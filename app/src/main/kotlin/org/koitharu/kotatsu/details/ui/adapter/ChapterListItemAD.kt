@@ -44,27 +44,27 @@ fun chapterListItemAD(
 		when {
 			item.isCurrent -> {
 				binding.textViewTitle.drawableStart = ContextCompat.getDrawable(context, R.drawable.ic_current_chapter)
-				binding.textViewTitle.setTextColor(0xFF07162B.toInt())
-				binding.textViewDate.setTextColor(0xFF65758B.toInt())
-				binding.textViewSource.setTextColor(0xFF7B8AA0.toInt())
+				binding.textViewTitle.setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
+				binding.textViewDate.setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+				binding.textViewSource.setTextColor(ContextCompat.getColor(context, R.color.taru_text_muted))
 				binding.textViewTitle.typeface = Typeface.DEFAULT_BOLD
 				binding.textViewStatus.alpha = 1f
 			}
 
 			item.isUnread -> {
 				binding.textViewTitle.drawableStart = null
-				binding.textViewTitle.setTextColor(0xFF0E1A2D.toInt())
-				binding.textViewDate.setTextColor(0xFF7C899B.toInt())
-				binding.textViewSource.setTextColor(0xFF8D99A9.toInt())
+				binding.textViewTitle.setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
+				binding.textViewDate.setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+				binding.textViewSource.setTextColor(ContextCompat.getColor(context, R.color.taru_text_muted))
 				binding.textViewTitle.typeface = Typeface.DEFAULT
 				binding.textViewStatus.alpha = 0.92f
 			}
 
 			else -> {
 				binding.textViewTitle.drawableStart = null
-				binding.textViewTitle.setTextColor(0xFF536176.toInt())
-				binding.textViewDate.setTextColor(0xFF9AA5B3.toInt())
-				binding.textViewSource.setTextColor(0xFFA0AABA.toInt())
+				binding.textViewTitle.setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+				binding.textViewDate.setTextColor(ContextCompat.getColor(context, R.color.taru_text_muted))
+				binding.textViewSource.setTextColor(ContextCompat.getColor(context, R.color.taru_text_soft))
 				binding.textViewTitle.typeface = Typeface.DEFAULT
 				binding.textViewStatus.alpha = 0.78f
 			}

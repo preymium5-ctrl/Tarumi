@@ -4,27 +4,38 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
-	android:layout_height="match_parent">
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root">
 
 	<com.google.android.material.appbar.AppBarLayout
 		android:id="@+id/appbar"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:fitsSystemWindows="false">
+		android:background="@android:color/transparent"
+		android:elevation="0dp"
+		android:fitsSystemWindows="false"
+		app:elevation="0dp"
+		app:liftOnScroll="false">
 
 		<com.google.android.material.appbar.CollapsingToolbarLayout
 			android:id="@+id/collapsingToolbarLayout"
 			style="?attr/collapsingToolbarLayoutMediumStyle"
 			android:layout_width="match_parent"
 			android:layout_height="?attr/collapsingToolbarLayoutMediumSize"
+			android:background="@android:color/transparent"
+			app:collapsedTitleTextColor="@color/taru_text_primary"
 			app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
+			app:expandedTitleTextColor="@color/taru_text_primary"
 			app:toolbarId="@id/toolbar">
 
 			<com.google.android.material.appbar.MaterialToolbar
 				android:id="@id/toolbar"
 				android:layout_width="match_parent"
 				android:layout_height="?attr/actionBarSize"
+				android:background="@android:color/transparent"
 				app:layout_collapseMode="pin"
+				app:navigationIconTint="@color/taru_text_primary"
+				app:titleTextColor="@color/taru_text_primary"
 				tools:title="Title" />
 
 		</com.google.android.material.appbar.CollapsingToolbarLayout>

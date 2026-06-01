@@ -119,13 +119,18 @@ class MangaListMapper @Inject constructor(
 		val counter = getCounter(manga.id, options)
 		val progress = getProgress(manga.id, options)
 		val history = historyRepository.getOne(manga)
-		val chapters = manga.chapters.orEmpty()
+		val mangaWithChapters = if (manga.chapters.isNullOrEmpty()) {
+			dataRepository.findMangaById(manga.id, withChapters = true) ?: manga
+		} else {
+			manga
+		}
+		val chapters = mangaWithChapters.chapters.orEmpty()
 		val currentChapter = history?.let { chapters.findById(it.chapterId) }
 		val latestChapter = chapters.maxWithOrNull(compareBy({ it.number }, { it.uploadDate }))
 		val currentChapterIndex = currentChapter?.let { chapter ->
 			chapters.indexOfFirst { it.id == chapter.id }.takeIf { it >= 0 }?.plus(1)
 		}
-		val totalChapters = manga.chaptersCount().takeIf { it > 0 } ?: history?.chaptersCount ?: progress?.totalChapters ?: 0
+		val totalChapters = mangaWithChapters.chaptersCount().takeIf { it > 0 } ?: history?.chaptersCount ?: progress?.totalChapters ?: 0
 		val currentChapterNumber = currentChapter?.numberString()
 			?: currentChapterIndex?.toString()
 			?: progress?.chapters?.takeIf { it > 0 }?.toString()
@@ -144,7 +149,7 @@ class MangaListMapper @Inject constructor(
 			latestChapterAge = latestChapter?.uploadDate?.toInstantOrNull()
 				?.let { calculateTimeAgo(it, showMonths = true)?.format(context) },
 			currentReadAge = history?.updatedAt?.let { calculateTimeAgo(it, showMonths = true)?.format(context) },
-			latestChapterNumber = latestChapter?.numberString() ?: totalChapters.takeIf { it > 0 }?.toString(),
+			latestChapterNumber = latestChapter?.numberString(),
 			currentChapterNumber = currentChapterNumber,
 			totalChapters = totalChapters,
 			canContinue = history != null && (!ReadingProgress.isCompleted(history.percent) || counter > 0),

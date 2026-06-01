@@ -2,9 +2,12 @@ package org.koitharu.kotatsu.settings
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
+import androidx.core.view.forEach
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -59,6 +62,7 @@ class SettingsActivity :
 		super.onCreate(savedInstanceState)
 		setContentView(ActivitySettingsBinding.inflate(layoutInflater))
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+		applyTarumiToolbarTheme()
 		val fm = supportFragmentManager
 		val currentFragment = fm.findFragmentById(R.id.container)
 		if (currentFragment == null || (isMasterDetails && currentFragment is RootSettingsFragment)) {
@@ -72,6 +76,14 @@ class SettingsActivity :
 		}
 		viewModel.isSearchActive.observe(this, ::toggleSearchMode)
 		viewModel.onNavigateToPreference.observeEvent(this, ::navigateToPreference)
+	}
+
+	override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+		val color = ContextCompat.getColor(this, R.color.taru_text_primary)
+		menu.forEach { item ->
+			item.icon?.setTint(color)
+		}
+		return super.onPrepareOptionsMenu(menu)
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -179,6 +191,16 @@ class SettingsActivity :
 			putString(ARG_PREF_KEY, item.key)
 		}
 		openFragment(item.fragmentClass, args, true)
+	}
+
+	private fun applyTarumiToolbarTheme() {
+		val color = ContextCompat.getColor(this, R.color.taru_text_primary)
+		viewBinding.toolbar.setTitleTextColor(color)
+		viewBinding.toolbar.navigationIcon?.setTint(color)
+		viewBinding.toolbar.overflowIcon?.setTint(color)
+		viewBinding.toolbar.menu.forEach { item ->
+			item.icon?.setTint(color)
+		}
 	}
 
 	companion object {

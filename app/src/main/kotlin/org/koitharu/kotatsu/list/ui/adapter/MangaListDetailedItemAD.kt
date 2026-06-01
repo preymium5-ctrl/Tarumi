@@ -21,11 +21,16 @@ fun mangaListDetailedItemAD(
 
 	bind { payloads ->
 		binding.textViewTitle.text = item.title
-		binding.textViewAuthor.text = item.latestChapterAge
-			?: item.latestChapterNumber?.let { "Latest $it" }
+		binding.textViewAuthor.text = item.latestChapterNumber?.let { "Latest $it" }
 			?: item.latestChapterTitle?.let { "Latest $it" }
-			?: "Latest chapter"
-		binding.textViewCurrentChapter.text = item.currentReadAge ?: "Not started"
+			?: "Latest unknown"
+		binding.textViewCurrentChapter.text = when {
+			item.currentChapterNumber != null && item.totalChapters > 0 ->
+				"Current ${item.currentChapterNumber} / ${item.totalChapters}"
+			item.currentChapterNumber != null -> "Current ${item.currentChapterNumber}"
+			item.currentChapterTitle != null -> "Current ${item.currentChapterTitle}"
+			else -> "Not started"
+		}
 		binding.textViewStatus.text = item.statusTitle ?: "Planned"
 		binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(statusColor(item.statusTitle))
 		binding.textViewStatus.setOnClickListener { view ->

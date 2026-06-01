@@ -1,6 +1,8 @@
 package org.koitharu.kotatsu.home.ui
 
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +21,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+	@ApplicationContext context: Context,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 ) : BaseViewModel() {
+
+	private val homeFeedCache = HomeFeedCache(context)
 
 	private val _featuredComics = MutableStateFlow<List<Manga>>(emptyList())
 	val featuredComics: StateFlow<List<Manga>> = _featuredComics
@@ -50,6 +55,7 @@ class HomeViewModel @Inject constructor(
 	val mangaRecommendationsLoading: StateFlow<Boolean> = _mangaRecommendationsLoading
 
 	init {
+		restoreCachedHomeFeed()
 		_featuredComics.value = cachedFeaturedComics
 		_trendingComics.value = cachedTrendingComics
 		_recentUpdates.value = cachedRecentUpdates
@@ -59,8 +65,12 @@ class HomeViewModel @Inject constructor(
 		_mangaRecommendations.value = cachedMangaRecommendations
 		_mangaRecommendationsLoading.value = cachedMangaRecommendations.isEmpty() && isMangaRecommendationsLoading
 		val featuredPeriod = currentFeaturedPeriod()
+		val recommendationPeriod = currentRecommendationPeriod()
+		val isHomeCacheExpired = cachedHomeFeedAt <= 0L ||
+			System.currentTimeMillis() - cachedHomeFeedAt >= HOME_CACHE_TTL_MS
+		val areRecommendationsExpired = cachedRecommendationPeriod != recommendationPeriod
 		if (
-			(cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty() || cachedFeaturedPeriod != featuredPeriod) &&
+			(cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty() || cachedFeaturedPeriod != featuredPeriod || isHomeCacheExpired) &&
 			!isFeaturedLoading
 		) {
 			launchJob(Dispatchers.Default) {
@@ -72,12 +82,14 @@ class HomeViewModel @Inject constructor(
 				cachedFeaturedComics = featured
 				cachedTrendingComics = trending
 				cachedFeaturedPeriod = featuredPeriod
+				cachedHomeFeedAt = System.currentTimeMillis()
 				_featuredComics.value = featured
 				_trendingComics.value = trending
+				saveHomeFeedCache()
 				isFeaturedLoading = false
 			}
 		}
-		if (cachedRecentUpdates.isEmpty() && !isRecentUpdatesLoading) {
+		if ((cachedRecentUpdates.isEmpty() || isHomeCacheExpired) && !isRecentUpdatesLoading) {
 			launchJob(Dispatchers.Default) {
 				isRecentUpdatesLoading = true
 				_recentUpdatesLoading.value = true
@@ -88,14 +100,16 @@ class HomeViewModel @Inject constructor(
 						it.printStackTraceDebug()
 					}.getOrDefault(cachedRecentUpdates)
 					cachedRecentUpdates = updates
+					cachedHomeFeedAt = System.currentTimeMillis()
 					_recentUpdates.value = updates
+					saveHomeFeedCache()
 				} finally {
 					_recentUpdatesLoading.value = false
 					isRecentUpdatesLoading = false
 				}
 			}
 		}
-		if (cachedManhuaRecommendations.isEmpty() && !isManhuaRecommendationsLoading) {
+		if ((cachedManhuaRecommendations.isEmpty() || areRecommendationsExpired) && !isManhuaRecommendationsLoading) {
 			launchJob(Dispatchers.Default) {
 				isManhuaRecommendationsLoading = true
 				_manhuaRecommendationsLoading.value = true
@@ -106,14 +120,17 @@ class HomeViewModel @Inject constructor(
 						limit = RECOMMENDATION_LIMIT,
 					)
 					cachedManhuaRecommendations = comics
+					cachedRecommendationPeriod = recommendationPeriod
+					cachedHomeFeedAt = System.currentTimeMillis()
 					_manhuaRecommendations.value = comics
+					saveHomeFeedCache()
 				} finally {
 					_manhuaRecommendationsLoading.value = false
 					isManhuaRecommendationsLoading = false
 				}
 			}
 		}
-		if (cachedMangaRecommendations.isEmpty() && !isMangaRecommendationsLoading) {
+		if ((cachedMangaRecommendations.isEmpty() || areRecommendationsExpired) && !isMangaRecommendationsLoading) {
 			launchJob(Dispatchers.Default) {
 				isMangaRecommendationsLoading = true
 				_mangaRecommendationsLoading.value = true
@@ -124,7 +141,10 @@ class HomeViewModel @Inject constructor(
 						limit = RECOMMENDATION_LIMIT,
 					)
 					cachedMangaRecommendations = comics
+					cachedRecommendationPeriod = recommendationPeriod
+					cachedHomeFeedAt = System.currentTimeMillis()
 					_mangaRecommendations.value = comics
+					saveHomeFeedCache()
 				} finally {
 					_mangaRecommendationsLoading.value = false
 					isMangaRecommendationsLoading = false
@@ -304,10 +324,12 @@ class HomeViewModel @Inject constructor(
 	private fun publishRecentUpdates(groups: List<RecentUpdateGroup>, limit: Int): List<RecentUpdateGroup> {
 		val updates = groups.sortedByDescending { it.sortDate }.take(limit)
 		cachedRecentUpdates = updates
+		cachedHomeFeedAt = System.currentTimeMillis()
 		_recentUpdates.value = updates
 		if (updates.isNotEmpty()) {
 			_recentUpdatesLoading.value = false
 		}
+		saveHomeFeedCache()
 		return updates
 	}
 
@@ -323,6 +345,51 @@ class HomeViewModel @Inject constructor(
 		return System.currentTimeMillis() / FEATURED_ROTATION_MS
 	}
 
+	private fun currentRecommendationPeriod(): Long {
+		return System.currentTimeMillis() / RECOMMENDATION_ROTATION_MS
+	}
+
+	private fun restoreCachedHomeFeed() {
+		if (
+			cachedFeaturedComics.isNotEmpty() ||
+			cachedTrendingComics.isNotEmpty() ||
+			cachedRecentUpdates.isNotEmpty() ||
+			cachedManhuaRecommendations.isNotEmpty() ||
+			cachedMangaRecommendations.isNotEmpty()
+		) {
+			return
+		}
+		val snapshot = homeFeedCache.load() ?: return
+		if (System.currentTimeMillis() - snapshot.savedAt >= HOME_CACHE_TTL_MS) {
+			return
+		}
+		cachedFeaturedComics = snapshot.featured
+		cachedTrendingComics = snapshot.trending
+		cachedRecentUpdates = snapshot.recentUpdates
+		cachedManhuaRecommendations = snapshot.manhuaRecommendations
+		cachedMangaRecommendations = snapshot.mangaRecommendations
+		cachedFeaturedPeriod = snapshot.featuredPeriod
+		cachedRecommendationPeriod = snapshot.recommendationPeriod
+		cachedHomeFeedAt = snapshot.savedAt
+	}
+
+	private fun saveHomeFeedCache() {
+		val savedAt = cachedHomeFeedAt.takeIf { it > 0L } ?: System.currentTimeMillis()
+		cachedHomeFeedAt = savedAt
+		homeFeedCache.save(
+			HomeFeedSnapshot(
+				savedAt = savedAt,
+				recommendationPeriod = cachedRecommendationPeriod,
+				featuredPeriod = cachedFeaturedPeriod,
+				featured = cachedFeaturedComics,
+				trending = cachedTrendingComics,
+				manhuaRecommendations = cachedManhuaRecommendations,
+				mangaRecommendations = cachedMangaRecommendations,
+				recentUpdates = cachedRecentUpdates,
+			),
+		)
+	}
+
 	private companion object {
 		var cachedFeaturedComics: List<Manga> = emptyList()
 		var cachedTrendingComics: List<Manga> = emptyList()
@@ -330,6 +397,8 @@ class HomeViewModel @Inject constructor(
 		var cachedManhuaRecommendations: List<Manga> = emptyList()
 		var cachedMangaRecommendations: List<Manga> = emptyList()
 		var cachedFeaturedPeriod: Long = -1L
+		var cachedRecommendationPeriod: Long = -1L
+		var cachedHomeFeedAt: Long = 0L
 		var isFeaturedLoading = false
 		var isRecentUpdatesLoading = false
 		var isManhuaRecommendationsLoading = false
@@ -349,7 +418,9 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_PAGE_TIMEOUT_MS = 3_000L
 		const val RECENT_DETAILS_TIMEOUT_MS = 2_000L
 		const val RECENT_FAST_VISIBLE_LIMIT = 20
-		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
+		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
+		const val FEATURED_ROTATION_MS = HOME_CACHE_TTL_MS
+		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }
 			.thenByDescending { it.number }
