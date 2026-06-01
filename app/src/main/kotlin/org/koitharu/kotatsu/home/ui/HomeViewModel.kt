@@ -361,11 +361,11 @@ class HomeViewModel @Inject constructor(
 		)
 
 		val RECENT_UPDATE_SOURCES = listOf(
-			MangaParserSource.WEEBCENTRAL,
+			MangaParserSource.FLAMECOMICS,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(
-			MangaParserSource.WEEBCENTRAL,
+			MangaParserSource.MANHUAFAST,
 		)
 
 		val MANGA_RECOMMENDATION_SOURCES = listOf(

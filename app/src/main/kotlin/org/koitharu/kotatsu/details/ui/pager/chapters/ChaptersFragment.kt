@@ -97,6 +97,9 @@ class ChaptersFragment :
 			.flowOn(Dispatchers.Default)
 			.observe(viewLifecycleOwner, this::onChaptersChanged)
 		viewModel.quickFilter.observe(viewLifecycleOwner, this::onFilterChanged)
+		viewModel.isChaptersReversed.observe(viewLifecycleOwner) {
+			binding.recyclerViewChapters.scrollToPosition(0)
+		}
 		viewModel.emptyReason.observe(viewLifecycleOwner) {
 			binding.textViewHolder.setTextAndVisible(it?.msgResId ?: 0)
 		}

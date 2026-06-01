@@ -20,7 +20,7 @@
 		android:gravity="center"
 		android:singleLine="true"
 		android:textAlignment="center"
-		android:textColor="?attr/colorOnPrimary"
+		android:textColor="@color/taru_on_accent"
 		android:textSize="12sp"
 		tools:text="13" />
 
@@ -34,6 +34,7 @@
 		android:ellipsize="end"
 		android:gravity="center_vertical"
 		android:singleLine="true"
+		android:textColor="@color/taru_text_secondary"
 		android:textAppearance="?attr/textAppearanceBodySmall"
 		app:drawableTint="?colorControlNormal"
 		tools:drawableEnd="@drawable/ic_check"

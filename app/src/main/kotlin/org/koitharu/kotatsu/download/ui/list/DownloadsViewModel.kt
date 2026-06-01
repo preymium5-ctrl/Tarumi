@@ -204,7 +204,9 @@ class DownloadsViewModel @Inject constructor(
 		if (isEmpty()) {
 			return emptyList()
 		}
-		val list = mapNotNullTo(ArrayList(size)) { it.toUiModel(it.id in exp) }
+		val list = mapNotNullTo(ArrayList(size)) { work ->
+			work.toUiModel(work.id in exp || work.state == WorkInfo.State.SUCCEEDED)
+		}
 		list.sortByDescending { it.timestamp }
 		return list
 	}

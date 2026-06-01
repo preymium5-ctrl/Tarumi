@@ -332,6 +332,10 @@
 
 	<style name="PreferenceThemeOverlay.Kotatsu">
 		<item name="singleLineTitle">false</item>
+		<item name="android:textColorPrimary">@color/taru_text_primary</item>
+		<item name="android:textColorSecondary">@color/taru_text_muted</item>
+		<item name="colorOnSurface">@color/taru_text_primary</item>
+		<item name="colorOnSurfaceVariant">@color/taru_text_secondary</item>
 	</style>
 
 	<style name="Preference.Slider" parent="Preference.SeekBarPreference.Material">

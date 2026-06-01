@@ -27,6 +27,7 @@
 	<color name="taru_outline">#26364F</color>
 	<color name="taru_outline_soft">#2B3D59</color>
 	<color name="taru_accent">#8FB2FF</color>
+	<color name="taru_on_accent">#091426</color>
 
 	<!-- Color schemes colors -->
 	<color name="background_miku">#191C1C</color>

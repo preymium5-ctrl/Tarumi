@@ -405,22 +405,28 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		}
 		taruAppBar?.root?.isInvisible = isOpened
 		adjustFabVisibility(isSearchOpened = isOpened)
-		bottomNav?.showOrHide(!isOpened)
+		bottomNav?.showOrHide(true)
 		updateContainerBottomMargin()
 	}
 
-	private fun openSearch() {
+	fun openSearchWithQuery(query: String = "") {
 		val searchView = viewBinding.searchView
 		searchView.isVisible = true
 		searchView.bringToFront()
-		bottomNav?.hide()
+		bottomNav?.show()
 		adjustSearchUI(isOpened = true)
 		searchView.show()
+		if (query.isNotBlank()) {
+			searchView.editText.setText(query)
+			searchView.editText.setSelection(searchView.editText.text?.length ?: 0)
+		}
 		searchView.editText.requestFocus()
 		searchView.post {
 			getSystemService<InputMethodManager>()?.showSoftInput(searchView.editText, InputMethodManager.SHOW_IMPLICIT)
 		}
 	}
+
+	private fun openSearch() = openSearchWithQuery()
 
 	private fun requestNotificationsPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(
@@ -454,6 +460,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	private fun initSearch() {
 		val listener = SearchSuggestionListenerImpl(router, viewBinding.searchView, searchSuggestionViewModel)
 		val adapter = SearchSuggestionAdapter(listener)
+		viewBinding.searchView.setBackgroundResource(R.drawable.bg_taru_home_root)
+		viewBinding.searchView.toolbar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+		viewBinding.recyclerViewSearch.setBackgroundResource(android.R.color.transparent)
+		viewBinding.searchView.editText.setTextColor(ContextCompat.getColor(this, R.color.taru_text_primary))
+		viewBinding.searchView.editText.setHintTextColor(ContextCompat.getColor(this, R.color.taru_text_muted))
+		viewBinding.searchView.toolbar.setTitleTextColor(ContextCompat.getColor(this, R.color.taru_text_primary))
+		viewBinding.searchView.toolbar.navigationIcon?.setTint(
+			ContextCompat.getColor(this, R.color.taru_text_primary),
+		)
 		viewBinding.searchView.toolbar.addMenuProvider(
 			SearchSuggestionMenuProvider(this, voiceInputLauncher, searchSuggestionViewModel),
 		)

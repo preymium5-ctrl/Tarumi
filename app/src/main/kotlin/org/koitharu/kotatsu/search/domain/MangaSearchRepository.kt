@@ -36,25 +36,41 @@ class MangaSearchRepository @Inject constructor(
 
 	suspend fun getMangaSuggestion(query: String, limit: Int, source: MangaSource?): List<Manga> = when {
 		query.isEmpty() -> db.getSuggestionDao().getTopManga(limit)
-		source != null -> db.getMangaDao().searchByTitle("%$query%", source.name, limit)
-		else -> {
-			val pattern = "%$query%"
-			val saved = db.getMangaDao().searchByTitle(pattern, limit)
-			val suggested = db.getSuggestionDao().searchMangaByTitle(pattern, limit)
-			val merged = (saved + suggested).distinctBy { it.manga.id }
-			if (merged.isNotEmpty()) {
-				merged
+		source != null -> {
+			val prefix = db.getMangaDao().searchByTitle("$query%", source.name, limit)
+			if (prefix.size >= limit) {
+				prefix
 			} else {
-				db.getSuggestionDao().getTopManga(limit)
+				(prefix + db.getMangaDao().searchByTitle("%$query%", source.name, limit))
+					.distinctBy { it.manga.id }
+					.take(limit)
 			}
+		}
+		else -> {
+			val prefix = (db.getMangaDao().searchByTitle("$query%", limit) +
+				db.getSuggestionDao().searchMangaByTitle("$query%", limit))
+				.distinctBy { it.manga.id }
+			val merged = if (prefix.size >= limit) {
+				prefix
+			} else {
+				(prefix + db.getMangaDao().searchByTitle("%$query%", limit) +
+					db.getSuggestionDao().searchMangaByTitle("%$query%", limit))
+					.distinctBy { it.manga.id }
+					.take(limit)
+			}
+			merged
 		}
 	}.let {
 		if (settings.isNsfwContentDisabled) it.filterNot { x -> x.manga.isNsfw } else it
 	}.map {
 		it.toManga()
-	}.sortedBy { x ->
+	}.sortedWith(compareBy<Manga> {
+		!it.title.startsWith(query, ignoreCase = true)
+	}.thenBy { x ->
 		x.title.levenshteinDistance(query)
-	}
+	}.thenBy {
+		it.title
+	})
 
 	suspend fun getQuerySuggestion(
 		query: String,

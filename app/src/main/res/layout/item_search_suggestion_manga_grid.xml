@@ -3,9 +3,8 @@
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
-	android:layout_width="108dp"
+	android:layout_width="128dp"
 	android:layout_height="match_parent"
-	android:layout_marginEnd="12dp"
 	android:background="@android:color/transparent"
 	android:orientation="vertical"
 	tools:layout_height="@dimen/search_suggestions_manga_height">
@@ -27,8 +26,8 @@
 		android:elegantTextHeight="false"
 		android:ellipsize="end"
 		android:fontFamily="sans-serif"
-		android:lines="1"
+		android:maxLines="2"
 		android:textColor="@color/taru_text_primary"
-		android:textSize="12sp"
+		android:textSize="14sp"
 		tools:text="@tools:sample/lorem" />
 </LinearLayout>

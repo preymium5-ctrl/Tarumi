@@ -377,9 +377,9 @@ class DetailsActivity :
 				foreground = 0xFF1F7A3F.toInt(),
 			)
 			else -> FavoriteStatusColors(
-				background = 0xFFF6F9FD.toInt(),
-				stroke = 0xFFE2EAF5.toInt(),
-				foreground = 0xFF07162B.toInt(),
+				background = getColor(R.color.taru_surface_button),
+				stroke = getColor(R.color.taru_outline),
+				foreground = getColor(R.color.taru_text_primary),
 			)
 		}
 		chip.chipBackgroundColor = ColorStateList.valueOf(colors.background)
