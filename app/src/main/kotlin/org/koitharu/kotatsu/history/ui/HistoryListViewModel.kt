@@ -195,7 +195,7 @@ class HistoryListViewModel @Inject constructor(
 					prevHeader = header
 				}
 			}
-			result += mangaListMapper.toListModel(manga, ListMode.DETAILED_LIST)
+			result += mangaListMapper.toListModel(manga, ListMode.GRID)
 		}
 		if (filters.isNotEmpty() && isEmpty) {
 			result += getEmptyState(hasFilters = true)
