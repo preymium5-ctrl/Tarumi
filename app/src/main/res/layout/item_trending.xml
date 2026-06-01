@@ -33,7 +33,7 @@
 		android:fontFamily="sans-serif"
 		android:lineSpacingExtra="0dp"
 		android:maxLines="2"
-		android:textColor="#0E1A2D"
+		android:textColor="@color/taru_text_primary"
 		android:textSize="15sp"
 		tools:text="Record of Ragnarok" />
 </LinearLayout>

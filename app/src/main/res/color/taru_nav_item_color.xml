@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 	<item
-		android:color="#07162B"
+		android:color="@color/taru_text_primary"
 		android:state_checked="true" />
-	<item android:color="#7A8494" />
+	<item android:color="@color/taru_text_soft" />
 </selector>

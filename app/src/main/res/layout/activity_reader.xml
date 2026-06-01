@@ -5,7 +5,7 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:background="#F8FBFF">
+	android:background="@color/taru_surface">
 
 	<androidx.fragment.app.FragmentContainerView
 		android:id="@+id/container"
@@ -66,7 +66,7 @@
 		android:id="@+id/appbar_top"
 		android:layout_width="match_parent"
 		android:layout_height="156dp"
-		android:background="#F8FBFF"
+		android:background="@color/taru_surface"
 		android:elevation="0dp"
 		app:elevation="0dp"
 		app:liftOnScroll="false">
@@ -75,20 +75,20 @@
 			android:id="@id/toolbar"
 			android:layout_width="match_parent"
 			android:layout_height="match_parent"
-			android:background="#F8FBFF"
+			android:background="@color/taru_surface"
 			android:elevation="0dp"
 			android:minHeight="156dp"
 			app:elevation="0dp"
 			app:navigationIconTint="@android:color/transparent"
 			app:popupTheme="@style/ThemeOverlay.Kotatsu"
-			app:subtitleTextColor="#7B8797"
+			app:subtitleTextColor="@color/taru_text_soft"
 			app:subtitleTextAppearance="@style/TextAppearance.Tarumi.Reader.Subtitle"
 			app:subtitleCentered="false"
 			app:titleCentered="false"
 			app:titleMarginStart="88dp"
 			app:titleMarginEnd="86dp"
 			app:titleTextAppearance="@style/TextAppearance.Tarumi.Reader.Title"
-			app:titleTextColor="#07162B"
+			app:titleTextColor="@color/taru_text_primary"
 			tools:menu="@menu/opt_reader" />
 
 	</com.google.android.material.appbar.AppBarLayout>
@@ -102,13 +102,13 @@
 		android:layout_marginStart="16dp"
 		android:layout_marginTop="40dp"
 		android:contentDescription="@string/close"
-		app:backgroundTint="#F7FAFF"
+		app:backgroundTint="@color/taru_surface_button"
 		app:cornerRadius="29dp"
 		app:icon="@drawable/ic_reader_back"
 		app:iconGravity="textStart"
 		app:iconSize="30dp"
-		app:iconTint="#07162B"
-		app:strokeColor="#E1EAF6"
+		app:iconTint="@color/taru_text_primary"
+		app:strokeColor="@color/taru_outline"
 		app:strokeWidth="1dp" />
 
 	<com.google.android.material.button.MaterialButton
@@ -119,13 +119,13 @@
 		android:layout_gravity="top|end"
 		android:layout_marginTop="40dp"
 		android:layout_marginEnd="16dp"
-		app:backgroundTint="#F7FAFF"
+		app:backgroundTint="@color/taru_surface_button"
 		app:cornerRadius="26dp"
 		app:icon="@drawable/ic_settings"
 		app:iconGravity="textStart"
 		app:iconSize="29dp"
-		app:iconTint="#07162B"
-		app:strokeColor="#E1EAF6"
+		app:iconTint="@color/taru_text_primary"
+		app:strokeColor="@color/taru_outline"
 		app:strokeWidth="1dp" />
 
 	<com.google.android.material.dockedtoolbar.DockedToolbarLayout

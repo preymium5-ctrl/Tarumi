@@ -16,7 +16,7 @@
 	android:paddingEnd="0dp"
 	android:singleLine="true"
 	android:fontFamily="sans-serif"
-	android:textColor="#07162B"
+	android:textColor="@color/taru_text_primary"
 	android:textSize="14sp"
 	app:drawableStartCompat="@drawable/ic_suggestion"
 	tools:text="@tools:sample/lorem[6]" />

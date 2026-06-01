@@ -35,7 +35,7 @@
 					android:fontFamily="sans-serif-light"
 					android:letterSpacing="0"
 					android:text="@string/notifications"
-					android:textColor="#07162B"
+					android:textColor="@color/taru_text_primary"
 					android:textSize="30sp" />
 
 				<TextView
@@ -68,15 +68,15 @@
 					android:fontFamily="sans-serif"
 					android:text="@string/all_types"
 					android:textAllCaps="false"
-					android:textColor="#536171"
+					android:textColor="@color/taru_text_secondary"
 					android:textSize="14sp"
-					app:backgroundTint="#F5F7FD"
+					app:backgroundTint="@color/taru_surface_button"
 					app:cornerRadius="10dp"
 					app:icon="@drawable/ic_filter_menu"
 					app:iconGravity="textStart"
 					app:iconPadding="10dp"
-					app:iconTint="#536171"
-					app:strokeColor="#E1E6EF"
+					app:iconTint="@color/taru_text_secondary"
+					app:strokeColor="@color/taru_outline"
 					app:strokeWidth="1dp" />
 
 				<com.google.android.material.button.MaterialButton
@@ -89,15 +89,15 @@
 					android:fontFamily="sans-serif"
 					android:text="@string/mark_all_as_read"
 					android:textAllCaps="false"
-					android:textColor="#536171"
+					android:textColor="@color/taru_text_secondary"
 					android:textSize="14sp"
-					app:backgroundTint="#F5F7FD"
+					app:backgroundTint="@color/taru_surface_button"
 					app:cornerRadius="10dp"
 					app:icon="@drawable/ic_check"
 					app:iconGravity="textStart"
 					app:iconPadding="10dp"
-					app:iconTint="#536171"
-					app:strokeColor="#E1E6EF"
+					app:iconTint="@color/taru_text_secondary"
+					app:strokeColor="@color/taru_outline"
 					app:strokeWidth="1dp" />
 			</LinearLayout>
 		</LinearLayout>

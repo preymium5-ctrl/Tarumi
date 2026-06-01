@@ -266,6 +266,11 @@ class ReaderViewModel @Inject constructor(
         return chaptersLoader.getPages(chapterId)
     }
 
+    fun downloadCurrentChapter() {
+        val chapterId = readingState.value?.chapterId ?: return
+        download(setOf(chapterId), allowMeteredNetwork = true)
+    }
+
     fun saveCurrentPage(
         pageSaveHelper: PageSaveHelper
     ) {

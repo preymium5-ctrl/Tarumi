@@ -27,7 +27,7 @@
 			android:fontFamily="sans-serif-medium"
 			android:letterSpacing="0.02"
 			android:text="@string/library_title"
-			android:textColor="#07162B"
+			android:textColor="@color/taru_text_primary"
 			android:textSize="26sp" />
 
 		<TextView
@@ -38,27 +38,50 @@
 			android:fontFamily="sans-serif"
 			android:lineSpacingExtra="2dp"
 			android:text="@string/library_subtitle"
-			android:textColor="#465569"
+			android:textColor="@color/taru_text_secondary"
 			android:textSize="13sp" />
 
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/button_saved_count"
-			style="?materialButtonOutlinedStyle"
-			android:layout_width="wrap_content"
-			android:layout_height="40dp"
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
 			android:layout_marginTop="18dp"
-			android:clickable="false"
-			android:focusable="false"
-			android:fontFamily="sans-serif-medium"
-			android:text="@string/saved_count_initial"
-			android:textColor="#2B3B50"
-			android:textSize="13sp"
-			app:backgroundTint="#F6F9FD"
-			app:cornerRadius="20dp"
-			app:icon="@drawable/ic_bookmark"
-			app:iconTint="#6F7E93"
-			app:strokeColor="#DDE5F0"
-			tools:text="13 saved" />
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_saved_count"
+				style="?materialButtonOutlinedStyle"
+				android:layout_width="wrap_content"
+				android:layout_height="40dp"
+				android:clickable="false"
+				android:focusable="false"
+				android:fontFamily="sans-serif-medium"
+				android:text="@string/saved_count_initial"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="13sp"
+				app:backgroundTint="@color/taru_surface_soft"
+				app:cornerRadius="20dp"
+				app:icon="@drawable/ic_bookmark"
+				app:iconTint="@color/taru_text_secondary"
+				app:strokeColor="@color/taru_outline_soft"
+				tools:text="13 saved" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_downloaded"
+				style="?materialButtonOutlinedStyle"
+				android:layout_width="wrap_content"
+				android:layout_height="40dp"
+				android:layout_marginStart="10dp"
+				android:fontFamily="sans-serif-medium"
+				android:text="@string/downloaded"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="13sp"
+				app:backgroundTint="@color/taru_surface_soft"
+				app:cornerRadius="20dp"
+				app:icon="@drawable/ic_download"
+				app:iconTint="@color/taru_text_secondary"
+				app:strokeColor="@color/taru_outline_soft" />
+		</LinearLayout>
 
 	</LinearLayout>
 
@@ -74,11 +97,11 @@
 		android:paddingHorizontal="6dp"
 		android:paddingVertical="2dp"
 		app:tabGravity="start"
-		app:tabIndicatorColor="#0E1A2D"
+		app:tabIndicatorColor="@color/taru_text_primary"
 		app:tabIndicatorHeight="2dp"
 		app:tabMode="scrollable"
-		app:tabSelectedTextColor="#0E1A2D"
-		app:tabTextColor="#7A8494" />
+		app:tabSelectedTextColor="@color/taru_text_primary"
+		app:tabTextColor="@color/taru_text_soft" />
 
 	<androidx.viewpager2.widget.ViewPager2
 		android:id="@+id/pager"

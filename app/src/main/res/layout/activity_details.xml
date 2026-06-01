@@ -106,7 +106,7 @@
 							android:letterSpacing="0.18"
 							android:paddingHorizontal="14dp"
 							android:text="MANHWA"
-							android:textColor="#7192CF"
+							android:textColor="@color/taru_accent"
 							android:textSize="12sp"
 							tools:ignore="HardcodedText" />
 
@@ -121,7 +121,7 @@
 							android:letterSpacing="0.18"
 							android:paddingHorizontal="14dp"
 							android:text="ONGOING"
-							android:textColor="#2B3B50"
+							android:textColor="@color/taru_text_primary"
 							android:textSize="12sp"
 							tools:ignore="HardcodedText" />
 
@@ -138,7 +138,7 @@
 							android:letterSpacing="0.18"
 							android:paddingHorizontal="14dp"
 							android:singleLine="true"
-							android:textColor="#6D7C91"
+							android:textColor="@color/taru_text_secondary"
 							android:textSize="12sp"
 							tools:text="WEEBCENTRAL" />
 					</LinearLayout>
@@ -162,7 +162,7 @@
 						android:ellipsize="end"
 						android:fontFamily="sans-serif"
 						android:maxLines="@integer/details_title_lines"
-						android:textColor="#07162B"
+						android:textColor="@color/taru_text_primary"
 						android:textIsSelectable="true"
 						android:textSize="34sp"
 						android:textStyle="bold"
@@ -176,7 +176,7 @@
 						android:ellipsize="end"
 						android:fontFamily="sans-serif"
 						android:maxLines="2"
-						android:textColor="#3F4D61"
+						android:textColor="@color/taru_text_primary"
 						android:textIsSelectable="true"
 						android:textSize="19sp"
 						tools:text="By Unknown" />
@@ -190,7 +190,7 @@
 						android:fontFamily="sans-serif"
 						android:lineSpacingExtra="2dp"
 						android:maxLines="4"
-						android:textColor="#425066"
+						android:textColor="@color/taru_text_primary"
 						android:textIsSelectable="true"
 						android:textSize="17sp"
 						tools:text="No synopsis is available for this title yet." />
@@ -217,7 +217,7 @@
 								android:fontFamily="sans-serif-medium"
 								android:letterSpacing="0.18"
 								android:text="LATEST"
-								android:textColor="#758399"
+								android:textColor="@color/taru_text_muted"
 								android:textSize="12sp"
 								tools:ignore="HardcodedText" />
 
@@ -229,7 +229,7 @@
 								android:ellipsize="end"
 								android:fontFamily="sans-serif"
 								android:singleLine="true"
-								android:textColor="#07162B"
+								android:textColor="@color/taru_text_primary"
 								android:textSize="25sp"
 								tools:text="Unknown" />
 						</LinearLayout>
@@ -250,7 +250,7 @@
 								android:fontFamily="sans-serif-medium"
 								android:letterSpacing="0.18"
 								android:text="SCANLATIONS"
-								android:textColor="#758399"
+								android:textColor="@color/taru_text_muted"
 								android:textSize="12sp"
 								tools:ignore="HardcodedText" />
 
@@ -262,7 +262,7 @@
 								android:ellipsize="end"
 								android:fontFamily="sans-serif"
 								android:singleLine="true"
-								android:textColor="#07162B"
+								android:textColor="@color/taru_text_primary"
 								android:textSize="25sp"
 								tools:text="N/A" />
 						</LinearLayout>
@@ -276,14 +276,14 @@
 						android:fontFamily="sans-serif-medium"
 						android:letterSpacing="0.16"
 						android:text="@string/start_reading"
-						android:textColor="#07162B"
+						android:textColor="@color/taru_text_primary"
 						android:textSize="14sp"
-						app:backgroundTint="#7FA7FF"
+						app:backgroundTint="@color/taru_accent"
 						app:cornerRadius="32dp"
 						app:icon="@drawable/ic_play"
 						app:iconGravity="textStart"
 						app:iconPadding="12dp"
-						app:iconTint="#07162B" />
+						app:iconTint="@color/taru_text_primary" />
 
 					<com.google.android.material.chip.Chip
 						android:id="@+id/chip_favorite"
@@ -296,12 +296,12 @@
 						android:letterSpacing="0.14"
 						android:text="@string/save"
 						android:textAlignment="center"
-						android:textColor="#07162B"
+						android:textColor="@color/taru_text_primary"
 						android:textSize="16sp"
-						app:chipBackgroundColor="#F6F9FD"
+						app:chipBackgroundColor="@color/taru_surface_soft"
 						app:chipIcon="@drawable/ic_bookmark"
-						app:chipIconTint="#07162B"
-						app:chipStrokeColor="#E2EAF5"
+						app:chipIconTint="@color/taru_text_primary"
+						app:chipStrokeColor="@color/taru_outline"
 						app:chipStrokeWidth="1dp" />
 
 				</LinearLayout>
@@ -373,7 +373,7 @@
 					android:paddingHorizontal="4dp"
 					android:text="@string/related_manga"
 					android:textAllCaps="true"
-					android:textColor="#5F6F83"
+					android:textColor="@color/taru_text_secondary"
 					android:textSize="13sp"
 					app:layout_constraintEnd_toStartOf="@id/button_related_more"
 					app:layout_constraintStart_toStartOf="parent"
@@ -427,7 +427,7 @@
 					android:paddingBottom="12dp"
 					android:text="@string/chapter_feed"
 					android:textAllCaps="true"
-					android:textColor="#5F6F83"
+					android:textColor="@color/taru_text_secondary"
 					android:textSize="13sp"
 					app:layout_constraintEnd_toEndOf="parent"
 					app:layout_constraintStart_toStartOf="parent"

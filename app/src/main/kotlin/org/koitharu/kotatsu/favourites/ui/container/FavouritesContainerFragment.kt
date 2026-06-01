@@ -67,6 +67,9 @@ class FavouritesContainerFragment : BaseFragment<FragmentFavouritesContainerBind
 		viewModel.isEmpty.observe(viewLifecycleOwner, ::onEmptyStateChanged)
 		addMenuProvider(FavouritesContainerMenuProvider(router))
 		viewModel.onActionDone.observeEvent(viewLifecycleOwner, ReversibleActionObserver(binding.pager))
+		binding.buttonDownloaded.setOnClickListener {
+			router.openDownloads()
+		}
 		binding.tabs.isGone = true
 	}
 

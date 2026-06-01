@@ -10,7 +10,7 @@
 	android:fontFamily="sans-serif"
 	android:paddingHorizontal="0dp"
 	android:paddingVertical="12dp"
-	android:textColor="#7D8794"
+	android:textColor="@color/taru_text_muted"
 	android:textSize="12sp"
 	tools:drawableStart="@drawable/ic_error_small"
 	tools:text="@string/error_corrupted_file" />

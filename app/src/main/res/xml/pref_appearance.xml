@@ -4,23 +4,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/appearance">
 
-    <org.koitharu.kotatsu.settings.utils.ThemeChooserPreference
-        android:key="color_theme"
-        android:title="@string/color_theme" />
-
     <ListPreference
-        android:defaultValue="-1"
+        android:defaultValue="1"
         android:entries="@array/themes"
         android:entryValues="@array/values_theme"
         android:key="theme"
         android:title="@string/theme"
         app:useSimpleSummaryProvider="true" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="amoled_theme"
-        android:summary="@string/black_dark_theme_summary"
-        android:title="@string/black_dark_theme" />
 
     <org.koitharu.kotatsu.settings.utils.ActivityListPreference
         android:key="app_locale"

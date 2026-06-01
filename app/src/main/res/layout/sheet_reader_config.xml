@@ -66,7 +66,7 @@
                 android:text="@string/read_mode"
                 android:fontFamily="sans-serif-medium"
                 android:letterSpacing="0.08"
-                android:textColor="#4F5D70"
+                android:textColor="@color/taru_text_secondary"
                 android:textSize="12sp" />
 
             <com.google.android.material.button.MaterialButtonToggleGroup
@@ -164,7 +164,7 @@
                 android:text="@string/reader_mode_hint"
                 android:fontFamily="sans-serif"
                 android:lineSpacingExtra="2dp"
-                android:textColor="#6B788A"
+                android:textColor="@color/taru_text_secondary"
                 android:textSize="12sp" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -178,7 +178,7 @@
                 android:paddingEnd="?android:listPreferredItemPaddingEnd"
                 android:text="@string/use_two_pages_landscape"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="#26354A"
+                android:textColor="@color/taru_text_primary"
                 android:textSize="14sp"
                 app:drawableStartCompat="@drawable/ic_split_horizontal" />
 
@@ -193,7 +193,7 @@
                 android:paddingEnd="?android:listPreferredItemPaddingEnd"
                 android:text="@string/auto_double_foldable"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="#26354A"
+                android:textColor="@color/taru_text_primary"
                 android:textSize="14sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
@@ -209,7 +209,7 @@
                 android:paddingEnd="?android:listPreferredItemPaddingEnd"
                 android:text="@string/double_page_cover_page"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="#26354A"
+                android:textColor="@color/taru_text_primary"
                 android:textSize="14sp" />
 
             <TextView
@@ -220,7 +220,7 @@
                 android:layout_marginTop="@dimen/margin_small"
                 android:text="@string/two_page_scroll_sensitivity"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="#4F5D70"
+                android:textColor="@color/taru_text_secondary"
                 android:textSize="13sp" />
 
             <com.google.android.material.slider.Slider

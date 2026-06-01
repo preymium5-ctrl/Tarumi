@@ -28,7 +28,7 @@
 		android:ellipsize="end"
 		android:fontFamily="sans-serif"
 		android:lines="1"
-		android:textColor="#07162B"
+		android:textColor="@color/taru_text_primary"
 		android:textSize="12sp"
 		tools:text="@tools:sample/lorem" />
 </LinearLayout>

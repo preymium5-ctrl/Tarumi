@@ -11,6 +11,7 @@
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:background="@android:color/transparent"
+		android:elevation="0dp"
 		android:fitsSystemWindows="false"
 		app:elevation="0dp"
 		app:liftOnScroll="false">
@@ -21,22 +22,24 @@
 			android:layout_height="wrap_content"
 			android:background="@android:color/transparent"
 			android:paddingHorizontal="18dp"
-			app:navigationIconTint="@color/taru_text_primary"
+			app:navigationIconTint="@color/taru_surface_button"
 			app:titleTextAppearance="@style/TextAppearance.Tarumi.Settings.Title"
-			app:titleTextColor="@color/taru_text_primary"
-			app:layout_scrollFlags="scroll|enterAlways" />
+			app:titleTextColor="@color/taru_surface_button"
+			app:layout_collapseMode="pin" />
 
 	</com.google.android.material.appbar.AppBarLayout>
 
-	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
-		android:id="@id/recyclerView"
+	<androidx.fragment.app.FragmentContainerView
+		android:id="@id/container"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:clipToPadding="false"
-		android:orientation="vertical"
-		android:paddingHorizontal="20dp"
-		android:paddingTop="6dp"
-		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior" />
+
+	<androidx.fragment.app.FragmentContainerView
+		android:id="@+id/container_search"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone"
 		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

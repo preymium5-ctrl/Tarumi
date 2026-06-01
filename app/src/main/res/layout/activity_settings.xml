@@ -22,9 +22,9 @@
 			android:layout_height="wrap_content"
 			android:background="@android:color/transparent"
 			android:paddingHorizontal="18dp"
-			app:navigationIconTint="#1F2D44"
+			app:navigationIconTint="@color/taru_text_primary"
 			app:titleTextAppearance="@style/TextAppearance.Tarumi.Settings.Title"
-			app:titleTextColor="#07162B"
+			app:titleTextColor="@color/taru_text_primary"
 			app:layout_collapseMode="pin" />
 
 	</com.google.android.material.appbar.AppBarLayout>

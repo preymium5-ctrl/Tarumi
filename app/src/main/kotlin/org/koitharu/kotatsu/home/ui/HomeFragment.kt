@@ -58,9 +58,10 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			renderRecommendationRail(binding.mangaRecommendationList, binding.mangaRecommendationLoading, comics)
 		}
 		viewModel.recentUpdatesLoading.observe(viewLifecycleOwner) { isLoading ->
-			binding.recentUpdatesLoading.isVisible = isLoading
-			binding.recentUpdatesList.isVisible = !isLoading
-			binding.recentUpdatesPagination.isVisible = !isLoading
+			val hasUpdates = viewModel.recentUpdates.value.isNotEmpty()
+			binding.recentUpdatesLoading.isVisible = isLoading && !hasUpdates
+			binding.recentUpdatesList.isVisible = hasUpdates
+			binding.recentUpdatesPagination.isVisible = hasUpdates
 		}
 		combine(viewModel.recentUpdates, viewModel.recentUpdatesPage, ::Pair)
 			.observe(viewLifecycleOwner) { (updates, page) ->
@@ -312,7 +313,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
 				typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
 				text = chapter.getLocalizedTitle(resources)
-				setTextColor(0xFF0E1A2D.toInt())
+				setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
 				textSize = 15f
 				maxLines = 1
 				ellipsize = android.text.TextUtils.TruncateAt.END
@@ -324,7 +325,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				)
 				typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
 				text = chapter.formatRelativeTime()
-				setTextColor(0xFF8B96A5.toInt())
+				setTextColor(ContextCompat.getColor(context, R.color.taru_text_soft))
 				textSize = 13f
 				maxLines = 1
 			})
@@ -372,7 +373,12 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				alpha = 1f
 				text = (i + 1).toString()
 				typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
-				setTextColor(if (isSelected) 0xFFFFFFFF.toInt() else 0xFF0E1A2D.toInt())
+				setTextColor(
+					ContextCompat.getColor(
+						context,
+						if (isSelected) android.R.color.white else R.color.taru_text_primary,
+					),
+				)
 				textSize = 16f
 				setOnClickListener { viewModel.setRecentUpdatesPage(i) }
 			}
@@ -406,7 +412,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			alpha = if (enabled) 1f else 0.42f
 			this.text = text
 			typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
-			setTextColor(0xFF0E1A2D.toInt())
+			setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
 			textSize = 15f
 			setOnClickListener { onClick() }
 		}

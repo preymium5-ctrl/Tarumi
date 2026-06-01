@@ -38,7 +38,7 @@
 				android:ellipsize="end"
 				android:fontFamily="sans-serif-medium"
 				android:maxLines="2"
-				android:textColor="#0E1A2D"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="17sp"
 				tools:text="Chapter 394: Chapter 394" />
 
@@ -68,7 +68,7 @@
 			android:ellipsize="end"
 			android:fontFamily="sans-serif"
 			android:singleLine="true"
-			android:textColor="#7C899B"
+			android:textColor="@color/taru_text_muted"
 			android:textSize="12sp"
 			tools:text="Mar 25, 2026" />
 
@@ -82,7 +82,7 @@
 			android:letterSpacing="0.12"
 			android:singleLine="true"
 			android:textAllCaps="true"
-			android:textColor="#8D99A9"
+			android:textColor="@color/taru_text_soft"
 			android:textSize="10sp"
 			tools:text="WEEBCENTRAL | EN" />
 
@@ -114,7 +114,7 @@
 				android:letterSpacing="0.12"
 				android:minWidth="76dp"
 				android:paddingHorizontal="12dp"
-				android:textColor="#41516A"
+				android:textColor="@color/taru_text_secondary"
 				android:textSize="10sp"
 				tools:text="UNREAD" />
 		</LinearLayout>
@@ -128,7 +128,7 @@
 		android:contentDescription="@string/read"
 		android:padding="7dp"
 		app:srcCompat="@drawable/ic_play"
-		app:tint="#6F9DFF" />
+		app:tint="@color/taru_accent" />
 
 	<ImageView
 		android:id="@+id/imageView_bookmarked"

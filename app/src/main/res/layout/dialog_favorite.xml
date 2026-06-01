@@ -29,7 +29,7 @@
 		android:fontFamily="sans-serif-medium"
 		android:gravity="center_vertical|start"
 		android:maxLines="3"
-		android:textColor="#07162B"
+		android:textColor="@color/taru_text_primary"
 		android:textSize="16sp"
 		app:layout_constraintBottom_toBottomOf="@id/coversStack"
 		app:layout_constraintEnd_toEndOf="parent"

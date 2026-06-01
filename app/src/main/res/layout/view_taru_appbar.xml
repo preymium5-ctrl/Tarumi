@@ -29,7 +29,7 @@
 			android:fontFamily="sans-serif-medium"
 			android:letterSpacing="0.16"
 			android:text="Tarumi"
-			android:textColor="#0B1B33"
+			android:textColor="@color/taru_text_primary"
 			android:textSize="25sp"
 			tools:ignore="HardcodedText" />
 
@@ -40,7 +40,7 @@
 			android:letterSpacing="0.18"
 			android:singleLine="true"
 			android:text="COMICS READER"
-			android:textColor="#7A8494"
+			android:textColor="@color/taru_text_soft"
 			android:textSize="9sp"
 			tools:ignore="HardcodedText" />
 	</LinearLayout>
@@ -57,7 +57,7 @@
 			android:contentDescription="@string/feed"
 			android:padding="9dp"
 			android:src="@drawable/ic_notification"
-			app:tint="#1F2D44" />
+			app:tint="@color/taru_text_primary" />
 
 		<TextView
 			android:id="@+id/textViewNotificationCount"
@@ -85,7 +85,7 @@
 		android:contentDescription="@string/search_manga"
 		android:padding="9dp"
 		android:src="@drawable/ic_taru_search"
-		app:tint="#1F2D44" />
+		app:tint="@color/taru_text_primary" />
 
 	<ImageButton
 		android:id="@+id/buttonHistory"
@@ -96,7 +96,7 @@
 		android:contentDescription="@string/history"
 		android:padding="9dp"
 		android:src="@drawable/ic_taru_history"
-		app:tint="#1F2D44" />
+		app:tint="@color/taru_text_primary" />
 
 	<ImageButton
 		android:id="@+id/buttonMenu"
@@ -107,5 +107,5 @@
 		android:contentDescription="@string/settings"
 		android:padding="9dp"
 		android:src="@drawable/ic_drawer_menu"
-		app:tint="#1F2D44" />
+		app:tint="@color/taru_text_primary" />
 </LinearLayout>

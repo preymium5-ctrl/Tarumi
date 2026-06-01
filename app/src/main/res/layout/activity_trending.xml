@@ -23,8 +23,8 @@
 			android:layout_height="?attr/actionBarSize"
 			android:background="@null"
 			android:titleTextAppearance="?attr/textAppearanceTitleLarge"
-			app:titleTextColor="#0E1A2D"
-			app:navigationIconTint="#1F2D44"
+			app:titleTextColor="@color/taru_text_primary"
+			app:navigationIconTint="@color/taru_text_primary"
 			tools:title="Trending" />
 	</com.google.android.material.appbar.AppBarLayout>
 

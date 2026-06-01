@@ -140,6 +140,8 @@ class ReaderControlDelegate(
 
 		fun onSavePageClick()
 
+		fun onDownloadChapterClick()
+
 		fun onScrollTimerClick(isLongClick: Boolean)
 
 		fun toggleScreenOrientation()

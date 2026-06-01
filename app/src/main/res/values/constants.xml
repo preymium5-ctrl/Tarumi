@@ -22,7 +22,6 @@
 	<string name="discord_app_id" translatable="false">1395464028611940393</string>
 	<string name="app_icon_url" translatable="false">https://raw.githubusercontent.com/preymium5-ctrl/Tarumi/main/metadata/en-US/icon.png</string>
 	<string-array name="values_theme" translatable="false">
-		<item>-1</item>
 		<item>1</item>
 		<item>2</item>
 	</string-array>

@@ -211,6 +211,16 @@ class ReaderActivity :
         }
         viewModel.readerMode.observe(this, Lifecycle.State.STARTED, this::onInitReader)
         viewModel.onPageSaved.observeEvent(this, PagesSavedObserver(viewBinding.container))
+        viewModel.onDownloadStarted.observeEvent(this) {
+            Snackbar.make(viewBinding.container, R.string.download_started, Snackbar.LENGTH_SHORT)
+                .setAnchorView(viewBinding.toolbarDocked)
+                .show()
+        }
+        viewModel.onDownloadFinished.observeEvent(this) {
+            Snackbar.make(viewBinding.container, R.string.download_finished, Snackbar.LENGTH_SHORT)
+                .setAnchorView(viewBinding.toolbarDocked)
+                .show()
+        }
         viewModel.uiState.zipWithPrevious().observe(this, this::onUiStateChanged)
         combine(
             viewModel.isLoading,
@@ -531,6 +541,10 @@ class ReaderActivity :
 
     override fun onSavePageClick() {
         viewModel.saveCurrentPage(pageSaveHelper)
+    }
+
+    override fun onDownloadChapterClick() {
+        viewModel.downloadCurrentChapter()
     }
 
     override fun onScrollTimerClick(isLongClick: Boolean) {

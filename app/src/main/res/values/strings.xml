@@ -59,6 +59,7 @@
     <string name="manga_downloading_">Downloadingâ€¦</string>
     <string name="processing_">Processingâ€¦</string>
     <string name="download_complete">Downloaded</string>
+    <string name="download_finished">Download finished</string>
     <string name="downloads">Downloads</string>
     <string name="by_name">Name</string>
     <string name="popular">Popular</string>

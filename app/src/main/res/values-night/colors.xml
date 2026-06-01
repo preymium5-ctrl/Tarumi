@@ -15,6 +15,19 @@
 	<color name="nsfw_18">#BF360C</color>
 	<color name="nsfw_16">#FF6F00</color>
 
+	<!-- Tarumi app theme -->
+	<color name="taru_text_primary">#F7FAFF</color>
+	<color name="taru_text_secondary">#C7D3E2</color>
+	<color name="taru_text_muted">#9BA9BC</color>
+	<color name="taru_text_soft">#8E9DB2</color>
+	<color name="taru_surface">#111C2F</color>
+	<color name="taru_surface_high">#172337</color>
+	<color name="taru_surface_soft">#1B2940</color>
+	<color name="taru_surface_button">#1B2940</color>
+	<color name="taru_outline">#26364F</color>
+	<color name="taru_outline_soft">#2B3D59</color>
+	<color name="taru_accent">#8FB2FF</color>
+
 	<!-- Color schemes colors -->
 	<color name="background_miku">#191C1C</color>
 	<color name="background_asuka">#201A1A</color>

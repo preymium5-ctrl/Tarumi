@@ -64,6 +64,7 @@ abstract class ChaptersPagesViewModel(
 
 	val onActionDone = MutableEventFlow<ReversibleAction>()
 	val onDownloadStarted = MutableEventFlow<Unit>()
+	val onDownloadFinished = MutableEventFlow<Unit>()
 	val onMangaRemoved = MutableEventFlow<Manga>()
 
 	private val chaptersQuery = MutableStateFlow("")
@@ -263,6 +264,10 @@ abstract class ChaptersPagesViewModel(
 
 	private suspend fun onDownloadComplete(downloadedManga: LocalManga?) {
 		downloadedManga ?: return
+		val currentMangaId = mangaDetails.value?.id
+		if (currentMangaId != null && downloadedManga.manga.id == currentMangaId) {
+			onDownloadFinished.call(Unit)
+		}
 		mangaDetails.update {
 			interactor.updateLocal(it, downloadedManga)
 		}

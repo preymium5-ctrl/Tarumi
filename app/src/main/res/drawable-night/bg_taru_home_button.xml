@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-	<corners android:radius="34dp" />
-	<solid android:color="@color/taru_surface" />
+	<corners android:radius="18dp" />
+	<solid android:color="#1B2940" />
 	<stroke
 		android:width="1dp"
-		android:color="@color/taru_outline" />
+		android:color="#2B3D59" />
 </shape>

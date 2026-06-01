@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string-array name="themes" translatable="false">
-		<item>@string/follow_system</item>
 		<item>@string/light</item>
 		<item>@string/dark</item>
 	</string-array>

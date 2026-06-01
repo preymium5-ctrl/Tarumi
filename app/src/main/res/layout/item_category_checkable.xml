@@ -5,7 +5,7 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:background="#FAFCFF"
+	android:background="@color/taru_surface_high"
 	android:gravity="center_vertical"
 	android:minHeight="66dp"
 	android:orientation="horizontal"
@@ -19,7 +19,7 @@
 		android:contentDescription="@null"
 		android:padding="3dp"
 		app:srcCompat="@drawable/ic_bookmark"
-		app:tint="#6F7E93" />
+		app:tint="@color/taru_text_secondary" />
 
 	<TextView
 		android:id="@+id/textView_title"
@@ -30,7 +30,7 @@
 		android:ellipsize="end"
 		android:fontFamily="sans-serif"
 		android:maxLines="1"
-		android:textColor="#101B2D"
+		android:textColor="@color/taru_text_primary"
 		android:textSize="20sp"
 		tools:text="Planned" />
 
@@ -40,6 +40,6 @@
 		android:layout_height="48dp"
 		android:clickable="false"
 		android:gravity="center"
-		app:buttonTint="#7DA3FF" />
+		app:buttonTint="@color/taru_accent" />
 
 </LinearLayout>

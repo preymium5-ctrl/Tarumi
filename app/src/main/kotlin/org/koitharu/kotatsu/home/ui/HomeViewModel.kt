@@ -134,7 +134,9 @@ class HomeViewModel @Inject constructor(
 	}
 
 	fun setRecentUpdatesPage(page: Int) {
-		_recentUpdatesPage.value = page.coerceIn(0, RECENT_PAGE_COUNT - 1)
+		val pageCount = ((recentUpdates.value.size + RECENT_PAGE_SIZE - 1) / RECENT_PAGE_SIZE)
+			.coerceIn(1, RECENT_PAGE_COUNT)
+		_recentUpdatesPage.value = page.coerceIn(0, pageCount - 1)
 	}
 
 	private suspend fun loadAsuraComics(limit: Int): List<Manga> {
@@ -289,6 +291,10 @@ class HomeViewModel @Inject constructor(
 				)
 				if (groups.size >= RECENT_PAGE_SIZE) {
 					publishRecentUpdates(groups, limit)
+					_recentUpdatesLoading.value = false
+				}
+				if (groups.size >= RECENT_FAST_VISIBLE_LIMIT) {
+					return
 				}
 			}
 			offset += page.size
@@ -337,11 +343,12 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_PAGE_SIZE = 10
 		const val RECENT_PAGE_COUNT = 6
 		const val RECENT_CHAPTERS_PER_TITLE = 3
-		const val RECENT_CANDIDATES_PER_SOURCE = 16
+		const val RECENT_CANDIDATES_PER_SOURCE = 24
 		const val RECENT_SOURCE_PAGE_ATTEMPTS = 3
-		const val RECENT_SOURCE_TIMEOUT_MS = 9_000L
-		const val RECENT_PAGE_TIMEOUT_MS = 4_000L
-		const val RECENT_DETAILS_TIMEOUT_MS = 3_500L
+		const val RECENT_SOURCE_TIMEOUT_MS = 7_000L
+		const val RECENT_PAGE_TIMEOUT_MS = 3_000L
+		const val RECENT_DETAILS_TIMEOUT_MS = 2_000L
+		const val RECENT_FAST_VISIBLE_LIMIT = 20
 		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }
@@ -354,17 +361,11 @@ class HomeViewModel @Inject constructor(
 		)
 
 		val RECENT_UPDATE_SOURCES = listOf(
-			MangaParserSource.ASURASCANS,
-			MangaParserSource.ASURASCANS_US,
-			MangaParserSource.ASURASCANSGG,
 			MangaParserSource.WEEBCENTRAL,
-			MangaParserSource.AQUAMANGA,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(
-			MangaParserSource.MANHUAUS,
-			MangaParserSource.MANHUAFAST,
-			MangaParserSource.MANHUAHOT,
+			MangaParserSource.WEEBCENTRAL,
 		)
 
 		val MANGA_RECOMMENDATION_SOURCES = listOf(

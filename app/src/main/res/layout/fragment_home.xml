@@ -44,7 +44,7 @@
 				android:paddingHorizontal="14dp"
 				android:paddingVertical="6dp"
 				android:text="FEATURED COMICS"
-				android:textColor="#2B3B50"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="11sp"
 				app:drawableStartCompat="@drawable/ic_book_page"
 				app:drawableTint="#E0B95B"
@@ -67,7 +67,7 @@
 					android:paddingHorizontal="14dp"
 					android:paddingVertical="6dp"
 					android:text="Comic"
-					android:textColor="#0E1A2D"
+					android:textColor="@color/taru_text_primary"
 					android:textSize="13sp"
 					tools:ignore="HardcodedText" />
 
@@ -82,7 +82,7 @@
 					android:paddingHorizontal="14dp"
 					android:paddingVertical="6dp"
 					android:text="Ongoing"
-					android:textColor="#2C394A"
+					android:textColor="@color/taru_text_primary"
 					android:textSize="13sp"
 					tools:ignore="HardcodedText" />
 			</LinearLayout>
@@ -95,7 +95,7 @@
 				android:fontFamily="sans-serif"
 				android:lineSpacingMultiplier="1.05"
 				android:text=""
-				android:textColor="#07162B"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="29sp"
 				android:textStyle="normal"
 				tools:ignore="HardcodedText" />
@@ -110,7 +110,7 @@
 				android:lineSpacingExtra="2dp"
 				android:maxLines="3"
 				android:text=""
-				android:textColor="#465569"
+				android:textColor="@color/taru_text_secondary"
 				android:textSize="13sp"
 				tools:ignore="HardcodedText" />
 
@@ -157,7 +157,7 @@
 					android:layout_weight="1"
 					android:fontFamily="sans-serif"
 					android:text="@string/trending_title"
-					android:textColor="#07162B"
+					android:textColor="@color/taru_text_primary"
 					android:textSize="30sp"
 					android:textStyle="normal" />
 
@@ -172,10 +172,10 @@
 					android:paddingHorizontal="6dp"
 					android:paddingVertical="6dp"
 					android:text="@string/see_more"
-					android:textColor="#465569"
+					android:textColor="@color/taru_text_secondary"
 					android:textSize="15sp"
 					app:drawableEndCompat="@drawable/ic_taru_chevron_right"
-					app:drawableTint="#465569" />
+					app:drawableTint="@color/taru_text_secondary" />
 			</LinearLayout>
 
 			<LinearLayout
@@ -217,10 +217,10 @@
 				android:fontFamily="sans-serif"
 				android:gravity="center_vertical"
 				android:text="@string/manhua_recommendation"
-				android:textColor="#07162B"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="22sp"
 				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
-				app:drawableTint="#465569" />
+				app:drawableTint="@color/taru_text_secondary" />
 
 			<HorizontalScrollView
 				android:layout_width="match_parent"
@@ -269,10 +269,10 @@
 				android:fontFamily="sans-serif"
 				android:gravity="center_vertical"
 				android:text="@string/manga_recommendation"
-				android:textColor="#07162B"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="22sp"
 				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
-				app:drawableTint="#465569" />
+				app:drawableTint="@color/taru_text_secondary" />
 
 			<HorizontalScrollView
 				android:layout_width="match_parent"
@@ -328,10 +328,10 @@
 				android:paddingVertical="5dp"
 				android:text="@string/live_feed"
 				android:textAllCaps="true"
-				android:textColor="#2B3B50"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="10sp"
 				app:drawableStartCompat="@drawable/ic_taru_history"
-				app:drawableTint="#83A8EA" />
+				app:drawableTint="@color/taru_accent" />
 
 			<TextView
 				android:layout_width="match_parent"
@@ -339,7 +339,7 @@
 				android:layout_marginTop="22dp"
 				android:fontFamily="sans-serif"
 				android:text="@string/recent_updates"
-				android:textColor="#07162B"
+				android:textColor="@color/taru_text_primary"
 				android:textSize="30sp" />
 
 			<TextView
@@ -349,7 +349,7 @@
 				android:fontFamily="sans-serif"
 				android:lineSpacingExtra="2dp"
 				android:text="@string/recent_updates_summary"
-				android:textColor="#7A8797"
+				android:textColor="@color/taru_text_muted"
 				android:textSize="15sp" />
 
 			<FrameLayout

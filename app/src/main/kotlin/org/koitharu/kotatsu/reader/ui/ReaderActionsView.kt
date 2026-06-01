@@ -125,7 +125,7 @@ class ReaderActionsView @JvmOverloads constructor(
 		when (v.id) {
 			R.id.button_prev -> listener?.switchChapterBy(-1)
 			R.id.button_next -> listener?.switchChapterBy(1)
-			R.id.button_save -> listener?.onSavePageClick()
+			R.id.button_save -> listener?.onDownloadChapterClick()
 			R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = false)
 			R.id.button_pages_thumbs -> AppRouter.from(this)?.showChapterPagesSheet()
 			R.id.button_screen_rotation -> listener?.toggleScreenOrientation()
