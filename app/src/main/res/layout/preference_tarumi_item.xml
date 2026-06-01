@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="20dp"
+	android:layout_marginVertical="0dp"
+	android:background="@android:color/transparent"
+	android:clipToPadding="false"
+	android:gravity="center_vertical"
+	android:minHeight="64dp"
+	android:orientation="horizontal"
+	android:paddingStart="0dp"
+	android:paddingTop="11dp"
+	android:paddingEnd="0dp"
+	android:paddingBottom="11dp">
+
+	<ImageView
+		android:id="@android:id/icon"
+		android:layout_width="36dp"
+		android:layout_height="36dp"
+		android:background="@drawable/bg_taru_home_button"
+		android:padding="9dp"
+		android:tint="#5F6F83"
+		tools:ignore="ContentDescription"
+		tools:src="@drawable/ic_settings" />
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="14dp"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<TextView
+			android:id="@android:id/title"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:ellipsize="end"
+			android:fontFamily="sans-serif"
+			android:maxLines="2"
+			android:textColor="#07162B"
+			android:textSize="16sp"
+			tools:text="Reader settings" />
+
+		<TextView
+			android:id="@android:id/summary"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:ellipsize="end"
+			android:fontFamily="sans-serif"
+			android:lineSpacingExtra="2dp"
+			android:maxLines="3"
+			android:textColor="#6D7A8D"
+			android:textSize="12sp"
+			tools:text="Read mode, scale mode, switch pages" />
+	</LinearLayout>
+
+	<LinearLayout
+		android:id="@android:id/widget_frame"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="10dp"
+		android:gravity="center"
+		android:orientation="vertical" />
+</LinearLayout>

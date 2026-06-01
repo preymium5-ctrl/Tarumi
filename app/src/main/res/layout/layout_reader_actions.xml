@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	tools:layout_height="wrap_content"
+	tools:layout_width="match_parent"
+	tools:orientation="vertical"
+	tools:parentTag="android.widget.LinearLayout">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@android:color/transparent"
+		android:orientation="vertical"
+		android:paddingHorizontal="0dp"
+		android:paddingTop="0dp"
+		android:paddingBottom="4dp">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_prev"
+				style="?materialIconButtonOutlinedStyle"
+				android:layout_width="50dp"
+				android:layout_height="50dp"
+				android:alpha="0.55"
+				android:contentDescription="@string/prev_chapter"
+				android:insetLeft="0dp"
+				android:insetRight="0dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:padding="0dp"
+				app:backgroundTint="#F7FAFF"
+				app:cornerRadius="25dp"
+				app:icon="@drawable/ic_prev"
+				app:iconGravity="textStart"
+				app:iconPadding="0dp"
+				app:iconSize="25dp"
+				app:iconTint="#7F8EA1"
+				app:strokeColor="#E1EAF6"
+				app:strokeWidth="1dp" />
+
+			<LinearLayout
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:orientation="vertical"
+				android:paddingHorizontal="6dp">
+
+				<TextView
+					android:id="@+id/textView_reader_chapter"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:ellipsize="end"
+					android:fontFamily="sans-serif-medium"
+					android:gravity="center"
+					android:maxLines="1"
+					android:textColor="#07162B"
+					android:textSize="15sp"
+					tools:text="Chapter Episode 0" />
+
+				<TextView
+					android:id="@+id/textView_reader_progress"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="4dp"
+					android:fontFamily="sans-serif-medium"
+					android:gravity="center"
+					android:letterSpacing="0.13"
+					android:textColor="#7B8797"
+					android:textSize="10sp"
+					tools:text="1 OF 35 CHAPTERS" />
+			</LinearLayout>
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_next"
+				style="?materialIconButtonOutlinedStyle"
+				android:layout_width="50dp"
+				android:layout_height="50dp"
+				android:contentDescription="@string/next_chapter"
+				android:insetLeft="0dp"
+				android:insetRight="0dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:padding="0dp"
+				app:backgroundTint="#F7FAFF"
+				app:cornerRadius="25dp"
+				app:icon="@drawable/ic_next"
+				app:iconGravity="textStart"
+				app:iconPadding="0dp"
+				app:iconSize="25dp"
+				app:iconTint="#07162B"
+				app:strokeColor="#E1EAF6"
+				app:strokeWidth="1dp" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:baselineAligned="false"
+			android:orientation="horizontal">
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_save"
+				style="?materialButtonOutlinedStyle"
+				android:layout_width="0dp"
+				android:layout_height="46dp"
+				android:layout_weight="1"
+				android:contentDescription="@string/save_page"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.13"
+				android:text="@string/download"
+				android:textColor="#07162B"
+				android:textSize="12sp"
+				app:backgroundTint="#F7FAFF"
+				app:cornerRadius="23dp"
+				app:icon="@drawable/ic_download"
+				app:iconGravity="textStart"
+				app:iconPadding="8dp"
+				app:iconSize="20dp"
+				app:iconTint="#07162B"
+				app:strokeColor="#E1EAF6"
+				app:strokeWidth="1dp" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_pages_thumbs"
+				style="?materialButtonOutlinedStyle"
+				android:layout_width="0dp"
+				android:layout_height="46dp"
+				android:layout_marginStart="8dp"
+				android:layout_weight="1"
+				android:contentDescription="@string/chapters"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.13"
+				android:text="@string/chapters"
+				android:textColor="#07162B"
+				android:textSize="12sp"
+				app:backgroundTint="#F7FAFF"
+				app:cornerRadius="23dp"
+				app:icon="@drawable/ic_book_page"
+				app:iconGravity="textStart"
+				app:iconPadding="8dp"
+				app:iconSize="20dp"
+				app:iconTint="#07162B"
+				app:strokeColor="#E1EAF6"
+				app:strokeWidth="1dp" />
+		</LinearLayout>
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="4dp"
+		android:background="@android:color/transparent"
+		android:orientation="vertical"
+		android:paddingHorizontal="4dp"
+		android:paddingTop="4dp"
+		android:paddingBottom="6dp">
+
+		<com.google.android.material.slider.Slider
+			android:id="@+id/slider"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:stepSize="1.0"
+			android:valueFrom="0"
+			android:visibility="visible"
+			app:haloColor="#336A9DFF"
+			app:labelBehavior="gone"
+			app:thumbColor="#6A9DFF"
+			app:tickVisible="false"
+			app:trackColorActive="#5F8FFF"
+			app:trackColorInactive="#D6DEEA"
+			tools:value="16"
+			tools:valueTo="89" />
+
+		<TextView
+			android:id="@+id/textView_reader_layout"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="-4dp"
+			android:fontFamily="sans-serif"
+			android:gravity="center"
+			android:text="vertical layout - scroll advance"
+			android:textColor="#4F5D70"
+			android:textSize="12sp"
+			tools:ignore="HardcodedText" />
+
+		<TextView
+			android:id="@+id/textView_reader_meta"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="6dp"
+			android:fontFamily="sans-serif-medium"
+			android:gravity="center"
+			android:letterSpacing="0.13"
+			android:textColor="#7D8898"
+			android:textSize="9sp"
+			tools:text="89 PAGES LOADED - PORTRAIT FIT - WEEBCENTRAL" />
+	</LinearLayout>
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_timer"
+		style="?materialIconButtonStyle"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone"
+		app:icon="@drawable/ic_timer" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_screen_rotation"
+		style="?materialIconButtonStyle"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone"
+		app:icon="@drawable/ic_screen_rotation" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_bookmark"
+		style="?materialIconButtonStyle"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone"
+		app:icon="@drawable/ic_bookmark" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_options"
+		style="?materialIconButtonStyle"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone"
+		app:icon="@drawable/abc_ic_menu_overflow_material" />
+</merge>

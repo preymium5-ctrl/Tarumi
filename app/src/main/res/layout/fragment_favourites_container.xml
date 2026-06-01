@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@android:color/transparent"
+	android:orientation="vertical">
+
+	<LinearLayout
+		android:id="@+id/layout_library_header"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="14dp"
+		android:layout_marginTop="6dp"
+		android:background="@drawable/bg_taru_home_feature"
+		android:orientation="vertical"
+		android:paddingHorizontal="20dp"
+		android:paddingTop="22dp"
+		android:paddingBottom="18dp">
+
+		<TextView
+			android:id="@+id/textView_library_title"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:fontFamily="sans-serif-medium"
+			android:letterSpacing="0.02"
+			android:text="@string/library_title"
+			android:textColor="#07162B"
+			android:textSize="26sp" />
+
+		<TextView
+			android:id="@+id/textView_library_subtitle"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="10dp"
+			android:fontFamily="sans-serif"
+			android:lineSpacingExtra="2dp"
+			android:text="@string/library_subtitle"
+			android:textColor="#465569"
+			android:textSize="13sp" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_saved_count"
+			style="?materialButtonOutlinedStyle"
+			android:layout_width="wrap_content"
+			android:layout_height="40dp"
+			android:layout_marginTop="18dp"
+			android:clickable="false"
+			android:focusable="false"
+			android:fontFamily="sans-serif-medium"
+			android:text="@string/saved_count_initial"
+			android:textColor="#2B3B50"
+			android:textSize="13sp"
+			app:backgroundTint="#F6F9FD"
+			app:cornerRadius="20dp"
+			app:icon="@drawable/ic_bookmark"
+			app:iconTint="#6F7E93"
+			app:strokeColor="#DDE5F0"
+			tools:text="13 saved" />
+
+	</LinearLayout>
+
+	<com.google.android.material.tabs.TabLayout
+		android:id="@+id/tabs"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="14dp"
+		android:layout_marginTop="4dp"
+		android:layout_marginBottom="6dp"
+		android:background="@drawable/bg_taru_home_surface"
+		android:elevation="1dp"
+		android:paddingHorizontal="6dp"
+		android:paddingVertical="2dp"
+		app:tabGravity="start"
+		app:tabIndicatorColor="#0E1A2D"
+		app:tabIndicatorHeight="2dp"
+		app:tabMode="scrollable"
+		app:tabSelectedTextColor="#0E1A2D"
+		app:tabTextColor="#7A8494" />
+
+	<androidx.viewpager2.widget.ViewPager2
+		android:id="@+id/pager"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		tools:visibility="gone" />
+
+	<ViewStub
+		android:id="@+id/stub_empty"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:layout="@layout/item_empty_state"
+		tools:visibility="visible" />
+
+</LinearLayout>

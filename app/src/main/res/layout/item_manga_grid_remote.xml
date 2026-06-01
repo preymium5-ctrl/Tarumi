@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:clipChildren="false"
+	android:orientation="vertical"
+	android:paddingHorizontal="6dp"
+	android:paddingTop="8dp"
+	android:paddingBottom="14dp"
+	tools:layout_width="176dp">
+
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_cover"
+		android:layout_width="match_parent"
+		android:layout_height="250dp"
+		android:background="@drawable/bg_taru_cover_peek"
+		android:scaleType="centerCrop"
+		app:allowRgb565="true"
+		app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover"
+		tools:ignore="ContentDescription"
+		tools:src="@tools:sample/backgrounds/scenic[5]" />
+
+	<TextView
+		android:id="@+id/textView_title"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:elegantTextHeight="false"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:lineSpacingExtra="0dp"
+		android:maxLines="2"
+		android:paddingTop="11dp"
+		android:textColor="#0E1A2D"
+		android:textSize="15sp"
+		tools:text="Record of Ragnarok" />
+</LinearLayout>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="14dp"
+	android:layout_marginTop="8dp"
+	android:layout_marginBottom="8dp"
+	android:background="@drawable/bg_taru_home_surface"
+	android:elevation="2dp"
+	android:gravity="center_vertical"
+	android:minHeight="72dp"
+	android:orientation="horizontal"
+	android:paddingStart="20dp"
+	android:paddingEnd="10dp"
+	android:paddingVertical="10dp">
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:fontFamily="sans-serif-medium"
+			android:letterSpacing="0.16"
+			android:text="Tarumi"
+			android:textColor="#0B1B33"
+			android:textSize="25sp"
+			tools:ignore="HardcodedText" />
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:fontFamily="sans-serif-medium"
+			android:letterSpacing="0.18"
+			android:singleLine="true"
+			android:text="COMICS READER"
+			android:textColor="#7A8494"
+			android:textSize="9sp"
+			tools:ignore="HardcodedText" />
+	</LinearLayout>
+
+	<FrameLayout
+		android:layout_width="40dp"
+		android:layout_height="40dp">
+
+		<ImageButton
+			android:id="@+id/buttonNotifications"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:background="@drawable/bg_taru_home_button"
+			android:contentDescription="@string/feed"
+			android:padding="9dp"
+			android:src="@drawable/ic_notification"
+			app:tint="#1F2D44" />
+
+		<TextView
+			android:id="@+id/textViewNotificationCount"
+			android:layout_width="wrap_content"
+			android:layout_height="18dp"
+			android:layout_gravity="top|end"
+			android:background="@drawable/bg_taru_new_label"
+			android:fontFamily="sans-serif-medium"
+			android:gravity="center"
+			android:minWidth="18dp"
+			android:paddingHorizontal="5dp"
+			android:textColor="@android:color/white"
+			android:textSize="10sp"
+			android:visibility="gone"
+			tools:text="5"
+			tools:visibility="visible" />
+	</FrameLayout>
+
+	<ImageButton
+		android:id="@+id/buttonSearch"
+		android:layout_width="40dp"
+		android:layout_height="40dp"
+		android:layout_marginStart="6dp"
+		android:background="@drawable/bg_taru_home_button"
+		android:contentDescription="@string/search_manga"
+		android:padding="9dp"
+		android:src="@drawable/ic_taru_search"
+		app:tint="#1F2D44" />
+
+	<ImageButton
+		android:id="@+id/buttonHistory"
+		android:layout_width="40dp"
+		android:layout_height="40dp"
+		android:layout_marginStart="6dp"
+		android:background="@drawable/bg_taru_home_button"
+		android:contentDescription="@string/history"
+		android:padding="9dp"
+		android:src="@drawable/ic_taru_history"
+		app:tint="#1F2D44" />
+
+	<ImageButton
+		android:id="@+id/buttonMenu"
+		android:layout_width="40dp"
+		android:layout_height="40dp"
+		android:layout_marginStart="6dp"
+		android:background="@drawable/bg_taru_home_button"
+		android:contentDescription="@string/settings"
+		android:padding="9dp"
+		android:src="@drawable/ic_drawer_menu"
+		app:tint="#1F2D44" />
+</LinearLayout>

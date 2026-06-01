@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="10dp"
+	android:layout_marginVertical="7dp"
+	android:background="@drawable/bg_taru_notification_card"
+	android:clipChildren="false">
+
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_cover"
+		android:layout_width="44dp"
+		android:layout_height="44dp"
+		android:layout_marginStart="16dp"
+		android:layout_marginTop="16dp"
+		android:scaleType="centerCrop"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Medium"
+		tools:src="@tools:sample/backgrounds/scenic" />
+
+	<TextView
+		android:id="@+id/textView_title"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="14dp"
+		android:layout_marginEnd="50dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="2"
+		android:textColor="#0B1528"
+		android:textSize="17sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/imageView_cover"
+		app:layout_constraintTop_toTopOf="@+id/imageView_cover"
+		tools:text="Chapter 50 of The Legend of Enxue" />
+
+	<TextView
+		android:id="@+id/textViewNew"
+		android:layout_width="wrap_content"
+		android:layout_height="22dp"
+		android:layout_marginTop="14dp"
+		android:layout_marginEnd="12dp"
+		android:background="@drawable/bg_taru_new_label"
+		android:fontFamily="sans-serif-medium"
+		android:gravity="center"
+		android:letterSpacing="0.08"
+		android:minWidth="42dp"
+		android:paddingHorizontal="8dp"
+		android:text="@string/notification_new_label"
+		android:textColor="#FFFFFF"
+		android:textSize="10sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/textView_summary"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="16dp"
+		android:layout_marginTop="14dp"
+		android:layout_marginEnd="16dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="2"
+		android:textColor="#1B2639"
+		android:textSize="14sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/textView_title"
+		tools:text="Chapter 50 is now available!" />
+
+	<TextView
+		android:id="@+id/textViewTime"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="16dp"
+		android:layout_marginTop="10dp"
+		android:layout_marginEnd="16dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="1"
+		android:textColor="#7D8794"
+		android:textSize="12sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/textView_summary"
+		tools:text="3 hours ago" />
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="16dp"
+		android:layout_marginTop="14dp"
+		android:layout_marginEnd="16dp"
+		android:layout_marginBottom="16dp"
+		android:orientation="horizontal"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/textViewTime">
+
+		<TextView
+			android:id="@+id/textViewType"
+			android:layout_width="wrap_content"
+			android:layout_height="36dp"
+			android:background="@drawable/bg_taru_notification_button"
+			android:drawableEnd="@drawable/ic_taru_chevron_right"
+			android:drawablePadding="8dp"
+			android:fontFamily="sans-serif"
+			android:gravity="center"
+			android:paddingHorizontal="14dp"
+			android:text="@string/notification_open_manga"
+			android:textColor="#233047"
+			android:textSize="13sp" />
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="36dp"
+			android:layout_marginStart="10dp"
+			android:background="@drawable/bg_taru_notification_button"
+			android:drawableEnd="@drawable/ic_taru_chevron_right"
+			android:drawablePadding="8dp"
+			android:fontFamily="sans-serif"
+			android:gravity="center"
+			android:paddingHorizontal="14dp"
+			android:text="@string/notification_read_chapter"
+			android:textColor="#233047"
+			android:textSize="13sp" />
+	</LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

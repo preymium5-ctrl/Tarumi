@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root"
+	android:clipToPadding="false"
+	tools:context=".details.ui.DetailsActivity"
+	tools:ignore="ViewBindingType"
+	tools:viewBindingType="android.view.ViewGroup">
+
+	<ImageView
+		android:id="@+id/imageView_cover_bg"
+		android:layout_width="match_parent"
+		android:layout_height="420dp"
+		android:layout_gravity="top"
+		android:layout_marginTop="12dp"
+		android:alpha="0.12"
+		android:scaleType="centerCrop"
+		android:visibility="gone"
+		tools:ignore="ContentDescription" />
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:elevation="0dp"
+		android:fitsSystemWindows="true"
+		app:elevation="0dp"
+		app:liftOnScroll="false">
+
+		<com.google.android.material.appbar.MaterialToolbar
+			android:id="@id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
+
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+		android:id="@+id/swipeRefreshLayout"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+
+		<androidx.core.widget.NestedScrollView
+			android:id="@+id/scrollView"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:clipToPadding="false"
+			android:scrollIndicators="top"
+			android:scrollbars="vertical">
+
+			<androidx.constraintlayout.widget.ConstraintLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:paddingHorizontal="14dp"
+				android:paddingBottom="88dp">
+
+				<LinearLayout
+					android:id="@+id/detailsHeroCard"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="8dp"
+					android:background="@drawable/bg_taru_home_feature"
+					android:clipToOutline="true"
+					android:elevation="2dp"
+					android:orientation="vertical"
+					android:paddingHorizontal="24dp"
+					android:paddingTop="22dp"
+					android:paddingBottom="22dp"
+					app:layout_constraintEnd_toEndOf="parent"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toTopOf="parent">
+
+					<org.koitharu.kotatsu.image.ui.CoverImageView
+						android:id="@+id/imageView_cover"
+						android:layout_width="230dp"
+						android:layout_height="318dp"
+						android:layout_gravity="center_horizontal"
+						android:background="@drawable/bg_taru_cover_peek"
+						android:clipToOutline="true"
+						android:foreground="?selectableItemBackground"
+						android:scaleType="centerCrop"
+						app:allowRgb565="false"
+						app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover"
+						app:useExistingDrawable="true"
+						tools:background="@tools:sample/backgrounds/scenic[5]"
+						tools:ignore="ContentDescription,UnusedAttribute" />
+
+					<LinearLayout
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="28dp"
+						android:baselineAligned="false"
+						android:orientation="horizontal">
+
+						<TextView
+							android:id="@+id/textChipType"
+							android:layout_width="wrap_content"
+							android:layout_height="34dp"
+							android:background="@drawable/bg_taru_home_chip_active"
+							android:fontFamily="sans-serif-medium"
+							android:gravity="center"
+							android:letterSpacing="0.18"
+							android:paddingHorizontal="14dp"
+							android:text="MANHWA"
+							android:textColor="#7192CF"
+							android:textSize="12sp"
+							tools:ignore="HardcodedText" />
+
+						<TextView
+							android:id="@+id/textChipStatus"
+							android:layout_width="wrap_content"
+							android:layout_height="34dp"
+							android:layout_marginStart="10dp"
+							android:background="@drawable/bg_taru_home_chip"
+							android:fontFamily="sans-serif-medium"
+							android:gravity="center"
+							android:letterSpacing="0.18"
+							android:paddingHorizontal="14dp"
+							android:text="ONGOING"
+							android:textColor="#2B3B50"
+							android:textSize="12sp"
+							tools:ignore="HardcodedText" />
+
+						<TextView
+							android:id="@+id/textChipSource"
+							android:layout_width="0dp"
+							android:layout_height="34dp"
+							android:layout_marginStart="10dp"
+							android:layout_weight="1"
+							android:background="@drawable/bg_taru_home_chip"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:gravity="center"
+							android:letterSpacing="0.18"
+							android:paddingHorizontal="14dp"
+							android:singleLine="true"
+							android:textColor="#6D7C91"
+							android:textSize="12sp"
+							tools:text="WEEBCENTRAL" />
+					</LinearLayout>
+
+					<org.koitharu.kotatsu.core.ui.widgets.ChipsView
+						android:id="@+id/chips_tags"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="12dp"
+						android:visibility="gone"
+						app:chipIconVisible="false"
+						app:chipSpacingHorizontal="10dp"
+						app:chipSpacingVertical="8dp"
+						app:chipStyle="@style/Widget.Tarumi.Chip" />
+
+					<org.koitharu.kotatsu.core.ui.widgets.SelectableTextView
+						android:id="@+id/textView_title"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="26dp"
+						android:ellipsize="end"
+						android:fontFamily="sans-serif"
+						android:maxLines="@integer/details_title_lines"
+						android:textColor="#07162B"
+						android:textIsSelectable="true"
+						android:textSize="34sp"
+						android:textStyle="bold"
+						tools:text="GOSU" />
+
+					<org.koitharu.kotatsu.core.ui.widgets.SelectableTextView
+						android:id="@+id/textView_subtitle"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="18dp"
+						android:ellipsize="end"
+						android:fontFamily="sans-serif"
+						android:maxLines="2"
+						android:textColor="#3F4D61"
+						android:textIsSelectable="true"
+						android:textSize="19sp"
+						tools:text="By Unknown" />
+
+					<org.koitharu.kotatsu.core.ui.widgets.SelectableTextView
+						android:id="@+id/textView_description"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="20dp"
+						android:ellipsize="end"
+						android:fontFamily="sans-serif"
+						android:lineSpacingExtra="2dp"
+						android:maxLines="4"
+						android:textColor="#425066"
+						android:textIsSelectable="true"
+						android:textSize="17sp"
+						tools:text="No synopsis is available for this title yet." />
+
+					<LinearLayout
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="30dp"
+						android:baselineAligned="false"
+						android:orientation="horizontal">
+
+						<LinearLayout
+							android:layout_width="0dp"
+							android:layout_height="112dp"
+							android:layout_weight="1"
+							android:background="@drawable/bg_taru_stat_card"
+							android:gravity="center_vertical"
+							android:orientation="vertical"
+							android:paddingHorizontal="20dp">
+
+							<TextView
+								android:layout_width="match_parent"
+								android:layout_height="wrap_content"
+								android:fontFamily="sans-serif-medium"
+								android:letterSpacing="0.18"
+								android:text="LATEST"
+								android:textColor="#758399"
+								android:textSize="12sp"
+								tools:ignore="HardcodedText" />
+
+							<TextView
+								android:id="@+id/textViewLatest"
+								android:layout_width="match_parent"
+								android:layout_height="wrap_content"
+								android:layout_marginTop="16dp"
+								android:ellipsize="end"
+								android:fontFamily="sans-serif"
+								android:singleLine="true"
+								android:textColor="#07162B"
+								android:textSize="25sp"
+								tools:text="Unknown" />
+						</LinearLayout>
+
+						<LinearLayout
+							android:layout_width="0dp"
+							android:layout_height="112dp"
+							android:layout_marginStart="14dp"
+							android:layout_weight="1"
+							android:background="@drawable/bg_taru_stat_card"
+							android:gravity="center_vertical"
+							android:orientation="vertical"
+							android:paddingHorizontal="20dp">
+
+							<TextView
+								android:layout_width="match_parent"
+								android:layout_height="wrap_content"
+								android:fontFamily="sans-serif-medium"
+								android:letterSpacing="0.18"
+								android:text="SCANLATIONS"
+								android:textColor="#758399"
+								android:textSize="12sp"
+								tools:ignore="HardcodedText" />
+
+							<TextView
+								android:id="@+id/textViewScanlations"
+								android:layout_width="match_parent"
+								android:layout_height="wrap_content"
+								android:layout_marginTop="16dp"
+								android:ellipsize="end"
+								android:fontFamily="sans-serif"
+								android:singleLine="true"
+								android:textColor="#07162B"
+								android:textSize="25sp"
+								tools:text="N/A" />
+						</LinearLayout>
+					</LinearLayout>
+
+					<com.google.android.material.button.MaterialButton
+						android:id="@+id/buttonStartReading"
+						android:layout_width="match_parent"
+						android:layout_height="64dp"
+						android:layout_marginTop="30dp"
+						android:fontFamily="sans-serif-medium"
+						android:letterSpacing="0.16"
+						android:text="@string/start_reading"
+						android:textColor="#07162B"
+						android:textSize="14sp"
+						app:backgroundTint="#7FA7FF"
+						app:cornerRadius="32dp"
+						app:icon="@drawable/ic_play"
+						app:iconGravity="textStart"
+						app:iconPadding="12dp"
+						app:iconTint="#07162B" />
+
+					<com.google.android.material.chip.Chip
+						android:id="@+id/chip_favorite"
+						style="@style/Widget.Kotatsu.Chip.Dropdown"
+						android:layout_width="match_parent"
+						android:layout_height="62dp"
+						android:layout_marginTop="18dp"
+						android:fontFamily="sans-serif-medium"
+						android:gravity="center"
+						android:letterSpacing="0.14"
+						android:text="@string/save"
+						android:textAlignment="center"
+						android:textColor="#07162B"
+						android:textSize="16sp"
+						app:chipBackgroundColor="#F6F9FD"
+						app:chipIcon="@drawable/ic_bookmark"
+						app:chipIconTint="#07162B"
+						app:chipStrokeColor="#E2EAF5"
+						app:chipStrokeWidth="1dp" />
+
+				</LinearLayout>
+
+				<androidx.constraintlayout.widget.Barrier
+					android:id="@+id/barrier_header"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					app:barrierDirection="bottom"
+					app:constraint_referenced_ids="detailsHeroCard" />
+
+				<include layout="@layout/layout_details_table" />
+
+				<TextView
+					android:id="@+id/textView_description_title"
+					android:layout_width="1dp"
+					android:layout_height="1dp"
+					android:visibility="gone"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/detailsHeroCard" />
+
+				<Button
+					android:id="@+id/button_description_more"
+					android:layout_width="1dp"
+					android:layout_height="1dp"
+					android:visibility="gone"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/detailsHeroCard" />
+
+				<TextView
+					android:id="@+id/textView_scrobbling_title"
+					android:layout_width="1dp"
+					android:layout_height="1dp"
+					android:visibility="gone"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/detailsHeroCard" />
+
+				<Button
+					android:id="@+id/button_scrobbling_more"
+					android:layout_width="1dp"
+					android:layout_height="1dp"
+					android:visibility="gone"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/detailsHeroCard" />
+
+				<androidx.recyclerview.widget.RecyclerView
+					android:id="@+id/recyclerView_scrobbling"
+					android:layout_width="0dp"
+					android:layout_height="1dp"
+					android:visibility="gone"
+					app:layout_constraintEnd_toEndOf="parent"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/detailsHeroCard" />
+
+				<androidx.constraintlayout.widget.Group
+					android:id="@+id/group_scrobbling"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:visibility="gone"
+					app:constraint_referenced_ids="recyclerView_scrobbling,textView_scrobbling_title,button_scrobbling_more" />
+
+				<TextView
+					android:id="@+id/textView_related_title"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="28dp"
+					android:fontFamily="sans-serif-medium"
+					android:letterSpacing="0.16"
+					android:paddingHorizontal="4dp"
+					android:text="@string/related_manga"
+					android:textAllCaps="true"
+					android:textColor="#5F6F83"
+					android:textSize="13sp"
+					app:layout_constraintEnd_toStartOf="@id/button_related_more"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/detailsHeroCard" />
+
+				<Button
+					android:id="@+id/button_related_more"
+					style="@style/Widget.Kotatsu.Button.More"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/show_all"
+					android:visibility="gone"
+					app:layout_constraintBaseline_toBaselineOf="@id/textView_related_title"
+					app:layout_constraintEnd_toEndOf="parent" />
+
+				<androidx.recyclerview.widget.RecyclerView
+					android:id="@+id/recyclerView_related"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="12dp"
+					android:clipToPadding="false"
+					android:nestedScrollingEnabled="false"
+					android:orientation="horizontal"
+					android:paddingStart="2dp"
+					android:paddingEnd="2dp"
+					app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+					app:layout_constraintEnd_toEndOf="parent"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/textView_related_title"
+					tools:listitem="@layout/item_manga_grid" />
+
+				<androidx.constraintlayout.widget.Group
+					android:id="@+id/group_related"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:visibility="gone"
+					app:constraint_referenced_ids="recyclerView_related,textView_related_title,button_related_more"
+					tools:visibility="visible" />
+
+				<TextView
+					android:id="@+id/textViewChapterFeed"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="30dp"
+					android:background="@drawable/bg_taru_home_feature"
+					android:fontFamily="sans-serif-medium"
+					android:letterSpacing="0.16"
+					android:paddingStart="22dp"
+					android:paddingTop="18dp"
+					android:paddingEnd="22dp"
+					android:paddingBottom="12dp"
+					android:text="@string/chapter_feed"
+					android:textAllCaps="true"
+					android:textColor="#5F6F83"
+					android:textSize="13sp"
+					app:layout_constraintEnd_toEndOf="parent"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/recyclerView_related" />
+
+				<androidx.fragment.app.FragmentContainerView
+					android:id="@+id/container_bottom_sheet"
+					android:name="org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet"
+					android:layout_width="0dp"
+					android:layout_height="640dp"
+					android:background="@drawable/bg_taru_home_feature"
+					android:nestedScrollingEnabled="false"
+					app:layout_constraintBottom_toBottomOf="parent"
+					app:layout_constraintEnd_toEndOf="parent"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/textViewChapterFeed"
+					tools:layout="@layout/sheet_chapters_pages" />
+
+				<TextView
+					android:id="@+id/textView_nsfw_16"
+					style="@style/Widget.Kotatsu.TextView.Badge"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_margin="@dimen/card_indicator_offset"
+					android:backgroundTint="@color/nsfw_16"
+					android:text="@string/nsfw_16"
+					android:visibility="gone"
+					app:layout_constraintBottom_toBottomOf="@id/imageView_cover"
+					app:layout_constraintEnd_toEndOf="@id/imageView_cover"
+					tools:visibility="visible" />
+
+				<TextView
+					android:id="@+id/textView_nsfw_18"
+					style="@style/Widget.Kotatsu.TextView.Badge"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_margin="@dimen/card_indicator_offset"
+					android:backgroundTint="@color/nsfw_18"
+					android:text="@string/nsfw"
+					android:visibility="gone"
+					app:layout_constraintBottom_toBottomOf="@id/imageView_cover"
+					app:layout_constraintEnd_toEndOf="@id/imageView_cover" />
+
+			</androidx.constraintlayout.widget.ConstraintLayout>
+
+		</androidx.core.widget.NestedScrollView>
+	</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+	<View
+		android:id="@+id/navbarDim"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom"
+		android:background="?colorSurfaceContainerLow"
+		android:elevation="9dp"
+		android:visibility="gone"
+		tools:layout_height="10dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

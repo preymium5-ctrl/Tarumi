@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="#F8FBFF">
+
+	<androidx.fragment.app.FragmentContainerView
+		android:id="@+id/container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		tools:background="@color/grey" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_timer"
+		style="?materialIconButtonOutlinedStyle"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom|end"
+		android:layout_margin="16dp"
+		app:backgroundTint="@color/bg_floating_button"
+		app:icon="@drawable/ic_timelapse"
+		app:layout_insetEdge="bottom" />
+
+	<org.koitharu.kotatsu.core.ui.widgets.ZoomControl
+		android:id="@+id/zoomControl"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom|end"
+		android:layout_margin="16dp"
+		android:orientation="vertical"
+		android:spacing="2dp"
+		android:visibility="gone"
+		app:layout_dodgeInsetEdges="bottom"
+		tools:visibility="visible" />
+
+	<org.koitharu.kotatsu.reader.ui.ReaderInfoBarView
+		android:id="@+id/infoBar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom"
+		android:layout_marginHorizontal="16dp"
+		android:layout_marginBottom="10dp"
+		android:background="@android:color/transparent"
+		android:minHeight="34dp"
+		android:paddingHorizontal="12dp"
+		android:paddingVertical="8dp"
+		android:textSize="12sp"
+		android:visibility="gone"
+		tools:visibility="visible" />
+
+	<org.koitharu.kotatsu.reader.ui.ScrollTimerControlView
+		android:id="@+id/timerControl"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom"
+		android:layout_margin="@dimen/screen_padding"
+		android:background="@drawable/bg_card"
+		android:elevation="@dimen/m3_card_elevated_elevation"
+		android:visibility="gone"
+		app:layout_dodgeInsetEdges="bottom" />
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar_top"
+		android:layout_width="match_parent"
+		android:layout_height="156dp"
+		android:background="#F8FBFF"
+		android:elevation="0dp"
+		app:elevation="0dp"
+		app:liftOnScroll="false">
+
+		<com.google.android.material.appbar.MaterialToolbar
+			android:id="@id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:background="#F8FBFF"
+			android:elevation="0dp"
+			android:minHeight="156dp"
+			app:elevation="0dp"
+			app:navigationIconTint="@android:color/transparent"
+			app:popupTheme="@style/ThemeOverlay.Kotatsu"
+			app:subtitleTextColor="#7B8797"
+			app:subtitleTextAppearance="@style/TextAppearance.Tarumi.Reader.Subtitle"
+			app:subtitleCentered="false"
+			app:titleCentered="false"
+			app:titleMarginStart="88dp"
+			app:titleMarginEnd="86dp"
+			app:titleTextAppearance="@style/TextAppearance.Tarumi.Reader.Title"
+			app:titleTextColor="#07162B"
+			tools:menu="@menu/opt_reader" />
+
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_reader_top_back"
+		style="?materialIconButtonOutlinedStyle"
+		android:layout_width="58dp"
+		android:layout_height="58dp"
+		android:layout_gravity="top|start"
+		android:layout_marginStart="16dp"
+		android:layout_marginTop="40dp"
+		android:contentDescription="@string/close"
+		app:backgroundTint="#F7FAFF"
+		app:cornerRadius="29dp"
+		app:icon="@drawable/ic_reader_back"
+		app:iconGravity="textStart"
+		app:iconSize="30dp"
+		app:iconTint="#07162B"
+		app:strokeColor="#E1EAF6"
+		app:strokeWidth="1dp" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_reader_top_settings"
+		style="?materialIconButtonOutlinedStyle"
+		android:layout_width="52dp"
+		android:layout_height="52dp"
+		android:layout_gravity="top|end"
+		android:layout_marginTop="40dp"
+		android:layout_marginEnd="16dp"
+		app:backgroundTint="#F7FAFF"
+		app:cornerRadius="26dp"
+		app:icon="@drawable/ic_settings"
+		app:iconGravity="textStart"
+		app:iconSize="29dp"
+		app:iconTint="#07162B"
+		app:strokeColor="#E1EAF6"
+		app:strokeWidth="1dp" />
+
+	<com.google.android.material.dockedtoolbar.DockedToolbarLayout
+		android:id="@+id/toolbar_docked"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom"
+		android:layout_marginHorizontal="6dp"
+		android:layout_marginBottom="8dp"
+		android:background="@drawable/bg_taru_home_surface"
+		android:elevation="4dp"
+		android:paddingHorizontal="8dp"
+		android:paddingTop="12dp"
+		android:paddingBottom="12dp"
+		android:fitsSystemWindows="false"
+		app:cardBackgroundColor="@android:color/transparent"
+		app:cardCornerRadius="24dp"
+		app:layout_insetEdge="bottom">
+
+		<org.koitharu.kotatsu.reader.ui.ReaderActionsView
+			android:id="@+id/actionsView"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:minHeight="?actionBarSize"
+			android:padding="0dp" />
+
+	</com.google.android.material.dockedtoolbar.DockedToolbarLayout>
+
+	<org.koitharu.kotatsu.reader.ui.ReaderToastView
+		android:id="@+id/toastView"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom|center_horizontal"
+		android:layout_marginBottom="20dp"
+		android:background="@drawable/bg_reader_indicator"
+		android:drawablePadding="6dp"
+		android:elevation="1000dp"
+		android:singleLine="true"
+		android:textAppearance="?attr/textAppearanceBodySmall"
+		android:theme="@style/ThemeOverlay.Material3.Dark"
+		android:visibility="gone"
+		app:layout_dodgeInsetEdges="bottom"
+		tools:text="@string/loading_"
+		tools:visibility="visible" />
+
+	<LinearLayout
+		android:id="@+id/layout_loading"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center"
+		android:background="@drawable/bg_taru_reader_loading"
+		android:gravity="center_horizontal"
+		android:orientation="vertical"
+		android:outlineProvider="background"
+		android:padding="@dimen/screen_padding">
+
+		<ImageView
+			android:layout_width="96dp"
+			android:layout_height="96dp"
+			android:layout_marginBottom="10dp"
+			android:contentDescription="@string/app_name"
+			android:src="@drawable/tarumi_icon_512" />
+
+		<com.google.android.material.progressindicator.CircularProgressIndicator
+			android:id="@+id/progressBar"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:indeterminate="true" />
+
+		<TextView
+			android:id="@+id/textView_loading"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="10dp"
+			android:text="@string/loading_"
+			android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+	</LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
