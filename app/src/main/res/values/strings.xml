@@ -169,6 +169,12 @@
     <string name="about">About</string>
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
+    <string name="support_me" translatable="false">Support me</string>
+    <string name="support_tarumi_title" translatable="false">Support Tarumi</string>
+    <string name="support_tarumi_message" translatable="false">Tarumi is built with care for a cleaner comics reading experience. Your support helps keep the app improving with better design, smoother reading, and more stable updates.</string>
+    <string name="open_kofi" translatable="false">Open Ko-fi</string>
+    <string name="url_discord_invite" translatable="false">https://discord.gg/hVr5KNQRnk</string>
+    <string name="url_kofi" translatable="false">https://ko-fi.com/taruru8</string>
     <string name="no_update_available">No updates available</string>
     <string name="right_to_left">Right-to-left</string>
     <string name="create_category">New category</string>
