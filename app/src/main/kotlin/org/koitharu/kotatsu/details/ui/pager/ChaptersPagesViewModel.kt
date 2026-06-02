@@ -134,7 +134,8 @@ abstract class ChaptersPagesViewModel(
 		readingState.map { it?.chapterId ?: 0L }.distinctUntilChanged(),
 		currentHistory,
 	) { currentChapterId, history ->
-		currentChapterId to (history?.takeIf { it.chapterId == currentChapterId }?.percent ?: -1f)
+		val chapterId = currentChapterId.takeIf { it != 0L } ?: history?.chapterId ?: 0L
+		chapterId to (history?.takeIf { it.chapterId == chapterId }?.percent ?: -1f)
 	}
 
 	val chapters = combine(
@@ -207,6 +208,15 @@ abstract class ChaptersPagesViewModel(
 	fun getMangaOrNull(): Manga? = mangaDetails.value?.toManga()
 
 	fun requireManga() = mangaDetails.requireValue().toManga()
+
+	fun getReaderStateForChapter(chapterId: Long): ReaderState {
+		val history = currentHistory.value
+		return if (history != null && history.chapterId == chapterId) {
+			ReaderState(history)
+		} else {
+			ReaderState(chapterId, 0, 0)
+		}
+	}
 
 	fun markChapterAsCurrent(chapterId: Long) {
 		launchJob(Dispatchers.Default) {
