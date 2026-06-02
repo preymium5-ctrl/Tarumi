@@ -6,6 +6,7 @@ import android.view.View
 import androidx.annotation.StringRes
 import androidx.fragment.app.viewModels
 import androidx.preference.Preference
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
@@ -53,6 +54,16 @@ class AboutSettingsFragment : BasePreferenceFragment(R.string.about) {
 				true
 			}
 
+			AppSettings.KEY_LINK_DISCORD -> {
+				openLink(R.string.url_discord_invite, preference.title)
+				true
+			}
+
+			AppSettings.KEY_LINK_KOFI -> {
+				showSupportDialog()
+				true
+			}
+
 			AppSettings.KEY_LINK_GITHUB -> {
 				openLink(R.string.url_github, preference.title)
 				true
@@ -83,5 +94,20 @@ class AboutSettingsFragment : BasePreferenceFragment(R.string.about) {
 	} else {
 		Snackbar.make(listView, R.string.operation_not_supported, Snackbar.LENGTH_SHORT).show()
 		false
+	}
+
+	private fun showSupportDialog() {
+		val view = layoutInflater.inflate(R.layout.dialog_support_tarumi, null)
+		val dialog = MaterialAlertDialogBuilder(requireContext())
+			.setView(view)
+			.create()
+		view.findViewById<View>(R.id.buttonClose).setOnClickListener {
+			dialog.dismiss()
+		}
+		view.findViewById<View>(R.id.buttonSupport).setOnClickListener {
+			dialog.dismiss()
+			openLink(R.string.url_kofi, getString(R.string.support_me))
+		}
+		dialog.show()
 	}
 }
