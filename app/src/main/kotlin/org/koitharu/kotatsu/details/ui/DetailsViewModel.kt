@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
-import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -241,10 +240,7 @@ class DetailsViewModel @Inject constructor(
 		detailsLoadUseCase.invoke(intent, force)
 			.onEachWhile {
 				if (it.allChapters.isNotEmpty()) {
-					val manga = it.toManga()
-					// find default branch
-					val hist = historyRepository.getOne(manga)
-					selectedBranch.value = manga.getPreferredBranch(hist)
+					selectedBranch.value = null
 					true
 				} else {
 					false
