@@ -89,20 +89,22 @@ class HomeViewModel @Inject constructor(
 				isFeaturedLoading = false
 			}
 		}
-		if ((cachedRecentUpdates.isEmpty() || isHomeCacheExpired) && !isRecentUpdatesLoading) {
+		if (!isRecentUpdatesLoading) {
 			launchJob(Dispatchers.Default) {
 				isRecentUpdatesLoading = true
-				_recentUpdatesLoading.value = true
+				_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty()
 				try {
 					val updates = runCatchingCancellable {
 						loadRecentUpdates(RECENT_PAGE_SIZE * RECENT_PAGE_COUNT)
 					}.onFailure {
 						it.printStackTraceDebug()
 					}.getOrDefault(cachedRecentUpdates)
-					cachedRecentUpdates = updates
-					cachedHomeFeedAt = System.currentTimeMillis()
-					_recentUpdates.value = updates
-					saveHomeFeedCache()
+					if (updates.isNotEmpty()) {
+						cachedRecentUpdates = updates
+						cachedHomeFeedAt = System.currentTimeMillis()
+						_recentUpdates.value = updates
+						saveHomeFeedCache()
+					}
 				} finally {
 					_recentUpdatesLoading.value = false
 					isRecentUpdatesLoading = false
@@ -412,8 +414,8 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_PAGE_SIZE = 10
 		const val RECENT_PAGE_COUNT = 6
 		const val RECENT_CHAPTERS_PER_TITLE = 3
-		const val RECENT_CANDIDATES_PER_SOURCE = 24
-		const val RECENT_SOURCE_PAGE_ATTEMPTS = 3
+		const val RECENT_CANDIDATES_PER_SOURCE = 60
+		const val RECENT_SOURCE_PAGE_ATTEMPTS = 8
 		const val RECENT_SOURCE_TIMEOUT_MS = 7_000L
 		const val RECENT_PAGE_TIMEOUT_MS = 3_000L
 		const val RECENT_DETAILS_TIMEOUT_MS = 2_000L
@@ -433,6 +435,8 @@ class HomeViewModel @Inject constructor(
 
 		val RECENT_UPDATE_SOURCES = listOf(
 			MangaParserSource.FLAMECOMICS,
+			MangaParserSource.AQUAMANGA,
+			MangaParserSource.MANGAFIRE_EN,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(

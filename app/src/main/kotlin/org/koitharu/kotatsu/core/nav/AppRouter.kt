@@ -101,6 +101,8 @@ import org.koitharu.kotatsu.settings.override.OverrideConfigActivity
 import org.koitharu.kotatsu.settings.reader.ReaderTapGridConfigActivity
 import org.koitharu.kotatsu.settings.sources.auth.SourceAuthActivity
 import org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity
+import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserDetailsActivity
+import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeActivity
 import org.koitharu.kotatsu.settings.storage.MangaDirectorySelectDialog
 import org.koitharu.kotatsu.settings.storage.directories.MangaDirectoriesActivity
 import org.koitharu.kotatsu.settings.tracker.categories.TrackerCategoriesConfigSheet
@@ -207,6 +209,15 @@ class AppRouter private constructor(
     }
 
     fun openSourcesCatalog() = startActivity(SourcesCatalogActivity::class.java)
+
+    fun openNsfwBrowserMode() = startActivity(NsfwBrowserModeActivity::class.java)
+
+    fun openNsfwBrowserDetails(manga: Manga) {
+        startActivity(
+            Intent(contextOrNull() ?: return, NsfwBrowserDetailsActivity::class.java)
+                .putExtra(KEY_MANGA, ParcelableManga(manga)),
+        )
+    }
 
     fun openDownloads() = startActivity(DownloadsActivity::class.java)
 

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@android:color/white"
+	tools:context=".settings.sources.catalog.NsfwBrowserModeActivity">
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@android:color/white"
+		android:fitsSystemWindows="true"
+		app:liftOnScroll="false">
+
+		<com.google.android.material.appbar.MaterialToolbar
+			android:id="@id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="?attr/actionBarSize"
+			android:visibility="gone"
+			app:title="@string/browser_mode" />
+
+		<LinearLayout
+			android:id="@+id/layout_controls"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:background="@android:color/white"
+			android:orientation="vertical"
+			android:paddingHorizontal="18dp"
+			android:paddingBottom="8dp">
+
+			<FrameLayout
+				android:layout_width="match_parent"
+				android:layout_height="48dp"
+				android:background="@drawable/bg_nsfw_browser_header"
+				android:paddingHorizontal="12dp"
+				android:paddingVertical="5dp">
+
+				<TextView
+					android:id="@+id/text_browser_heading"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="start|top"
+					android:fontFamily="sans-serif-condensed"
+					android:shadowColor="#99390B13"
+					android:shadowDx="1"
+					android:shadowDy="1"
+					android:shadowRadius="1.5"
+					android:text="@string/browser_recently_added"
+					android:textColor="@android:color/white"
+					android:textSize="21sp"
+					android:textStyle="bold" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_source"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="wrap_content"
+					android:layout_height="34dp"
+					android:layout_gravity="end|bottom"
+					android:backgroundTint="@android:color/white"
+					android:ellipsize="end"
+					android:insetTop="0dp"
+					android:insetBottom="0dp"
+					android:maxWidth="230dp"
+					android:maxLines="1"
+					android:minWidth="0dp"
+					android:paddingHorizontal="8dp"
+					android:text="@string/select_source"
+					android:textColor="#20242D"
+					android:textSize="13sp"
+					app:icon="@drawable/ic_arrow_down"
+					app:iconGravity="textEnd"
+					app:iconPadding="3dp"
+					app:iconSize="18dp"
+					app:iconTint="#20242D"
+					app:strokeColor="#5E636F" />
+
+			</FrameLayout>
+
+
+			<LinearLayout
+				android:id="@+id/layout_pages"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="14dp"
+				android:gravity="center"
+				android:orientation="horizontal">
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_prev"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="40dp"
+					android:layout_height="36dp"
+					android:backgroundTint="@android:color/white"
+					android:contentDescription="@string/prev_page"
+					android:insetTop="0dp"
+					android:insetBottom="0dp"
+					android:textColor="#20242D"
+					app:icon="@drawable/ic_prev"
+					app:iconGravity="textStart"
+					app:iconSize="17dp"
+					app:iconTint="#20242D"
+					app:strokeColor="#6B7280" />
+
+				<TextView
+					android:id="@+id/text_page"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginHorizontal="16dp"
+					android:fontFamily="sans-serif"
+					android:gravity="center"
+					android:letterSpacing="0.08"
+					android:textColor="#20242D"
+					android:textSize="21sp"
+					tools:text="1  2  3 ... 12" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_next"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="40dp"
+					android:layout_height="36dp"
+					android:backgroundTint="@android:color/white"
+					android:contentDescription="@string/next_page"
+					android:insetTop="0dp"
+					android:insetBottom="0dp"
+					android:textColor="#20242D"
+					app:icon="@drawable/ic_next"
+					app:iconGravity="textStart"
+					app:iconSize="17dp"
+					app:iconTint="#20242D"
+					app:strokeColor="#6B7280" />
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<FrameLayout
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="@android:color/white"
+		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/recyclerView"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:background="@android:color/white"
+			android:clipToPadding="false"
+			android:paddingHorizontal="18dp"
+			android:paddingTop="10dp"
+			android:paddingBottom="96dp"
+			tools:listitem="@layout/item_nsfw_browser_entry" />
+
+		<com.google.android.material.progressindicator.CircularProgressIndicator
+			android:id="@+id/progress"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:indeterminate="true"
+			android:visibility="gone"
+			tools:visibility="visible" />
+
+		<TextView
+			android:id="@+id/text_empty"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:gravity="center"
+			android:padding="32dp"
+			android:text="@string/no_browser_comics"
+			android:textAppearance="?attr/textAppearanceBodyLarge"
+			android:textColor="@color/taru_text_secondary"
+			android:visibility="gone"
+			tools:visibility="visible" />
+
+	</FrameLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

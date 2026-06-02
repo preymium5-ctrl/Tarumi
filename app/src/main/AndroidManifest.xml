@@ -281,6 +281,12 @@
 			android:name="org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity"
 			android:label="@string/sources_catalog" />
 		<activity
+			android:name="org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeActivity"
+			android:label="@string/browser_mode" />
+		<activity
+			android:name="org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserDetailsActivity"
+			android:label="@string/browser_mode" />
+		<activity
 			android:name="org.koitharu.kotatsu.scrobbling.kitsu.ui.KitsuAuthActivity"
 			android:exported="false"
 			android:label="@string/kitsu"

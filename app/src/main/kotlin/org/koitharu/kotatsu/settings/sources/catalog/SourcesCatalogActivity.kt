@@ -57,6 +57,9 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			adapter = sourcesAdapter
 		}
 		viewBinding.chipsFilter.onChipClickListener = this
+		viewBinding.buttonBrowserMode.setOnClickListener {
+			router.openNsfwBrowserMode()
+		}
 		FadingAppbarMediator(viewBinding.appbar, viewBinding.toolbar).bind()
 		viewModel.content.observe(this, sourcesAdapter)
 		viewModel.onActionDone.observeEvent(
