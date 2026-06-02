@@ -41,7 +41,6 @@ import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.reader.ui.ReaderNavigationCallback
-import org.koitharu.kotatsu.reader.ui.ReaderState
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
@@ -55,6 +54,8 @@ class ChaptersFragment :
 
 	private var chaptersAdapter: ChaptersAdapter? = null
 	private var selectionController: ListSelectionController? = null
+	private var isFirstReverseEmission = true
+	private var shouldScrollChaptersToTop = false
 
 	override val recyclerView: RecyclerView?
 		get() = viewBinding?.recyclerViewChapters
@@ -98,7 +99,11 @@ class ChaptersFragment :
 			.observe(viewLifecycleOwner, this::onChaptersChanged)
 		viewModel.quickFilter.observe(viewLifecycleOwner, this::onFilterChanged)
 		viewModel.isChaptersReversed.observe(viewLifecycleOwner) {
-			binding.recyclerViewChapters.scrollToPosition(0)
+			if (isFirstReverseEmission) {
+				isFirstReverseEmission = false
+			} else {
+				shouldScrollChaptersToTop = true
+			}
 		}
 		viewModel.emptyReason.observe(viewLifecycleOwner) {
 			binding.textViewHolder.setTextAndVisible(it?.msgResId ?: 0)
@@ -122,7 +127,7 @@ class ChaptersFragment :
 			router.openReader(
 				ReaderIntent.Builder(view.context)
 					.manga(viewModel.getMangaOrNull() ?: return)
-					.state(ReaderState(item.chapter.id, 0, 0))
+					.state(viewModel.getReaderStateForChapter(item.chapter.id))
 					.build(),
 			)
 		}
@@ -162,6 +167,14 @@ class ChaptersFragment :
 
 	private fun onChaptersChanged(list: List<ListModel>) {
 		val adapter = chaptersAdapter ?: return
+		if (shouldScrollChaptersToTop) {
+			shouldScrollChaptersToTop = false
+			adapter.items = list
+			requireViewBinding().recyclerViewChapters.post {
+				viewBinding?.recyclerViewChapters?.scrollToPosition(0)
+			}
+			return
+		}
 		if (adapter.itemCount == 0) {
 			val position = list.indexOfFirst { it is ChapterListItem && it.isCurrent } - 1
 			if (position > 0) {
