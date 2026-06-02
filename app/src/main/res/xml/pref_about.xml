@@ -8,4 +8,18 @@
 		android:persistent="false"
 		android:summary="@string/check_for_updates" />
 
+	<Preference
+		android:icon="@drawable/ic_discord"
+		android:key="about_discord"
+		android:persistent="false"
+		android:summary="@string/url_discord_invite"
+		android:title="@string/discord" />
+
+	<Preference
+		android:icon="@drawable/ic_kofi"
+		android:key="about_kofi"
+		android:persistent="false"
+		android:summary="@string/url_kofi"
+		android:title="@string/support_me" />
+
 </PreferenceScreen>
