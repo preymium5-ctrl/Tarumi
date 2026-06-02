@@ -64,6 +64,16 @@ class AboutSettingsFragment : BasePreferenceFragment(R.string.about) {
 				true
 			}
 
+			AppSettings.KEY_LINK_DISCORD -> {
+				openLink(R.string.url_discord_invite, preference.title)
+				true
+			}
+
+			AppSettings.KEY_LINK_KOFI -> {
+				showSupportDialog()
+				true
+			}
+
 			AppSettings.KEY_LINK_GITHUB -> {
 				openLink(R.string.url_github, preference.title)
 				true
