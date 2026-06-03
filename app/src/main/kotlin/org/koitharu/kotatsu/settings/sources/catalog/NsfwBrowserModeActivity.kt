@@ -13,6 +13,7 @@ import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.AppBarLayout
@@ -61,6 +62,9 @@ class NsfwBrowserModeActivity :
 		viewBinding.buttonSource.setOnClickListener { showSourceMenu(it) }
 		viewBinding.buttonPrev.setOnClickListener { viewModel.previousPage() }
 		viewBinding.buttonNext.setOnClickListener { viewModel.nextPage() }
+		viewBinding.editTextSearch.doAfterTextChanged { text ->
+			viewModel.setQuery(text?.toString().orEmpty())
+		}
 
 		viewModel.state.observe(this, this::render)
 	}
@@ -88,8 +92,13 @@ class NsfwBrowserModeActivity :
 		val canNext = state.hasNext && !state.isLoading
 		val pageWindow = buildPageWindow(state)
 		viewBinding.buttonSource.text = selected?.getTitle(this) ?: getString(R.string.select_source)
+		if (viewBinding.editTextSearch.text?.toString() != state.query) {
+			viewBinding.editTextSearch.setText(state.query)
+			viewBinding.editTextSearch.setSelection(state.query.length)
+		}
 		adapter.submitItems(state.items, state.page, pageWindow, canPrevious, canNext)
-		viewBinding.progress.isVisible = state.isLoading && state.items.isEmpty()
+		viewBinding.progress.isVisible = state.isLoading
+		viewBinding.recyclerView.alpha = if (state.isLoading && state.items.isNotEmpty()) 0.45f else 1f
 		viewBinding.textEmpty.isVisible = !state.isLoading && state.items.isEmpty()
 		viewBinding.textEmpty.text = when {
 			state.sources.isEmpty() -> getString(R.string.no_browser_sources)

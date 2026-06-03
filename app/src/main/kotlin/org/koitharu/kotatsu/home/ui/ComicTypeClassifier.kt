@@ -18,8 +18,13 @@ fun Manga.detectComicType(): ComicType {
 			add(tag.title)
 			add(tag.key)
 		}
-		add(source.name)
+		if (source != MangaParserSource.WEEBCENTRAL) {
+			add(source.name)
+		}
 		add(title)
+		for (chapter in chapters.orEmpty()) {
+			chapter.title?.let(::add)
+		}
 		description?.let(::add)
 	}.map { it.lowercase() }
 
@@ -30,7 +35,6 @@ fun Manga.detectComicType(): ComicType {
 		it.contains("manhwa") ||
 			it.contains("webtoon") ||
 			it.contains("asura") ||
-			it.contains("weebcentral") ||
 			it.contains("demonicscans") ||
 			it.contains("stonescape")
 	}
@@ -49,9 +53,10 @@ fun Manga.detectComicType(): ComicType {
 		hasManhuaLabel -> ComicType.MANHUA
 		hasManhwaLabel -> ComicType.MANHWA
 		hasMangaLabel -> ComicType.MANGA
-		sourceType == ContentType.MANHUA -> ComicType.MANHUA
-		sourceType == ContentType.MANHWA -> ComicType.MANHWA
-		sourceType == ContentType.MANGA || sourceType == ContentType.ONE_SHOT || sourceType == ContentType.DOUJINSHI -> ComicType.MANGA
+		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHUA -> ComicType.MANHUA
+		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHWA -> ComicType.MANHWA
+		source != MangaParserSource.WEEBCENTRAL &&
+			(sourceType == ContentType.MANGA || sourceType == ContentType.ONE_SHOT || sourceType == ContentType.DOUJINSHI) -> ComicType.MANGA
 		else -> ComicType.COMIC
 	}
 }

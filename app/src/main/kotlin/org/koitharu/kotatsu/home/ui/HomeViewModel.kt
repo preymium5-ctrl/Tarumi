@@ -7,22 +7,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.model.distinctById
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.parsers.model.MangaState
 import org.koitharu.kotatsu.parsers.model.SortOrder
+import org.koitharu.kotatsu.parsers.util.await
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
 	@ApplicationContext context: Context,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	@BaseHttpClient private val okHttpClient: OkHttpClient,
 ) : BaseViewModel() {
 
 	private val homeFeedCache = HomeFeedCache(context)
@@ -68,6 +78,8 @@ class HomeViewModel @Inject constructor(
 		val recommendationPeriod = currentRecommendationPeriod()
 		val isHomeCacheExpired = cachedHomeFeedAt <= 0L ||
 			System.currentTimeMillis() - cachedHomeFeedAt >= HOME_CACHE_TTL_MS
+		val isRecentUpdatesExpired = cachedRecentUpdatesAt <= 0L ||
+			System.currentTimeMillis() - cachedRecentUpdatesAt >= RECENT_CACHE_TTL_MS
 		val areRecommendationsExpired = cachedRecommendationPeriod != recommendationPeriod
 		if (
 			(cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty() || cachedFeaturedPeriod != featuredPeriod || isHomeCacheExpired) &&
@@ -89,7 +101,7 @@ class HomeViewModel @Inject constructor(
 				isFeaturedLoading = false
 			}
 		}
-		if (!isRecentUpdatesLoading) {
+		if ((cachedRecentUpdates.isEmpty() || isRecentUpdatesExpired) && !isRecentUpdatesLoading) {
 			launchJob(Dispatchers.Default) {
 				isRecentUpdatesLoading = true
 				_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty()
@@ -100,9 +112,11 @@ class HomeViewModel @Inject constructor(
 						it.printStackTraceDebug()
 					}.getOrDefault(cachedRecentUpdates)
 					if (updates.isNotEmpty()) {
-						cachedRecentUpdates = updates
-						cachedHomeFeedAt = System.currentTimeMillis()
-						_recentUpdates.value = updates
+						val rankedUpdates = mergeRecentUpdates(updates, cachedRecentUpdates)
+						cachedRecentUpdates = rankedUpdates
+						cachedRecentUpdatesAt = System.currentTimeMillis()
+						_recentUpdates.value = rankedUpdates
+						setRecentUpdatesPage(_recentUpdatesPage.value)
 						saveHomeFeedCache()
 					}
 				} finally {
@@ -251,20 +265,158 @@ class HomeViewModel @Inject constructor(
 	}
 
 	private suspend fun loadRecentUpdates(limit: Int): List<RecentUpdateGroup> {
+		return loadRecentUpdatesFromParser(limit)
+	}
+
+	private suspend fun loadWeebCentralLatestUpdates(limit: Int): List<RecentUpdateGroup> {
+		val feedItems = withTimeoutOrNull(RECENT_SOURCE_TIMEOUT_MS) {
+			fetchWeebCentralLatestFeed(limit)
+		}.orEmpty()
+		if (feedItems.isEmpty()) {
+			return emptyList()
+		}
+		val groups = ArrayList<RecentUpdateGroup>(feedItems.size)
+		val seenSeries = HashSet<String>(feedItems.size)
+		for (item in feedItems) {
+			if (!seenSeries.add(item.seriesUrl)) {
+				continue
+			}
+			val fallbackManga = item.toManga()
+			val fallbackChapter = item.toChapter()
+			val chapters = listOf(fallbackChapter)
+			groups += RecentUpdateGroup(
+				manga = fallbackManga.copy(chapters = chapters),
+				chapters = chapters,
+				sourceTitle = MangaParserSource.WEEBCENTRAL.title,
+				sortDate = item.uploadDate,
+			)
+			if (groups.size >= limit) {
+				break
+			}
+		}
+		return groups
+	}
+
+	private suspend fun fetchWeebCentralLatestFeed(limit: Int): List<WeebCentralFeedItem> {
+		val request = Request.Builder()
+			.get()
+			.url(WEEBCENTRAL_HOME_URL)
+			.tag(org.koitharu.kotatsu.parsers.model.MangaSource::class.java, MangaParserSource.WEEBCENTRAL)
+			.build()
+		val html = okHttpClient.newCall(request).await().use { response ->
+			response.body?.string().orEmpty()
+		}
+		val document = Jsoup.parse(html, WEEBCENTRAL_HOME_URL)
+		val latestSection = document.select("h2").firstOrNull { heading ->
+			heading.text().contains("Latest Updates", ignoreCase = true)
+		}?.parent() ?: return emptyList()
+		return latestSection.select("article")
+			.mapNotNull { it.toWeebCentralFeedItem() }
+			.take(limit)
+	}
+
+	private fun Element.toWeebCentralFeedItem(): WeebCentralFeedItem? {
+		val seriesLink = selectFirst("a[href*=/series/]") ?: return null
+		val chapterLink = selectFirst("a[href*=/chapters/]")
+		val title = attr("data-tip")
+			.ifBlank { selectFirst(".font-semibold")?.text().orEmpty() }
+			.trim()
+		if (title.isEmpty()) {
+			return null
+		}
+		val seriesUrl = seriesLink.absUrl("href")
+		if (seriesUrl.isEmpty()) {
+			return null
+		}
+		val chapterUrl = chapterLink?.absUrl("href")?.takeIf { it.isNotEmpty() } ?: seriesUrl
+		val coverUrl = selectFirst("source[srcset]")?.attr("srcset")?.substringBefore(' ')?.trim()
+			?.let(::resolveWeebCentralUrl)
+			?.takeIf { it.isNotEmpty() }
+			?: selectFirst("img[src]")?.absUrl("src")?.takeIf { it.isNotEmpty() }
+		val chapterTitle = chapterLink?.selectFirst("span")?.text()?.trim()?.takeIf { it.isNotEmpty() }
+			?: select("span").lastOrNull()?.text()?.trim()?.takeIf { it.isNotEmpty() }
+			?: "Chapter"
+		val uploadDate = selectFirst("time[datetime]")?.attr("datetime")
+			?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+			?: System.currentTimeMillis()
+		return WeebCentralFeedItem(
+			title = title,
+			seriesUrl = seriesUrl,
+			chapterUrl = chapterUrl,
+			coverUrl = coverUrl,
+			chapterTitle = chapterTitle,
+			uploadDate = uploadDate,
+		)
+	}
+
+	private fun resolveWeebCentralUrl(url: String): String {
+		return when {
+			url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true) -> url
+			url.startsWith("/") -> WEEBCENTRAL_HOME_URL.trimEnd('/') + url
+			else -> WEEBCENTRAL_HOME_URL + url
+		}
+	}
+
+	private fun WeebCentralFeedItem.toManga(): Manga {
+		return Manga(
+			id = stableId(seriesUrl),
+			title = title,
+			altTitles = emptySet(),
+			url = seriesUrl,
+			publicUrl = seriesUrl,
+			rating = 0f,
+			contentRating = ContentRating.SAFE,
+			coverUrl = coverUrl,
+			tags = emptySet(),
+			state = MangaState.ONGOING,
+			authors = emptySet(),
+			largeCoverUrl = coverUrl,
+			description = null,
+			chapters = listOf(toChapter()),
+			source = MangaParserSource.WEEBCENTRAL,
+		)
+	}
+
+	private fun WeebCentralFeedItem.toChapter(): MangaChapter {
+		return MangaChapter(
+			id = stableId(chapterUrl),
+			title = chapterTitle,
+			number = chapterTitle.toChapterNumber(),
+			volume = 0,
+			url = chapterUrl,
+			scanlator = MangaParserSource.WEEBCENTRAL.title,
+			uploadDate = uploadDate,
+			branch = null,
+			source = MangaParserSource.WEEBCENTRAL,
+		)
+	}
+
+	private fun stableId(value: String): Long {
+		return value.hashCode().toLong() and 0xffffffffL
+	}
+
+	private fun String.toChapterNumber(): Float {
+		return Regex("""(?:Chapter|Episode|Rating)\s+([0-9]+(?:\.[0-9]+)?)""", RegexOption.IGNORE_CASE)
+			.find(this)
+			?.groupValues
+			?.getOrNull(1)
+			?.toFloatOrNull()
+			?: 0f
+	}
+
+	private suspend fun loadRecentUpdatesFromParser(limit: Int): List<RecentUpdateGroup> {
 		val groups = ArrayList<RecentUpdateGroup>(limit)
 		val seenIds = HashSet<Long>(limit + RECENT_CANDIDATES_PER_SOURCE)
 		for (source in RECENT_UPDATE_SOURCES) {
 			if (groups.size >= limit) {
 				break
 			}
-			withTimeoutOrNull(RECENT_SOURCE_TIMEOUT_MS) {
-				loadRecentUpdatesFromSource(source, groups, seenIds, limit)
-			}
+			loadRecentUpdatesFromParserSource(source, groups, seenIds, limit)
 		}
-		return publishRecentUpdates(groups, limit)
+		return rankRecentUpdates(groups, limit)
 	}
 
-	private suspend fun loadRecentUpdatesFromSource(
+	private suspend fun loadRecentUpdatesFromParserSource(
 		source: MangaParserSource,
 		groups: MutableList<RecentUpdateGroup>,
 		seenIds: MutableSet<Long>,
@@ -298,7 +450,7 @@ class HomeViewModel @Inject constructor(
 				sourceCount++
 				val details = withTimeoutOrNull(RECENT_DETAILS_TIMEOUT_MS) {
 					repository.getDetails(manga)
-				} ?: continue
+				} ?: manga
 				val chapters = details.chapters.orEmpty()
 					.sortedWith(CHAPTER_COMPARATOR)
 					.take(RECENT_CHAPTERS_PER_TITLE)
@@ -311,28 +463,37 @@ class HomeViewModel @Inject constructor(
 					sourceTitle = (details.source as? MangaParserSource)?.title ?: details.source.name,
 					sortDate = chapters.maxOf(MangaChapter::uploadDate),
 				)
-				if (groups.size >= RECENT_PAGE_SIZE) {
-					publishRecentUpdates(groups, limit)
-					_recentUpdatesLoading.value = false
-				}
-				if (groups.size >= RECENT_FAST_VISIBLE_LIMIT) {
-					return
-				}
 			}
 			offset += page.size
 		}
 	}
 
-	private fun publishRecentUpdates(groups: List<RecentUpdateGroup>, limit: Int): List<RecentUpdateGroup> {
-		val updates = groups.sortedByDescending { it.sortDate }.take(limit)
-		cachedRecentUpdates = updates
-		cachedHomeFeedAt = System.currentTimeMillis()
-		_recentUpdates.value = updates
-		if (updates.isNotEmpty()) {
-			_recentUpdatesLoading.value = false
+	private fun rankRecentUpdates(groups: List<RecentUpdateGroup>, limit: Int): List<RecentUpdateGroup> {
+		return groups
+			.distinctBy { recentUpdateKey(it) }
+			.sortedByDescending { it.sortDate }
+			.take(limit)
+	}
+
+	private fun mergeRecentUpdates(
+		freshUpdates: List<RecentUpdateGroup>,
+		cachedUpdates: List<RecentUpdateGroup>,
+	): List<RecentUpdateGroup> {
+		return rankRecentUpdates(freshUpdates + cachedUpdates, RECENT_PAGE_SIZE * RECENT_PAGE_COUNT)
+	}
+
+	private fun recentUpdateKey(group: RecentUpdateGroup): String {
+		val newestChapter = group.chapters.maxByOrNull { it.uploadDate }
+		return "${group.manga.source.name}:${group.manga.id}:${newestChapter?.id ?: newestChapter?.url ?: group.manga.url}"
+	}
+
+	private fun List<RecentUpdateGroup>.isRecentUpdatesCacheCompatible(): Boolean {
+		return all { group ->
+			RECENT_UPDATE_SOURCES.any { source ->
+				group.manga.source.name == source.name ||
+					group.sourceTitle.equals(source.title, ignoreCase = true)
+			}
 		}
-		saveHomeFeedCache()
-		return updates
 	}
 
 	private fun List<Manga>.rotateForPeriod(period: Long): List<Manga> {
@@ -373,6 +534,14 @@ class HomeViewModel @Inject constructor(
 		cachedFeaturedPeriod = snapshot.featuredPeriod
 		cachedRecommendationPeriod = snapshot.recommendationPeriod
 		cachedHomeFeedAt = snapshot.savedAt
+		cachedRecentUpdatesAt = snapshot.recentUpdatesSavedAt
+		if (
+			snapshot.recentUpdatesCacheVersion != RECENT_CACHE_VERSION ||
+			!cachedRecentUpdates.isRecentUpdatesCacheCompatible()
+		) {
+			cachedRecentUpdates = emptyList()
+			cachedRecentUpdatesAt = 0L
+		}
 	}
 
 	private fun saveHomeFeedCache() {
@@ -381,6 +550,8 @@ class HomeViewModel @Inject constructor(
 		homeFeedCache.save(
 			HomeFeedSnapshot(
 				savedAt = savedAt,
+				recentUpdatesSavedAt = cachedRecentUpdatesAt.takeIf { it > 0L } ?: savedAt,
+				recentUpdatesCacheVersion = RECENT_CACHE_VERSION,
 				recommendationPeriod = cachedRecommendationPeriod,
 				featuredPeriod = cachedFeaturedPeriod,
 				featured = cachedFeaturedComics,
@@ -401,6 +572,7 @@ class HomeViewModel @Inject constructor(
 		var cachedFeaturedPeriod: Long = -1L
 		var cachedRecommendationPeriod: Long = -1L
 		var cachedHomeFeedAt: Long = 0L
+		var cachedRecentUpdatesAt: Long = 0L
 		var isFeaturedLoading = false
 		var isRecentUpdatesLoading = false
 		var isManhuaRecommendationsLoading = false
@@ -416,13 +588,15 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_CHAPTERS_PER_TITLE = 3
 		const val RECENT_CANDIDATES_PER_SOURCE = 60
 		const val RECENT_SOURCE_PAGE_ATTEMPTS = 8
-		const val RECENT_SOURCE_TIMEOUT_MS = 7_000L
+		const val RECENT_SOURCE_TIMEOUT_MS = 12_000L
 		const val RECENT_PAGE_TIMEOUT_MS = 3_000L
-		const val RECENT_DETAILS_TIMEOUT_MS = 2_000L
-		const val RECENT_FAST_VISIBLE_LIMIT = 20
+		const val RECENT_DETAILS_TIMEOUT_MS = 4_000L
 		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
+		const val RECENT_CACHE_TTL_MS = 8L * 60L * 60L * 1000L
+		const val RECENT_CACHE_VERSION = 5
 		const val FEATURED_ROTATION_MS = HOME_CACHE_TTL_MS
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
+		const val WEEBCENTRAL_HOME_URL = "https://weebcentral.com/"
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }
 			.thenByDescending { it.number }
@@ -434,9 +608,12 @@ class HomeViewModel @Inject constructor(
 		)
 
 		val RECENT_UPDATE_SOURCES = listOf(
-			MangaParserSource.FLAMECOMICS,
-			MangaParserSource.AQUAMANGA,
+			MangaParserSource.DEMONICSCANS,
 			MangaParserSource.MANGAFIRE_EN,
+			MangaParserSource.AQUAMANGA,
+			MangaParserSource.FLAMECOMICS,
+			MangaParserSource.MANGAPLUSPARSER_EN,
+			MangaParserSource.MANHUAFAST,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(

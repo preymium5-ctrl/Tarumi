@@ -255,7 +255,7 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 
 	private fun RecyclerView.findCurrentPagePosition(): Int {
 		val centerX = width / 2f
-		val centerY = height - resources.getDimension(R.dimen.webtoon_pages_gap)
+		val centerY = height * CURRENT_PAGE_ANCHOR_Y
 		if (centerY <= 0) {
 			return RecyclerView.NO_POSITION
 		}
@@ -297,5 +297,9 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 		if (this.text != text) {
 			this.text = text
 		}
+	}
+
+	private companion object {
+		const val CURRENT_PAGE_ANCHOR_Y = 0.28f
 	}
 }

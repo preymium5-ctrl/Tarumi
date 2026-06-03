@@ -36,11 +36,13 @@ class RootSettingsFragment : BasePreferenceFragment(0) {
 		bindPreferenceSummary("downloads", R.string.manga_save_location, R.string.downloads_wifi_only)
 		bindPreferenceSummary("tracker", R.string.track_sources, R.string.notifications_settings)
 		bindPreferenceSummary("services", R.string.suggestions, R.string.sync, R.string.tracking)
+		findPreference<Preference>("check_app_updates")?.summary = getString(R.string.check_for_updates)
 		findPreference<Preference>("local_storage")?.setOnPreferenceClickListener {
 			router.openList(LocalMangaSource, null, null)
 			true
 		}
 		findPreference<Preference>("about")?.summary = getString(R.string.app_version, BuildConfig.VERSION_NAME)
+		findPreference<Preference>("check_app_updates")?.order = TARUMI_UPDATES_ORDER
 		findPreference<Preference>("about")?.order = TARUMI_ABOUT_PREF_ORDER
 		findPreference<Preference>("tarumi_about_card")?.let { pref ->
 			pref.summary = buildString {
@@ -79,6 +81,7 @@ class RootSettingsFragment : BasePreferenceFragment(0) {
 
 	private companion object {
 
+		const val TARUMI_UPDATES_ORDER = 997
 		const val TARUMI_DEBUG_ORDER = 998
 		const val TARUMI_ABOUT_PREF_ORDER = 999
 		const val TARUMI_ABOUT_ORDER = 1000

@@ -15,6 +15,8 @@
 	<string name="browser_mode">Browser mode</string>
 	<string name="select_source">Select source</string>
 	<string name="browser_recently_added">Recently Added</string>
+	<string name="browser_search_hint">Search title or genre</string>
+	<string name="browser_related_galleries">Related Galleries</string>
 	<string name="date_added">Date Added</string>
 	<string name="browser_series">Series</string>
 	<string name="browser_group">Group</string>
@@ -188,6 +190,10 @@
     <string name="about">About</string>
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
+    <string name="check_app_updates">Check App Updates</string>
+    <string name="update_tutorial_title">Keep Tarumi updated</string>
+    <string name="update_tutorial_message">To check for a new version, open Settings, then tap Check App Updates. That screen also has the Discord server and Ko-fi support links.</string>
+    <string name="open_settings">Open Settings</string>
     <string name="support_me" translatable="false">Support me</string>
     <string name="support_tarumi_title" translatable="false">Support Tarumi</string>
     <string name="support_tarumi_message" translatable="false">Tarumi is built with care for a cleaner comics reading experience. Your support helps keep the app improving with better design, smoother reading, and more stable updates.</string>

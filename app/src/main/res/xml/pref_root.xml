@@ -56,9 +56,15 @@
         android:title="@string/backup_restore" />
 
     <PreferenceScreen
-        android:fragment="org.koitharu.kotatsu.settings.about.AboutSettingsFragment"
+        android:fragment="org.koitharu.kotatsu.settings.about.AppUpdatesSettingsFragment"
+        android:icon="@drawable/ic_updated"
+        android:key="check_app_updates"
+        android:title="@string/check_app_updates" />
+
+    <Preference
         android:icon="@drawable/ic_info_outline"
         android:key="about"
+        android:selectable="false"
         android:title="@string/about" />
 
     <Preference

@@ -291,6 +291,49 @@
 				tools:itemCount="9"
 				tools:listitem="@layout/item_nsfw_browser_page" />
 
+			<LinearLayout
+				android:id="@+id/layout_related"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="18dp"
+				android:orientation="vertical"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<FrameLayout
+					android:layout_width="match_parent"
+					android:layout_height="48dp"
+					android:background="@drawable/bg_nsfw_browser_header"
+					android:paddingHorizontal="12dp"
+					android:paddingVertical="5dp">
+
+					<TextView
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:layout_gravity="start|top"
+						android:fontFamily="sans-serif-condensed"
+						android:shadowColor="#99390B13"
+						android:shadowDx="1"
+						android:shadowDy="1"
+						android:shadowRadius="1.5"
+						android:text="@string/browser_related_galleries"
+						android:textColor="@android:color/white"
+						android:textSize="21sp"
+						android:textStyle="bold" />
+
+				</FrameLayout>
+
+				<androidx.recyclerview.widget.RecyclerView
+					android:id="@+id/recyclerView_related"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="10dp"
+					android:nestedScrollingEnabled="false"
+					tools:itemCount="2"
+					tools:listitem="@layout/item_nsfw_browser_entry" />
+
+			</LinearLayout>
+
 		</LinearLayout>
 
 	</androidx.core.widget.NestedScrollView>

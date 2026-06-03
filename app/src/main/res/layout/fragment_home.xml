@@ -316,27 +316,8 @@
 			android:paddingBottom="4dp">
 
 			<TextView
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:background="@drawable/bg_taru_home_badge"
-				android:drawablePadding="8dp"
-				android:fontFamily="sans-serif-medium"
-				android:gravity="center_vertical"
-				android:letterSpacing="0.16"
-				android:minHeight="30dp"
-				android:paddingHorizontal="13dp"
-				android:paddingVertical="5dp"
-				android:text="@string/live_feed"
-				android:textAllCaps="true"
-				android:textColor="@color/taru_text_primary"
-				android:textSize="10sp"
-				app:drawableStartCompat="@drawable/ic_taru_history"
-				app:drawableTint="@color/taru_accent" />
-
-			<TextView
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginTop="22dp"
 				android:fontFamily="sans-serif"
 				android:text="@string/recent_updates"
 				android:textColor="@color/taru_text_primary"

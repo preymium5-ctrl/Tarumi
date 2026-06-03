@@ -5,6 +5,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -42,9 +43,13 @@ class NsfwBrowserDetailsViewModel @Inject constructor(
 				val details = repository.getDetails(seed)
 				val chapter = details.chapters.orEmpty().firstOrNull()
 				val pages = chapter?.let { repository.getPages(it) }.orEmpty()
+				val related = withTimeoutOrNull(RELATED_TIMEOUT_MS) {
+					repository.getRelated(details)
+				}.orEmpty()
 				NsfwBrowserDetailsState(
 					manga = details,
 					pages = pages,
+					related = related,
 					isLoading = false,
 					error = null,
 				)
@@ -54,6 +59,7 @@ class NsfwBrowserDetailsViewModel @Inject constructor(
 				NsfwBrowserDetailsState(
 					manga = _state.value.manga,
 					pages = emptyList(),
+					related = emptyList(),
 					isLoading = false,
 					error = error,
 				)
@@ -61,11 +67,16 @@ class NsfwBrowserDetailsViewModel @Inject constructor(
 			_state.value = result
 		}
 	}
+
+	private companion object {
+		const val RELATED_TIMEOUT_MS = 5_000L
+	}
 }
 
 data class NsfwBrowserDetailsState(
 	val manga: Manga,
 	val pages: List<MangaPage> = emptyList(),
+	val related: List<Manga> = emptyList(),
 	val isLoading: Boolean = false,
 	val error: Throwable? = null,
 )

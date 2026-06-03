@@ -1,14 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<org.koitharu.kotatsu.image.ui.CoverImageView
+<FrameLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
-	android:id="@+id/imageView_page"
 	android:layout_width="match_parent"
 	android:layout_height="154dp"
 	android:layout_margin="2dp"
-	android:background="@android:color/white"
-	android:scaleType="centerCrop"
-	app:allowRgb565="true"
-	tools:ignore="ContentDescription"
-	tools:src="@tools:sample/backgrounds/scenic[5]" />
+	android:foreground="?attr/selectableItemBackground">
+
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_page"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="@android:color/white"
+		android:scaleType="centerCrop"
+		app:allowRgb565="true"
+		tools:ignore="ContentDescription"
+		tools:src="@tools:sample/backgrounds/scenic[5]" />
+
+	<TextView
+		android:id="@+id/textView_page_number"
+		android:layout_width="wrap_content"
+		android:layout_height="22dp"
+		android:layout_gravity="end|bottom"
+		android:layout_margin="6dp"
+		android:background="@drawable/bg_search_suggestion"
+		android:gravity="center"
+		android:minWidth="38dp"
+		android:paddingHorizontal="7dp"
+		android:textColor="@android:color/white"
+		android:textSize="11sp"
+		android:textStyle="bold"
+		tools:text="12" />
+
+</FrameLayout>

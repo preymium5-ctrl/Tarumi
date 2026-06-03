@@ -9,3 +9,12 @@ data class RecentUpdateGroup(
 	val sourceTitle: String,
 	val sortDate: Long,
 )
+
+data class WeebCentralFeedItem(
+	val title: String,
+	val seriesUrl: String,
+	val chapterUrl: String,
+	val coverUrl: String?,
+	val chapterTitle: String,
+	val uploadDate: Long,
+)

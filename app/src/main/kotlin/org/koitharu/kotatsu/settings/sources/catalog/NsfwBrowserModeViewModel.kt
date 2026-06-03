@@ -9,6 +9,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -32,11 +33,12 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	private val _state = MutableStateFlow(NsfwBrowserModeState())
 	val state: StateFlow<NsfwBrowserModeState> = _state
 	private val pageSignatures = HashMap<Int, Set<String>>()
+	private var loadJob: Job? = null
 
 	init {
 		val sources = sourcesRepository.allMangaSources
 			.asSequence()
-			.filter { it.contentType == ContentType.HENTAI }
+			.filter { it.contentType == ContentType.HENTAI && it.isEnglishSource() }
 			.sortedBy { it.getTitle(context) }
 			.toList()
 		_state.value = _state.value.copy(
@@ -66,6 +68,24 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		loadPage(page = 0)
 	}
 
+	fun setQuery(query: String) {
+		val normalized = query.trim()
+		val current = _state.value
+		if (current.query == normalized) {
+			return
+		}
+		_state.value = current.copy(
+			query = normalized,
+			items = emptyList(),
+			page = 0,
+			knownPageCount = if (current.selectedSource == null) 0 else 1,
+			hasNext = false,
+			error = null,
+		)
+		pageSignatures.clear()
+		loadPage(page = 0)
+	}
+
 	fun nextPage() {
 		val current = _state.value
 		if (!current.hasNext || current.isLoading) {
@@ -88,8 +108,10 @@ class NsfwBrowserModeViewModel @Inject constructor(
 
 	private fun loadPage(page: Int) {
 		val source = _state.value.selectedSource ?: return
-		launchJob(Dispatchers.Default) {
-			_state.value = _state.value.copy(isLoading = true, error = null)
+		loadJob?.cancel()
+		loadJob = launchJob(Dispatchers.Default) {
+			val query = _state.value.query
+			_state.value = _state.value.copy(isLoading = true, error = null, page = page)
 			val repository = mangaRepositoryFactory.create(source)
 			val order = when {
 				SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
@@ -97,7 +119,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 				else -> repository.defaultSortOrder
 			}
 			val pageResult = runCatchingCancellable {
-				fetchPage(repository, order, page)
+				fetchPage(repository, order, page, query)
 			}.onFailure {
 				it.printStackTraceDebug()
 			}.getOrElse { error ->
@@ -111,6 +133,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			}
 			pageSignatures[page] = pageResult.signature
 			val visibleManga = hydrateDetails(repository, pageResult.items)
+				.filter { it.matchesBrowserQuery(query) }
 			_state.value = _state.value.copy(
 				isLoading = false,
 				items = visibleManga,
@@ -126,8 +149,14 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		repository: MangaRepository,
 		order: SortOrder,
 		page: Int,
+		query: String,
 	): BrowserPageResult {
 		val previousSignature = pageSignatures[page - 1]
+		val filter = if (query.isBlank()) {
+			MangaListFilter.EMPTY
+		} else {
+			MangaListFilter(query = query)
+		}
 		val offsets = if (page == 0) {
 			listOf(0)
 		} else {
@@ -140,7 +169,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		}
 		var fallback: BrowserPageResult? = null
 		for (offset in offsets) {
-			val raw = repository.getList(offset, order, MangaListFilter.EMPTY)
+			val raw = repository.getList(offset, order, filter)
 			val window = when {
 				raw.size > PAGE_SIZE && offset >= PAGE_SIZE -> raw.drop(offset).take(PAGE_SIZE)
 				else -> raw.take(PAGE_SIZE)
@@ -172,6 +201,25 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		}
 	}
 
+	private fun Manga.matchesBrowserQuery(query: String): Boolean {
+		if (query.isBlank()) {
+			return true
+		}
+		return title.contains(query, ignoreCase = true) ||
+			altTitles.any { it.contains(query, ignoreCase = true) } ||
+			authors.any { it.contains(query, ignoreCase = true) } ||
+			tags.any { tag ->
+				tag.title.contains(query, ignoreCase = true) ||
+					tag.key.contains(query, ignoreCase = true)
+			}
+	}
+
+	private fun MangaParserSource.isEnglishSource(): Boolean {
+		return locale.equals("en", ignoreCase = true) ||
+			locale.startsWith("en-", ignoreCase = true) ||
+			locale.startsWith("en_", ignoreCase = true)
+	}
+
 	companion object {
 		const val PAGE_SIZE = 25
 		private const val DETAILS_CHUNK_SIZE = 5
@@ -188,6 +236,7 @@ data class NsfwBrowserModeState(
 	val sources: List<MangaParserSource> = emptyList(),
 	val selectedSource: MangaParserSource? = null,
 	val items: List<Manga> = emptyList(),
+	val query: String = "",
 	val page: Int = 0,
 	val knownPageCount: Int = 0,
 	val hasNext: Boolean = false,

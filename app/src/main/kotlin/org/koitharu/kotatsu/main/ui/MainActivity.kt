@@ -31,6 +31,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withResumed
 import androidx.recyclerview.widget.ItemTouchHelper
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.LayoutParams.SCROLL_FLAG_ENTER_ALWAYS
 import com.google.android.material.appbar.AppBarLayout.LayoutParams.SCROLL_FLAG_NO_SCROLL
@@ -155,6 +156,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		if (savedInstanceState == null) {
 			onFirstStart()
+			showUpdateTutorial()
 		}
 
 		viewModel.onOpenReader.observeEvent(this, this::onOpenReader)
@@ -423,6 +425,22 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		searchView.editText.requestFocus()
 		searchView.post {
 			getSystemService<InputMethodManager>()?.showSoftInput(searchView.editText, InputMethodManager.SHOW_IMPLICIT)
+		}
+	}
+
+	private fun showUpdateTutorial() {
+		viewBinding.root.post {
+			if (isFinishing || isDestroyed) {
+				return@post
+			}
+			MaterialAlertDialogBuilder(this)
+				.setTitle(R.string.update_tutorial_title)
+				.setMessage(R.string.update_tutorial_message)
+				.setNegativeButton(R.string.got_it, null)
+				.setPositiveButton(R.string.open_settings) { _, _ ->
+					router.openSettings()
+				}
+				.show()
 		}
 	}
 

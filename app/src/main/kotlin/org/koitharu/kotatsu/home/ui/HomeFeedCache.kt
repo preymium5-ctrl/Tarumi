@@ -30,6 +30,8 @@ class HomeFeedCache(context: Context) {
 
 	private fun JSONObject.toSnapshot() = HomeFeedSnapshot(
 		savedAt = optLong("savedAt", 0L),
+		recentUpdatesSavedAt = optLong("recentUpdatesSavedAt", optLong("savedAt", 0L)),
+		recentUpdatesCacheVersion = optInt("recentUpdatesCacheVersion", 0),
 		recommendationPeriod = optLong("recommendationPeriod", -1L),
 		featuredPeriod = optLong("featuredPeriod", -1L),
 		featured = optMangaArray("featured"),
@@ -41,6 +43,8 @@ class HomeFeedCache(context: Context) {
 
 	private fun HomeFeedSnapshot.toJson() = JSONObject()
 		.put("savedAt", savedAt)
+		.put("recentUpdatesSavedAt", recentUpdatesSavedAt)
+		.put("recentUpdatesCacheVersion", recentUpdatesCacheVersion)
 		.put("recommendationPeriod", recommendationPeriod)
 		.put("featuredPeriod", featuredPeriod)
 		.put("featured", featured.toMangaArray())
@@ -168,6 +172,8 @@ class HomeFeedCache(context: Context) {
 
 data class HomeFeedSnapshot(
 	val savedAt: Long,
+	val recentUpdatesSavedAt: Long,
+	val recentUpdatesCacheVersion: Int,
 	val recommendationPeriod: Long,
 	val featuredPeriod: Long,
 	val featured: List<Manga>,

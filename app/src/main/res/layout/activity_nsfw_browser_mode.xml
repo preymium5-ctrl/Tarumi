@@ -80,6 +80,20 @@
 
 			</FrameLayout>
 
+			<EditText
+				android:id="@+id/editText_search"
+				android:layout_width="match_parent"
+				android:layout_height="42dp"
+				android:layout_marginTop="10dp"
+				android:background="@drawable/bg_nsfw_browser_search"
+				android:hint="@string/browser_search_hint"
+				android:imeOptions="actionSearch"
+				android:inputType="text"
+				android:maxLines="1"
+				android:paddingHorizontal="12dp"
+				android:textColor="#20242D"
+				android:textColorHint="#8B8F99"
+				android:textSize="15sp" />
 
 			<LinearLayout
 				android:id="@+id/layout_pages"
@@ -87,23 +101,7 @@
 				android:layout_height="wrap_content"
 				android:layout_marginTop="14dp"
 				android:gravity="center"
-				android:orientation="horizontal">
-
-				<com.google.android.material.button.MaterialButton
-					android:id="@+id/button_prev"
-					style="?materialButtonOutlinedStyle"
-					android:layout_width="40dp"
-					android:layout_height="36dp"
-					android:backgroundTint="@android:color/white"
-					android:contentDescription="@string/prev_page"
-					android:insetTop="0dp"
-					android:insetBottom="0dp"
-					android:textColor="#20242D"
-					app:icon="@drawable/ic_prev"
-					app:iconGravity="textStart"
-					app:iconSize="17dp"
-					app:iconTint="#20242D"
-					app:strokeColor="#6B7280" />
+				android:orientation="vertical">
 
 				<TextView
 					android:id="@+id/text_page"
@@ -117,21 +115,50 @@
 					android:textSize="21sp"
 					tools:text="1  2  3 ... 12" />
 
-				<com.google.android.material.button.MaterialButton
-					android:id="@+id/button_next"
-					style="?materialButtonOutlinedStyle"
-					android:layout_width="40dp"
-					android:layout_height="36dp"
-					android:backgroundTint="@android:color/white"
-					android:contentDescription="@string/next_page"
-					android:insetTop="0dp"
-					android:insetBottom="0dp"
-					android:textColor="#20242D"
-					app:icon="@drawable/ic_next"
-					app:iconGravity="textStart"
-					app:iconSize="17dp"
-					app:iconTint="#20242D"
-					app:strokeColor="#6B7280" />
+				<LinearLayout
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="14dp"
+					android:gravity="center"
+					android:orientation="horizontal">
+
+					<com.google.android.material.button.MaterialButton
+						android:id="@+id/button_prev"
+						style="?materialButtonOutlinedStyle"
+						android:layout_width="96dp"
+						android:layout_height="40dp"
+						android:backgroundTint="@android:color/white"
+						android:contentDescription="@string/prev_page"
+						android:insetTop="0dp"
+						android:insetBottom="0dp"
+						android:text="@string/browser_prev_page"
+						android:textColor="#20242D"
+						android:textSize="13sp"
+						app:icon="@drawable/ic_prev"
+						app:iconSize="16dp"
+						app:iconTint="#20242D"
+						app:strokeColor="#6B7280" />
+
+					<com.google.android.material.button.MaterialButton
+						android:id="@+id/button_next"
+						style="?materialButtonOutlinedStyle"
+						android:layout_width="96dp"
+						android:layout_height="40dp"
+						android:layout_marginStart="14dp"
+						android:backgroundTint="@android:color/white"
+						android:contentDescription="@string/next_page"
+						android:insetTop="0dp"
+						android:insetBottom="0dp"
+						android:text="@string/browser_next_page"
+						android:textColor="#20242D"
+						android:textSize="13sp"
+						app:icon="@drawable/ic_next"
+						app:iconGravity="textEnd"
+						app:iconSize="16dp"
+						app:iconTint="#20242D"
+						app:strokeColor="#6B7280" />
+
+				</LinearLayout>
 
 			</LinearLayout>
 
