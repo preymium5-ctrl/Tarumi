@@ -80,20 +80,48 @@
 
 			</FrameLayout>
 
-			<EditText
-				android:id="@+id/editText_search"
+			<LinearLayout
 				android:layout_width="match_parent"
 				android:layout_height="42dp"
 				android:layout_marginTop="10dp"
-				android:background="@drawable/bg_nsfw_browser_search"
-				android:hint="@string/browser_search_hint"
-				android:imeOptions="actionSearch"
-				android:inputType="text"
-				android:maxLines="1"
-				android:paddingHorizontal="12dp"
-				android:textColor="#20242D"
-				android:textColorHint="#8B8F99"
-				android:textSize="15sp" />
+				android:gravity="center_vertical"
+				android:orientation="horizontal">
+
+				<EditText
+					android:id="@+id/editText_search"
+					android:layout_width="0dp"
+					android:layout_height="match_parent"
+					android:layout_weight="1"
+					android:background="@drawable/bg_nsfw_browser_search"
+					android:hint="@string/browser_search_hint"
+					android:imeOptions="actionSearch"
+					android:inputType="text"
+					android:maxLines="1"
+					android:paddingHorizontal="12dp"
+					android:textColor="#20242D"
+					android:textColorHint="#8B8F99"
+					android:textSize="15sp" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_filter"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="48dp"
+					android:layout_height="match_parent"
+					android:layout_marginStart="8dp"
+					android:backgroundTint="@android:color/white"
+					android:contentDescription="@string/browser_filter_tags"
+					android:insetTop="0dp"
+					android:insetBottom="0dp"
+					android:minWidth="0dp"
+					android:padding="0dp"
+					app:icon="@drawable/ic_filter_menu"
+					app:iconGravity="textStart"
+					app:iconPadding="0dp"
+					app:iconSize="22dp"
+					app:iconTint="#20242D"
+					app:strokeColor="#D6A8AC" />
+
+			</LinearLayout>
 
 			<LinearLayout
 				android:id="@+id/layout_pages"

@@ -41,6 +41,10 @@ value class ReaderIntent private constructor(
 			intent.putExtra(EXTRA_STATE, state)
 		}
 
+		fun browserMode() = apply {
+			intent.putExtra(EXTRA_BROWSER_MODE, true)
+		}
+
 		fun bookmark(bookmark: Bookmark) = manga(
 			bookmark.manga,
 		).state(
@@ -59,5 +63,6 @@ value class ReaderIntent private constructor(
 		const val EXTRA_STATE = "state"
 		const val EXTRA_BRANCH = "branch"
 		const val EXTRA_INCOGNITO = "incognito"
+		const val EXTRA_BROWSER_MODE = "browser_mode"
 	}
 }

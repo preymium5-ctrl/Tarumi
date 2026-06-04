@@ -34,6 +34,7 @@ import org.koitharu.kotatsu.image.ui.CoverImageView
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.parsers.model.MangaTag
 
 @AndroidEntryPoint
 class NsfwBrowserModeActivity :
@@ -45,6 +46,7 @@ class NsfwBrowserModeActivity :
 
 	private val viewModel by viewModels<NsfwBrowserModeViewModel>()
 	private lateinit var adapter: BrowserEntryAdapter
+	private var renderedPage = -1
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -54,12 +56,14 @@ class NsfwBrowserModeActivity :
 
 		adapter = BrowserEntryAdapter(
 			onClick = { manga -> router.openNsfwBrowserDetails(manga) },
+			onTagClick = { tag -> viewModel.selectTag(tag) },
 			onPreviousPage = { viewModel.previousPage() },
 			onNextPage = { viewModel.nextPage() },
 		)
 		viewBinding.recyclerView.layoutManager = LinearLayoutManager(this)
 		viewBinding.recyclerView.adapter = adapter
 		viewBinding.buttonSource.setOnClickListener { showSourceMenu(it) }
+		viewBinding.buttonFilter.setOnClickListener { showTagMenu(it) }
 		viewBinding.buttonPrev.setOnClickListener { viewModel.previousPage() }
 		viewBinding.buttonNext.setOnClickListener { viewModel.nextPage() }
 		viewBinding.editTextSearch.doAfterTextChanged { text ->
@@ -92,11 +96,19 @@ class NsfwBrowserModeActivity :
 		val canNext = state.hasNext && !state.isLoading
 		val pageWindow = buildPageWindow(state)
 		viewBinding.buttonSource.text = selected?.getTitle(this) ?: getString(R.string.select_source)
+		viewBinding.textBrowserHeading.text = state.query.takeIf { it.isNotBlank() }
+			?: getString(R.string.browser_recently_added)
+		viewBinding.buttonFilter.isEnabled = state.availableTags.isNotEmpty()
+		viewBinding.buttonFilter.alpha = if (state.availableTags.isNotEmpty()) 1f else 0.45f
 		if (viewBinding.editTextSearch.text?.toString() != state.query) {
 			viewBinding.editTextSearch.setText(state.query)
 			viewBinding.editTextSearch.setSelection(state.query.length)
 		}
 		adapter.submitItems(state.items, state.page, pageWindow, canPrevious, canNext)
+		if (state.page != renderedPage) {
+			renderedPage = state.page
+			viewBinding.recyclerView.scrollToPosition(0)
+		}
 		viewBinding.progress.isVisible = state.isLoading
 		viewBinding.recyclerView.alpha = if (state.isLoading && state.items.isNotEmpty()) 0.45f else 1f
 		viewBinding.textEmpty.isVisible = !state.isLoading && state.items.isEmpty()
@@ -140,11 +152,37 @@ class NsfwBrowserModeActivity :
 		popup.show()
 	}
 
+	private fun showTagMenu(anchor: View) {
+		val tags = viewModel.state.value.availableTags
+		if (tags.isEmpty()) {
+			return
+		}
+		val popup = PopupMenu(this, anchor)
+		popup.menu.add(Menu.NONE, MENU_ALL_TAGS, 0, getString(R.string.browser_all_tags))
+		for ((index, tag) in tags.withIndex()) {
+			popup.menu.add(Menu.NONE, index, index + 1, tag.title.ifBlank { tag.key })
+		}
+		popup.setOnMenuItemClickListener { item ->
+			if (item.itemId == MENU_ALL_TAGS) {
+				viewModel.selectTag(null)
+			} else {
+				tags.getOrNull(item.itemId)?.let(viewModel::selectTag)
+			}
+			true
+		}
+		popup.show()
+	}
+
 	private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
+
+	private companion object {
+		const val MENU_ALL_TAGS = -1
+	}
 }
 
 private class BrowserEntryAdapter(
 	private val onClick: (Manga) -> Unit,
+	private val onTagClick: (MangaTag) -> Unit,
 	private val onPreviousPage: () -> Unit,
 	private val onNextPage: () -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -176,7 +214,7 @@ private class BrowserEntryAdapter(
 	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
 		val inflater = LayoutInflater.from(parent.context)
 		return when (viewType) {
-			VIEW_TYPE_ENTRY -> Holder(inflater.inflate(R.layout.item_nsfw_browser_entry, parent, false), onClick)
+			VIEW_TYPE_ENTRY -> Holder(inflater.inflate(R.layout.item_nsfw_browser_entry, parent, false), onClick, onTagClick)
 			VIEW_TYPE_PAGER -> PagerHolder(
 				view = inflater.inflate(R.layout.item_nsfw_browser_pager, parent, false),
 				onPreviousPage = onPreviousPage,
@@ -222,6 +260,7 @@ private class BrowserEntryAdapter(
 	class Holder(
 		view: View,
 		private val onClick: (Manga) -> Unit,
+		private val onTagClick: (MangaTag) -> Unit,
 	) : RecyclerView.ViewHolder(view) {
 
 		private val title: TextView = view.findViewById(R.id.textView_title)
@@ -273,24 +312,26 @@ private class BrowserEntryAdapter(
 
 		private fun bindTags(context: Context, manga: Manga, typeText: String, languageText: String) {
 			chips.removeAllViews()
-			val tagTitles = manga.tags
-				.map { it.title }
-				.filter { it.isNotBlank() }
+			val visibleTags = manga.tags
+				.filter { it.title.isNotBlank() }
 				.distinct()
 				.take(MAX_TAGS)
-				.ifEmpty {
-					listOf(typeText, languageText, "NSFW")
+			if (visibleTags.isEmpty()) {
+				listOf(typeText, languageText, "NSFW").forEach { tag ->
+					chips.addView(createTagChip(context, tag, null))
 				}
-			for (tag in tagTitles) {
-				chips.addView(createTagChip(context, tag))
+				return
+			}
+			for (tag in visibleTags) {
+				chips.addView(createTagChip(context, tag.title, tag))
 			}
 		}
 
-		private fun createTagChip(context: Context, text: String): Chip {
+		private fun createTagChip(context: Context, text: String, tag: MangaTag?): Chip {
 			return Chip(context).apply {
 				this.text = text
 				isCheckable = false
-				isClickable = false
+				isClickable = tag != null
 				setTextColor(0xFFFFFFFF.toInt())
 				textSize = 10f
 				minHeight = 20.dp(context)
@@ -300,6 +341,9 @@ private class BrowserEntryAdapter(
 				chipStartPadding = 5.dp(context).toFloat()
 				chipEndPadding = 5.dp(context).toFloat()
 				setChipBackgroundColorResource(R.color.grey)
+				if (tag != null) {
+					setOnClickListener { onTagClick(tag) }
+				}
 			}
 		}
 

@@ -13,6 +13,7 @@ import androidx.core.view.updatePadding
 import coil3.ImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.list.ListSelectionController
@@ -66,6 +67,12 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		viewModel.hasActiveWorks.observe(this, menuInvalidator)
 		viewModel.hasPausedWorks.observe(this, menuInvalidator)
 		viewModel.hasCancellableWorks.observe(this, menuInvalidator)
+		viewBinding.buttonNsfw.setOnClickListener {
+			viewModel.setNsfwMode(viewBinding.buttonNsfw.isChecked)
+		}
+		viewModel.isNsfwMode.observe(this) { isChecked ->
+			viewBinding.buttonNsfw.isChecked = isChecked
+		}
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -89,7 +96,12 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		if (selectionController.onItemClick(item.id.mostSignificantBits)) {
 			return
 		}
-		router.openDetails(item.manga ?: return)
+		val manga = item.manga ?: return
+		if (manga.isNsfw()) {
+			router.openNsfwBrowserDetails(manga)
+		} else {
+			router.openDetails(manga)
+		}
 	}
 
 	override fun onItemLongClick(item: DownloadItemModel, view: View): Boolean {

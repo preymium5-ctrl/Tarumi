@@ -16,6 +16,8 @@
 	<string name="select_source">Select source</string>
 	<string name="browser_recently_added">Recently Added</string>
 	<string name="browser_search_hint">Search title or genre</string>
+	<string name="browser_filter_tags">Filter tags</string>
+	<string name="browser_all_tags">All tags</string>
 	<string name="browser_related_galleries">Related Galleries</string>
 	<string name="date_added">Date Added</string>
 	<string name="browser_series">Series</string>
@@ -82,6 +84,8 @@
     <string name="download_complete">Downloaded</string>
     <string name="download_finished">Download finished</string>
     <string name="downloads">Downloads</string>
+	<string name="downloads_subtitle">Downloaded chapters and saved offline comics</string>
+	<string name="show_nsfw_downloads">NSFW downloads</string>
     <string name="by_name">Name</string>
     <string name="popular">Popular</string>
     <string name="updated">Updated</string>

@@ -54,7 +54,13 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		viewBinding.recyclerViewRelated.layoutManager = LinearLayoutManager(this)
 		viewBinding.recyclerViewRelated.adapter = relatedAdapter
 		viewBinding.buttonReadOnline.setOnClickListener {
-			router.openReader(viewModel.state.value.manga)
+			val chapterId = viewModel.state.value.manga.chapters.orEmpty().firstOrNull()?.id
+			val intent = ReaderIntent.Builder(this)
+				.manga(viewModel.state.value.manga)
+				.state(chapterId?.let { ReaderState(it, 0, 0) })
+				.browserMode()
+				.build()
+			router.openReader(intent)
 		}
 		viewBinding.buttonDownload.setOnClickListener {
 			router.showDownloadDialog(viewModel.state.value.manga, viewBinding.root)
@@ -89,12 +95,23 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 
 		viewBinding.imageViewCover.setImageAsync(coverUrl, manga)
 		viewBinding.textViewTitle.text = manga.title
-		viewBinding.textViewSubtitle.text = manga.authors.joinToString(", ").ifNullOrBlank("N/A")
+		val authorText = manga.authors.joinToString(", ").ifNullOrBlank("N/A")
+		viewBinding.textViewSubtitle.text = authorText
 		viewBinding.textViewGroup.text = sourceTitle
 		viewBinding.textViewType.text = typeText
 		viewBinding.textViewLanguage.text = languageText
 		viewBinding.textViewSeries.text = seriesText
 		viewBinding.textViewFooter.text = formatDate(manga.chapters.orEmpty().firstOrNull()?.uploadDate)
+		viewBinding.textViewSubtitle.setOnClickListener {
+			if (authorText != "N/A") {
+				router.openNsfwBrowserMode(manga.source, authorText)
+			}
+		}
+		viewBinding.textViewSeries.setOnClickListener {
+			if (seriesText != "N/A") {
+				router.openNsfwBrowserMode(manga.source, seriesText)
+			}
+		}
 		bindChips(viewBinding.chipGroupCharacters, extractTags(manga, CHARACTER_KEYS).take(MAX_CHARACTERS))
 		bindChips(
 			chipGroup = viewBinding.chipGroupTags,
@@ -122,6 +139,7 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		val intent = ReaderIntent.Builder(this)
 			.manga(viewModel.state.value.manga)
 			.state(ReaderState(chapterId, pageIndex, 0))
+			.browserMode()
 			.build()
 		router.openReader(intent)
 	}
@@ -141,7 +159,7 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		return Chip(this).apply {
 			this.text = text
 			isCheckable = false
-			isClickable = false
+			isClickable = true
 			setTextColor(0xFFFFFFFF.toInt())
 			textSize = 13f
 			minHeight = 24.dp()
@@ -151,6 +169,9 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 			chipStartPadding = 6.dp().toFloat()
 			chipEndPadding = 6.dp().toFloat()
 			setChipBackgroundColorResource(R.color.grey)
+			setOnClickListener {
+				router.openNsfwBrowserMode(viewModel.state.value.manga.source, text)
+			}
 		}
 	}
 

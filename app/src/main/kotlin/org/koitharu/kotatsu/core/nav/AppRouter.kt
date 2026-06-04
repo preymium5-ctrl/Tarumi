@@ -103,6 +103,7 @@ import org.koitharu.kotatsu.settings.sources.auth.SourceAuthActivity
 import org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity
 import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserDetailsActivity
 import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeActivity
+import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeViewModel
 import org.koitharu.kotatsu.settings.storage.MangaDirectorySelectDialog
 import org.koitharu.kotatsu.settings.storage.directories.MangaDirectoriesActivity
 import org.koitharu.kotatsu.settings.tracker.categories.TrackerCategoriesConfigSheet
@@ -211,6 +212,14 @@ class AppRouter private constructor(
     fun openSourcesCatalog() = startActivity(SourcesCatalogActivity::class.java)
 
     fun openNsfwBrowserMode() = startActivity(NsfwBrowserModeActivity::class.java)
+
+    fun openNsfwBrowserMode(source: MangaSource?, query: String?) {
+        startActivity(
+            Intent(contextOrNull() ?: return, NsfwBrowserModeActivity::class.java)
+                .putExtra(NsfwBrowserModeViewModel.EXTRA_SOURCE, source?.name)
+                .putExtra(NsfwBrowserModeViewModel.EXTRA_QUERY, query),
+        )
+    }
 
     fun openNsfwBrowserDetails(manga: Manga) {
         startActivity(

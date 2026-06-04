@@ -30,10 +30,9 @@ fun chapterListItemAD(
 		binding.textViewDate.text = item.formattedDate()
 		binding.textViewSource.text = "${item.chapter.source.getTitle(context).uppercase(Locale.getDefault())} | EN"
 		val currentProgress = item.progressPercent.takeIf { item.isCurrent && it >= 0f }?.coerceIn(0f, 1f)
-		val read = !item.isUnread || currentProgress == 1f
+		val read = currentProgress == 1f
 		binding.progressChapter.progress = when {
 			currentProgress != null -> (currentProgress * 100f).toInt().coerceIn(0, 100)
-			read -> 100
 			else -> 0
 		}
 		binding.textViewStatus.text = when {

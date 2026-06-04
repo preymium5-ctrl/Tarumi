@@ -45,6 +45,7 @@ import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.resolve.DialogErrorObserver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.SourceSettings
@@ -253,6 +254,9 @@ class ReaderActivity :
     }
 
     override fun getParentActivityIntent(): Intent? {
+        if (intent.getBooleanExtra(ReaderIntent.EXTRA_BROWSER_MODE, false)) {
+            return null
+        }
         val manga = viewModel.getMangaOrNull() ?: return null
         return AppRouter.detailsIntent(this, manga)
     }

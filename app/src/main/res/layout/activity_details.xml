@@ -75,8 +75,8 @@
 					app:layout_constraintTop_toTopOf="parent">
 
 					<FrameLayout
-						android:layout_width="230dp"
-						android:layout_height="318dp"
+						android:layout_width="260dp"
+						android:layout_height="360dp"
 						android:layout_gravity="center_horizontal">
 
 						<org.koitharu.kotatsu.image.ui.CoverImageView
@@ -185,6 +185,24 @@
 						app:chipSpacingVertical="8dp"
 						app:chipStyle="@style/Widget.Tarumi.Chip" />
 
+					<TextView
+						android:id="@+id/textChipGenres"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="14dp"
+						android:background="@drawable/bg_taru_home_chip"
+						android:fontFamily="sans-serif-medium"
+						android:letterSpacing="0.16"
+						android:lineSpacingExtra="3dp"
+						android:minHeight="48dp"
+						android:paddingHorizontal="18dp"
+						android:paddingVertical="10dp"
+						android:textColor="@color/taru_text_secondary"
+						android:textSize="13sp"
+						android:visibility="gone"
+						tools:text="ACTION / COMEDY / SHOUNEN / SUPERNATURAL"
+						tools:visibility="visible" />
+
 					<org.koitharu.kotatsu.core.ui.widgets.SelectableTextView
 						android:id="@+id/textView_title"
 						android:layout_width="match_parent"
@@ -230,87 +248,138 @@
 						android:layout_width="match_parent"
 						android:layout_height="wrap_content"
 						android:layout_marginTop="30dp"
-						android:baselineAligned="false"
-						android:orientation="horizontal">
+						android:orientation="vertical">
 
 						<LinearLayout
-							android:layout_width="0dp"
-							android:layout_height="112dp"
-							android:layout_weight="1"
-							android:background="@drawable/bg_taru_stat_card"
-							android:gravity="center_vertical"
-							android:orientation="vertical"
-							android:paddingHorizontal="20dp">
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:baselineAligned="false"
+							android:orientation="horizontal">
 
-							<TextView
-								android:layout_width="match_parent"
-								android:layout_height="wrap_content"
-								android:fontFamily="sans-serif-medium"
-								android:letterSpacing="0.18"
-								android:text="LATEST"
-								android:textColor="@color/taru_text_muted"
-								android:textSize="12sp"
-								tools:ignore="HardcodedText" />
+							<LinearLayout
+								android:layout_width="0dp"
+								android:layout_height="112dp"
+								android:layout_weight="1"
+								android:background="@drawable/bg_taru_stat_card"
+								android:gravity="center_vertical"
+								android:orientation="vertical"
+								android:paddingHorizontal="20dp">
 
-							<TextView
-								android:id="@+id/textViewLatest"
-								android:layout_width="match_parent"
-								android:layout_height="wrap_content"
-								android:layout_marginTop="16dp"
-								android:ellipsize="end"
-								android:fontFamily="sans-serif"
-								android:singleLine="true"
-								android:textColor="@color/taru_text_primary"
-								android:textSize="25sp"
-								tools:text="Unknown" />
+								<TextView
+									android:layout_width="match_parent"
+									android:layout_height="wrap_content"
+									android:fontFamily="sans-serif-medium"
+									android:letterSpacing="0.18"
+									android:text="RATING"
+									android:textColor="@color/taru_text_muted"
+									android:textSize="12sp"
+									tools:ignore="HardcodedText" />
+
+								<TextView
+									android:id="@+id/textViewRating"
+									android:layout_width="match_parent"
+									android:layout_height="wrap_content"
+									android:layout_marginTop="16dp"
+									android:drawablePadding="10dp"
+									android:ellipsize="end"
+									android:fontFamily="sans-serif"
+									android:singleLine="true"
+									android:textColor="@color/taru_text_primary"
+									android:textSize="25sp"
+									android:textStyle="bold"
+									app:drawableStartCompat="@drawable/ic_star_small"
+									app:drawableTint="@color/taru_accent"
+									tools:text="4.8" />
+							</LinearLayout>
+
+							<LinearLayout
+								android:layout_width="0dp"
+								android:layout_height="112dp"
+								android:layout_marginStart="14dp"
+								android:layout_weight="1"
+								android:background="@drawable/bg_taru_stat_card"
+								android:gravity="center_vertical"
+								android:orientation="vertical"
+								android:paddingHorizontal="20dp">
+
+								<TextView
+									android:layout_width="match_parent"
+									android:layout_height="wrap_content"
+									android:fontFamily="sans-serif-medium"
+									android:letterSpacing="0.18"
+									android:text="FOLLOWS"
+									android:textColor="@color/taru_text_muted"
+									android:textSize="12sp"
+									tools:ignore="HardcodedText" />
+
+								<TextView
+									android:id="@+id/textViewFollows"
+									android:layout_width="match_parent"
+									android:layout_height="wrap_content"
+									android:layout_marginTop="16dp"
+									android:ellipsize="end"
+									android:fontFamily="sans-serif"
+									android:singleLine="true"
+									android:textColor="@color/taru_text_primary"
+									android:textSize="25sp"
+									android:textStyle="bold"
+									tools:text="2,384" />
+							</LinearLayout>
 						</LinearLayout>
 
 						<LinearLayout
-							android:layout_width="0dp"
+							android:layout_width="match_parent"
 							android:layout_height="112dp"
-							android:layout_marginStart="14dp"
-							android:layout_weight="1"
-							android:background="@drawable/bg_taru_stat_card"
-							android:gravity="center_vertical"
-							android:orientation="vertical"
-							android:paddingHorizontal="20dp">
+							android:layout_marginTop="14dp"
+							android:baselineAligned="false"
+							android:orientation="horizontal">
 
-							<TextView
+							<LinearLayout
 								android:layout_width="match_parent"
-								android:layout_height="wrap_content"
-								android:fontFamily="sans-serif-medium"
-								android:letterSpacing="0.18"
-								android:text="SCANLATIONS"
-								android:textColor="@color/taru_text_muted"
-								android:textSize="12sp"
-								tools:ignore="HardcodedText" />
+								android:layout_height="match_parent"
+								android:background="@drawable/bg_taru_stat_card"
+								android:gravity="center_vertical"
+								android:orientation="vertical"
+								android:paddingHorizontal="20dp">
 
-							<TextView
-								android:id="@+id/textViewScanlations"
-								android:layout_width="match_parent"
-								android:layout_height="wrap_content"
-								android:layout_marginTop="16dp"
-								android:ellipsize="end"
-								android:fontFamily="sans-serif"
-								android:singleLine="true"
-								android:textColor="@color/taru_text_primary"
-								android:textSize="25sp"
-								tools:text="N/A" />
+								<TextView
+									android:layout_width="match_parent"
+									android:layout_height="wrap_content"
+									android:fontFamily="sans-serif-medium"
+									android:letterSpacing="0.18"
+									android:text="CHAPTERS"
+									android:textColor="@color/taru_text_muted"
+									android:textSize="12sp"
+									tools:ignore="HardcodedText" />
+
+								<TextView
+									android:id="@+id/textViewChaptersCount"
+									android:layout_width="match_parent"
+									android:layout_height="wrap_content"
+									android:layout_marginTop="16dp"
+									android:ellipsize="end"
+									android:fontFamily="sans-serif"
+									android:singleLine="true"
+									android:textColor="@color/taru_text_primary"
+									android:textSize="25sp"
+									android:textStyle="bold"
+									tools:text="404" />
+							</LinearLayout>
 						</LinearLayout>
 					</LinearLayout>
 
 					<com.google.android.material.button.MaterialButton
 						android:id="@+id/buttonStartReading"
 						android:layout_width="match_parent"
-						android:layout_height="58dp"
-						android:layout_marginTop="30dp"
+						android:layout_height="62dp"
+						android:layout_marginTop="32dp"
 						android:fontFamily="sans-serif-medium"
-						android:letterSpacing="0.12"
+						android:letterSpacing="0.16"
 						android:text="@string/start_reading"
 						android:textColor="@color/taru_on_accent"
 						android:textSize="14sp"
 						app:backgroundTint="@color/taru_accent"
-						app:cornerRadius="22dp"
+						app:cornerRadius="28dp"
 						app:elevation="1dp"
 						app:icon="@drawable/ic_play"
 						app:iconGravity="textStart"
@@ -319,22 +388,27 @@
 
 					<com.google.android.material.chip.Chip
 						android:id="@+id/chip_favorite"
-						style="@style/Widget.Kotatsu.Chip.Dropdown"
+						style="@style/Widget.Kotatsu.Chip.Assist"
 						android:layout_width="match_parent"
-						android:layout_height="56dp"
-						android:layout_marginTop="12dp"
+						android:layout_height="60dp"
+						android:layout_marginTop="14dp"
 						android:fontFamily="sans-serif-medium"
 						android:gravity="center"
-						android:letterSpacing="0.12"
+						android:letterSpacing="0.16"
 						android:text="@string/save"
 						android:textAlignment="center"
 						android:textColor="@color/taru_text_primary"
 						android:textSize="14sp"
 						app:chipBackgroundColor="@color/taru_surface_button"
+						app:chipCornerRadius="28dp"
 						app:chipIcon="@drawable/ic_bookmark"
+						app:chipIconSize="22dp"
 						app:chipIconTint="@color/taru_text_primary"
+						app:chipMinHeight="60dp"
 						app:chipStrokeColor="@color/taru_outline"
-						app:chipStrokeWidth="1dp" />
+						app:chipStrokeWidth="1dp"
+						app:closeIconVisible="false"
+						app:ensureMinTouchTargetSize="false" />
 
 				</LinearLayout>
 

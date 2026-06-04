@@ -9,6 +9,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -171,7 +172,7 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 	}
 
 	override fun getCurrentState(): ReaderState? = viewBinding?.run {
-		val currentItem = recyclerView.findCurrentPagePosition()
+		val currentItem = recyclerView.findSelectedPagePosition()
 		val adapter = recyclerView.adapter as? BaseReaderAdapter<*>
 		val page = adapter?.getItemOrNull(currentItem) ?: return@run null
 		ReaderState(
@@ -261,6 +262,18 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 		}
 		val view = findChildViewUnder(centerX, centerY) ?: return RecyclerView.NO_POSITION
 		return getChildAdapterPosition(view)
+	}
+
+	private fun WebtoonRecyclerView.findSelectedPagePosition(): Int {
+		val lm = layoutManager as? LinearLayoutManager ?: return findCurrentPagePosition()
+		val first = lm.findFirstVisibleItemPosition()
+		val last = lm.findLastVisibleItemPosition()
+		return when {
+			first == RecyclerView.NO_POSITION || last == RecyclerView.NO_POSITION -> findCurrentPagePosition()
+			!canScrollVertically(1) -> last
+			!canScrollVertically(-1) -> first
+			else -> findCurrentPagePosition().takeIf { it != RecyclerView.NO_POSITION } ?: ((first + last) / 2)
+		}
 	}
 
 	private fun TextView.updateFeedback(progress: Float) {

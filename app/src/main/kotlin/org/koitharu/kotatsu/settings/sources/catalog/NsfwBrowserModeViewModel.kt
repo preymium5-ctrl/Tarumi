@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.settings.sources.catalog
 
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import javax.inject.Inject
@@ -28,12 +30,16 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	@ApplicationContext private val context: Context,
 	private val sourcesRepository: MangaSourcesRepository,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	savedStateHandle: SavedStateHandle,
 ) : BaseViewModel() {
 
 	private val _state = MutableStateFlow(NsfwBrowserModeState())
 	val state: StateFlow<NsfwBrowserModeState> = _state
 	private val pageSignatures = HashMap<Int, Set<String>>()
 	private var loadJob: Job? = null
+	private var tagsJob: Job? = null
+	private val initialSourceName = savedStateHandle.get<String>(EXTRA_SOURCE)
+	private val initialQuery = savedStateHandle.get<String>(EXTRA_QUERY).orEmpty()
 
 	init {
 		val sources = sourcesRepository.allMangaSources
@@ -41,12 +47,15 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			.filter { it.contentType == ContentType.HENTAI && it.isEnglishSource() }
 			.sortedBy { it.getTitle(context) }
 			.toList()
+		val selected = sources.firstOrNull { it.name == initialSourceName } ?: sources.firstOrNull()
 		_state.value = _state.value.copy(
 			sources = sources,
-			selectedSource = sources.firstOrNull(),
+			selectedSource = selected,
+			query = initialQuery,
 			knownPageCount = if (sources.isEmpty()) 0 else 1,
 		)
 		if (sources.isNotEmpty()) {
+			loadAvailableTags()
 			loadPage(page = 0)
 		}
 	}
@@ -62,9 +71,12 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			page = 0,
 			knownPageCount = 1,
 			hasNext = false,
+			availableTags = emptyList(),
+			selectedTags = emptyList(),
 			error = null,
 		)
 		pageSignatures.clear()
+		loadAvailableTags()
 		loadPage(page = 0)
 	}
 
@@ -76,6 +88,30 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		}
 		_state.value = current.copy(
 			query = normalized,
+			items = emptyList(),
+			page = 0,
+			knownPageCount = if (current.selectedSource == null) 0 else 1,
+			hasNext = false,
+			selectedTags = emptyList(),
+			error = null,
+		)
+		pageSignatures.clear()
+		loadPage(page = 0)
+	}
+
+	fun selectTag(tag: MangaTag?) {
+		val current = _state.value
+		val selectedTags = when {
+			tag == null -> emptyList()
+			current.selectedTags.any { it.key == tag.key && it.source == tag.source } -> current.selectedTags
+			else -> current.selectedTags + tag
+		}
+		if (current.selectedTags == selectedTags) {
+			return
+		}
+		_state.value = current.copy(
+			selectedTags = selectedTags,
+			query = selectedTags.joinToString(", ") { it.title.ifBlank { it.key } },
 			items = emptyList(),
 			page = 0,
 			knownPageCount = if (current.selectedSource == null) 0 else 1,
@@ -111,15 +147,17 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		loadJob?.cancel()
 		loadJob = launchJob(Dispatchers.Default) {
 			val query = _state.value.query
+			val selectedTags = _state.value.selectedTags
 			_state.value = _state.value.copy(isLoading = true, error = null, page = page)
 			val repository = mangaRepositoryFactory.create(source)
 			val order = when {
+				SortOrder.NEWEST in repository.sortOrders -> SortOrder.NEWEST
 				SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
 				SortOrder.POPULARITY in repository.sortOrders -> SortOrder.POPULARITY
 				else -> repository.defaultSortOrder
 			}
 			val pageResult = runCatchingCancellable {
-				fetchPage(repository, order, page, query)
+				fetchPage(repository, order, page, query, selectedTags)
 			}.onFailure {
 				it.printStackTraceDebug()
 			}.getOrElse { error ->
@@ -133,7 +171,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			}
 			pageSignatures[page] = pageResult.signature
 			val visibleManga = hydrateDetails(repository, pageResult.items)
-				.filter { it.matchesBrowserQuery(query) }
+				.filter { selectedTags.isNotEmpty() || it.matchesBrowserQuery(query) }
 			_state.value = _state.value.copy(
 				isLoading = false,
 				items = visibleManga,
@@ -150,28 +188,22 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		order: SortOrder,
 		page: Int,
 		query: String,
+		selectedTags: List<MangaTag>,
 	): BrowserPageResult {
 		val previousSignature = pageSignatures[page - 1]
-		val filter = if (query.isBlank()) {
+		val filter = if (selectedTags.isNotEmpty()) {
+			MangaListFilter(tags = selectedTags.toSet())
+		} else if (query.isBlank()) {
 			MangaListFilter.EMPTY
 		} else {
 			MangaListFilter(query = query)
 		}
-		val offsets = if (page == 0) {
-			listOf(0)
-		} else {
-			listOf(
-				page * PAGE_SIZE,
-				page,
-				page + 1,
-				(page * PAGE_SIZE) + 1,
-			).distinct()
-		}
+		val offsets = buildOffsetCandidates(page)
 		var fallback: BrowserPageResult? = null
 		for (offset in offsets) {
 			val raw = repository.getList(offset, order, filter)
 			val window = when {
-				raw.size > PAGE_SIZE && offset >= PAGE_SIZE -> raw.drop(offset).take(PAGE_SIZE)
+				raw.size > PAGE_SIZE -> raw.take(PAGE_SIZE)
 				else -> raw.take(PAGE_SIZE)
 			}
 			val result = BrowserPageResult(
@@ -187,6 +219,35 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			}
 		}
 		return fallback?.copy(hasNext = false) ?: BrowserPageResult(emptyList(), emptySet(), false)
+	}
+
+	private fun loadAvailableTags() {
+		val source = _state.value.selectedSource ?: return
+		tagsJob?.cancel()
+		tagsJob = launchJob(Dispatchers.Default) {
+			val repository = mangaRepositoryFactory.create(source)
+			val tags = runCatchingCancellable {
+				repository.getFilterOptions().availableTags
+			}.onFailure {
+				it.printStackTraceDebug()
+			}.getOrDefault(emptySet())
+				.sortedWith(compareBy<MangaTag> { it.title.lowercase() }.thenBy { it.key })
+			_state.value = _state.value.copy(availableTags = tags)
+		}
+	}
+
+	private fun buildOffsetCandidates(page: Int): List<Int> {
+		if (page <= 0) {
+			return listOf(0)
+		}
+		return listOf(
+			page * PAGE_SIZE,
+			page * SOURCE_PAGE_HINT,
+			page,
+			page + 1,
+			(page * PAGE_SIZE) + 1,
+			(page * SOURCE_PAGE_HINT) + 1,
+		).filter { it >= 0 }.distinct()
 	}
 
 	private suspend fun hydrateDetails(repository: MangaRepository, manga: List<Manga>): List<Manga> = coroutineScope {
@@ -221,7 +282,10 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	}
 
 	companion object {
+		const val EXTRA_SOURCE = "browser_source"
+		const val EXTRA_QUERY = "browser_query"
 		const val PAGE_SIZE = 25
+		private const val SOURCE_PAGE_HINT = 50
 		private const val DETAILS_CHUNK_SIZE = 5
 	}
 }
@@ -237,6 +301,8 @@ data class NsfwBrowserModeState(
 	val selectedSource: MangaParserSource? = null,
 	val items: List<Manga> = emptyList(),
 	val query: String = "",
+	val availableTags: List<MangaTag> = emptyList(),
+	val selectedTags: List<MangaTag> = emptyList(),
 	val page: Int = 0,
 	val knownPageCount: Int = 0,
 	val hasNext: Boolean = false,

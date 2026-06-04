@@ -26,6 +26,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.core.view.updatePaddingRelative
+import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.transition.TransitionManager
 import coil3.ImageLoader
@@ -39,24 +40,29 @@ import coil3.target.ImageViewTarget
 import coil3.transform.RoundedCornersTransformation
 import com.google.android.material.chip.Chip
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.core.image.CoilMemoryCacheKey
 import org.koitharu.kotatsu.core.model.FavouriteCategory
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
-import org.koitharu.kotatsu.core.model.getLocalizedTitle
 import org.koitharu.kotatsu.core.model.getSummary
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
+import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -80,6 +86,7 @@ import org.koitharu.kotatsu.core.util.ext.enqueueWith
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
 import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
+import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.isTextTruncated
 import org.koitharu.kotatsu.core.util.ext.joinToStringWithLimit
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
@@ -116,6 +123,9 @@ import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.toTitleCase
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
+import org.jsoup.Jsoup
+import java.text.NumberFormat
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import com.google.android.material.R as materialR
@@ -139,11 +149,16 @@ class DetailsActivity :
 	lateinit var coil: ImageLoader
 
 	@Inject
+	@MangaHttpClient
+	lateinit var okHttpClient: OkHttpClient
+
+	@Inject
 	lateinit var settings: AppSettings
 
 	private val viewModel: DetailsViewModel by viewModels()
 	private lateinit var menuProvider: DetailsMenuProvider
 	private lateinit var infoBinding: LayoutDetailsTableBinding
+	private var sourceStatsRequestUrl: String? = null
 
 	override val bottomSheet: View?
 		get() = viewBinding.containerBottomSheet
@@ -450,14 +465,13 @@ class DetailsActivity :
 			textViewDescription.text = details.description.ifNullOrEmpty { getString(R.string.no_description) }
 			textChipType?.text = manga.detectComicType().label.uppercase()
 			textChipStatus?.text = manga.state?.let { resources.getString(it.titleResId).uppercase() } ?: getString(R.string.unknown).uppercase()
-			textChipSource?.text = manga.source.getTitle(this@DetailsActivity).uppercase()
-			textViewScanlations?.text = manga.source.getTitle(this@DetailsActivity)
-			textViewLatest?.text = details.chapters.values
-				.flatten()
-				.maxWithOrNull(compareBy({ it.number }, { it.uploadDate }))
-				?.getLocalizedTitle(resources)
-				?: getString(R.string.unknown)
+			textChipSource?.text = manga.source.getTitle(this@DetailsActivity).uppercase(Locale.getDefault())
+			textChipSource?.isVisible = true
+			textViewRating?.text = manga.formatSourceRating()
+			textViewFollows?.text = manga.formatSourceFollows()
+			textViewChaptersCount?.text = details.formatChapterCount()
 		}
+		updateSourceStatsFromPage(manga)
 		with(infoBinding) {
 			val translation = details.getLocale()
 			infoBinding.textViewTranslation.textAndVisible = translation?.getDisplayLanguage(translation)
@@ -524,6 +538,129 @@ class DetailsActivity :
 		finishAfterTransition()
 	}
 
+	private fun Manga.formatSourceRating(): String {
+		if (!hasRating) {
+			return getString(R.string.unknown)
+		}
+		val ratingValue = (rating * 5f).coerceIn(0f, 5f)
+		return String.format(Locale.US, "%.1f", ratingValue)
+	}
+
+	private fun Manga.formatSourceFollows(): String {
+		val value = readNumericProperty(
+			"getFollows",
+			"getFollowers",
+			"getFollowCount",
+			"getFollowersCount",
+			"getFollowedCount",
+		) ?: return getString(R.string.unknown)
+		if (value <= 0L) {
+			return getString(R.string.unknown)
+		}
+		return NumberFormat.getIntegerInstance(Locale.US).format(value)
+	}
+
+	private fun updateSourceStatsFromPage(manga: Manga) {
+		val url = manga.publicUrl.takeIf { it.isHttpUrl() } ?: return
+		sourceStatsRequestUrl = url
+		lifecycleScope.launch {
+			val stats = runCatching {
+				fetchSourcePageStats(url)
+			}.getOrNull() ?: return@launch
+			if (sourceStatsRequestUrl != url || viewModel.getMangaOrNull()?.id != manga.id) {
+				return@launch
+			}
+			stats.rating?.let { viewBinding.textViewRating?.text = it }
+			stats.follows?.let { viewBinding.textViewFollows?.text = it }
+		}
+	}
+
+	private suspend fun fetchSourcePageStats(url: String): SourcePageStats = withContext(Dispatchers.IO) {
+		val request = Request.Builder()
+			.url(url)
+			.get()
+			.build()
+		okHttpClient.newCall(request).execute().use { response ->
+			if (!response.isSuccessful) {
+				return@withContext SourcePageStats()
+			}
+			parseSourcePageStats(response.body?.string().orEmpty(), url)
+		}
+	}
+
+	private fun parseSourcePageStats(html: String, url: String): SourcePageStats {
+		if (html.isBlank()) {
+			return SourcePageStats()
+		}
+		val document = Jsoup.parse(html, url)
+		val text = document.body()?.text().orEmpty()
+		return SourcePageStats(
+			rating = extractRating(document.selectFirst("[itemprop=ratingValue]")?.textOrContent())
+				?: extractRating(document.selectFirst("meta[itemprop=ratingValue]")?.textOrContent())
+				?: extractRating(document.selectFirst(".rating, .score, .post-rating, .series-rating")?.textOrContent())
+				?: extractRating(RATING_TEXT_REGEX.find(text)?.groupValues?.getOrNull(2))
+				?: extractRating(RATING_JSON_REGEX.find(html)?.groupValues?.getOrNull(1)),
+			follows = extractFollowCount(FOLLOW_TEXT_REGEX.find(text)?.groupValues?.getOrNull(1))
+				?: extractFollowCount(FOLLOW_JSON_REGEX.find(html)?.groupValues?.getOrNull(1)),
+		)
+	}
+
+	private fun org.jsoup.nodes.Element.textOrContent(): String {
+		return attr("content").ifBlank { text() }
+	}
+
+	private fun extractRating(raw: String?): String? {
+		val match = raw?.let { RATING_VALUE_REGEX.find(it) } ?: return null
+		val value = match.groupValues.getOrNull(1)?.toFloatOrNull() ?: return null
+		val scale = match.groupValues.getOrNull(2)?.toFloatOrNull()
+		val normalized = when {
+			scale != null && scale > 0f -> value / scale * 5f
+			value > 5f && value <= 10f -> value / 10f * 5f
+			value > 10f && value <= 100f -> value / 100f * 5f
+			else -> value
+		}.coerceIn(0f, 5f)
+		return String.format(Locale.US, "%.1f", normalized)
+	}
+
+	private fun extractFollowCount(raw: String?): String? {
+		val match = raw?.let { COMPACT_NUMBER_REGEX.find(it.trim()) } ?: return null
+		val base = match.groupValues[1].replace(",", "").toDoubleOrNull() ?: return null
+		val multiplier = when (match.groupValues.getOrNull(2)?.uppercase(Locale.US)) {
+			"K" -> 1_000.0
+			"M" -> 1_000_000.0
+			"B" -> 1_000_000_000.0
+			else -> 1.0
+		}
+		val count = (base * multiplier).toLong()
+		return count.takeIf { it > 0L }?.let {
+			NumberFormat.getIntegerInstance(Locale.US).format(it)
+		}
+	}
+
+	private fun Any.readNumericProperty(vararg methodNames: String): Long? {
+		for (methodName in methodNames) {
+			val method = javaClass.methods.firstOrNull { method ->
+				method.name == methodName && method.parameterTypes.isEmpty()
+			} ?: continue
+			val value = method.invoke(this)
+			return when (value) {
+				is Number -> value.toLong()
+				is String -> value.filter(Char::isDigit).toLongOrNull()
+				else -> null
+			}
+		}
+		return null
+	}
+
+	private fun MangaDetails.formatChapterCount(): String {
+		val count = chapters.values.flatten().distinctBy { it.id }.size
+		return if (count > 0) {
+			NumberFormat.getIntegerInstance(Locale.US).format(count)
+		} else {
+			getString(R.string.unknown)
+		}
+	}
+
 	private fun onHistoryChanged(info: HistoryInfo, isLoading: Boolean) = with(infoBinding) {
 		viewBinding.buttonStartReading?.setText(
 			when {
@@ -564,16 +701,17 @@ class DetailsActivity :
 	}
 
 	private fun onTagsChanged(tags: Collection<ChipsView.ChipModel>) {
-		viewBinding.chipsTags.isVisible = tags.isNotEmpty()
-		viewBinding.chipsTags.setChips(
-			tags.map { tag ->
-				if (tag.titleResId == 0 && tag.title != null) {
-					tag.copy(title = tag.title.toString().uppercase())
-				} else {
-					tag
-				}
-			},
-		)
+		viewBinding.chipsTags.isGone = true
+		val summary = tags
+			.asSequence()
+			.mapNotNull { tag ->
+				tag.title?.toString()?.takeIf { it.isNotBlank() }
+					?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
+			}
+			.take(4)
+			.joinToString(separator = " / ") { it.uppercase(Locale.getDefault()) }
+		viewBinding.textChipGenres?.text = summary
+		viewBinding.textChipGenres?.isVisible = summary.isNotEmpty()
 	}
 
 	private fun loadCover(imageUrl: String?) {
@@ -708,5 +846,34 @@ class DetailsActivity :
 	companion object {
 
 		private const val FAV_LABEL_LIMIT = 16
+		private val RATING_VALUE_REGEX = Regex(
+			pattern = """([0-9]+(?:\.[0-9]+)?)\s*(?:/|out\s+of)?\s*([0-9]+(?:\.[0-9]+)?)?""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val RATING_TEXT_REGEX = Regex(
+			pattern = """\b(rating|score)\b[^\d]{0,24}([0-9]+(?:\.[0-9]+)?(?:\s*/\s*[0-9]+(?:\.[0-9]+)?)?)""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val RATING_JSON_REGEX = Regex(
+			pattern = """"(?:rating|score|ratingValue)"\s*:\s*"?([0-9]+(?:\.[0-9]+)?(?:\s*/\s*[0-9]+(?:\.[0-9]+)?)?)"?""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val FOLLOW_TEXT_REGEX = Regex(
+			pattern = """\b(?:follows|followers|followed\s+by)\b[^\d]{0,28}([0-9][0-9,]*(?:\.[0-9]+)?\s*[kmb]?)""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val FOLLOW_JSON_REGEX = Regex(
+			pattern = """"(?:follows|followers|followCount|followersCount)"\s*:\s*"?([0-9][0-9,]*(?:\.[0-9]+)?\s*[kmb]?)"?""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val COMPACT_NUMBER_REGEX = Regex(
+			pattern = """([0-9][0-9,]*(?:\.[0-9]+)?)\s*([KMB])?""",
+			option = RegexOption.IGNORE_CASE,
+		)
 	}
+
+	private data class SourcePageStats(
+		val rating: String? = null,
+		val follows: String? = null,
+	)
 }

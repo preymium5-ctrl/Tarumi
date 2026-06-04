@@ -22,6 +22,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -60,6 +61,7 @@ class DownloadsViewModel @Inject constructor(
 	private val mangaCache = LongSparseArray<Manga>()
 	private val cacheMutex = Mutex()
 	private val expanded = MutableStateFlow(emptySet<UUID>())
+	val isNsfwMode = MutableStateFlow(false)
 	private val chaptersCache = ArrayMap<UUID, StateFlow<List<DownloadChapter>?>>()
 
 	private val works = combine(
@@ -72,8 +74,8 @@ class DownloadsViewModel @Inject constructor(
 
 	val onActionDone = MutableEventFlow<ReversibleAction>()
 
-	val items = works.map {
-		it?.toUiList() ?: listOf(LoadingState())
+	val items = combine(works, isNsfwMode) { list, nsfwMode ->
+		itOrLoading(list, nsfwMode)
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, listOf(LoadingState()))
 
 	val hasPausedWorks = works.map {
@@ -197,6 +199,21 @@ class DownloadsViewModel @Inject constructor(
 			} else {
 				it + item.id
 			}
+		}
+	}
+
+	fun setNsfwMode(enabled: Boolean) {
+		isNsfwMode.value = enabled
+	}
+
+	private fun itOrLoading(list: List<DownloadItemModel>?, nsfwMode: Boolean): List<ListModel> {
+		return list?.filterDownloads(nsfwMode)?.toUiList() ?: listOf(LoadingState())
+	}
+
+	private fun List<DownloadItemModel>.filterDownloads(nsfwMode: Boolean): List<DownloadItemModel> {
+		return filter { item ->
+			val isNsfw = item.manga?.isNsfw() == true
+			if (nsfwMode) isNsfw else !isNsfw
 		}
 	}
 
