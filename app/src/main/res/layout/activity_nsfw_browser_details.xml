@@ -74,6 +74,23 @@
 						android:textSize="20sp"
 						android:textStyle="bold" />
 
+					<com.google.android.material.button.MaterialButton
+						android:id="@+id/button_chapters"
+						android:layout_width="match_parent"
+						android:layout_height="36dp"
+						android:layout_marginTop="4dp"
+						android:backgroundTint="#556579"
+						android:fontFamily="sans-serif-condensed"
+						android:insetTop="0dp"
+						android:insetBottom="0dp"
+						android:text="@string/chapters"
+						android:textAllCaps="false"
+						android:textColor="@android:color/white"
+						android:textSize="20sp"
+						android:textStyle="bold"
+						android:visibility="gone"
+						tools:visibility="visible" />
+
 				</LinearLayout>
 
 			</LinearLayout>

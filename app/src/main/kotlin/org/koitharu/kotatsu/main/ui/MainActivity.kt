@@ -54,6 +54,7 @@ import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.backups.ui.periodical.PeriodicalBackupService
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
+import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.os.VoiceInputContract
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -108,6 +109,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	private lateinit var navigationDelegate: MainNavigationDelegate
 	private lateinit var fadingAppbarMediator: FadingAppbarMediator
 	private var taruAppBar: ViewTaruAppbarBinding? = null
+	private var updatePromptShown = false
 
 	override val appBar: AppBarLayout
 		get() = viewBinding.appbar
@@ -138,6 +140,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		)
 		navigationDelegate.addOnFragmentChangedListener(this)
 		navigationDelegate.onCreate(this, savedInstanceState)
+		navigateFromIntent(intent)
 		viewBinding.textViewTitle?.let { tv ->
 			navigationDelegate.observeTitle().observe(this) { tv.text = it }
 		}
@@ -156,7 +159,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		if (savedInstanceState == null) {
 			onFirstStart()
-			showUpdateTutorial()
 		}
 
 		viewModel.onOpenReader.observeEvent(this, this::onOpenReader)
@@ -165,6 +167,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewModel.isResumeEnabled.observe(this, this::onResumeEnabledChanged)
 		viewModel.feedCounter.observe(this, ::onFeedCounterChanged)
 		viewModel.appUpdate.observe(this, MenuInvalidator(this))
+		viewModel.appUpdate.observe(this) { version ->
+			if (version != null && !updatePromptShown) {
+				updatePromptShown = true
+				showUpdateTutorial(version.name)
+			}
+		}
 		viewModel.onFirstStart.observeEvent(this) { router.showWelcomeSheet() }
 		viewModel.isBottomNavPinned.observe(this, ::setNavbarPinned)
 		settings.observe(AppSettings.KEY_FLOATING_NAV).onEach {
@@ -177,6 +185,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.searchView.addTransitionListener(exitCallback)
 		initSearch()
 		hideSystemNavigationBar()
+	}
+
+	override fun onNewIntent(intent: Intent) {
+		super.onNewIntent(intent)
+		setIntent(intent)
+		navigateFromIntent(intent)
 	}
 
 	override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -428,23 +442,31 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		}
 	}
 
-	private fun showUpdateTutorial() {
+	private fun showUpdateTutorial(versionName: String) {
 		viewBinding.root.post {
 			if (isFinishing || isDestroyed) {
 				return@post
 			}
 			MaterialAlertDialogBuilder(this)
 				.setTitle(R.string.update_tutorial_title)
-				.setMessage(R.string.update_tutorial_message)
+				.setMessage(getString(R.string.update_tutorial_message, versionName))
 				.setNegativeButton(R.string.got_it, null)
-				.setPositiveButton(R.string.open_settings) { _, _ ->
-					router.openSettings()
+				.setPositiveButton(R.string.check_app_updates) { _, _ ->
+					router.openAppUpdate()
 				}
 				.show()
 		}
 	}
 
 	private fun openSearch() = openSearchWithQuery()
+
+	private fun navigateFromIntent(intent: Intent?) {
+		val navItemId = intent?.getIntExtra(AppRouter.KEY_NAV_ITEM, 0) ?: 0
+		if (navItemId != 0) {
+			navigationDelegate.selectItem(navItemId)
+			intent?.removeExtra(AppRouter.KEY_NAV_ITEM)
+		}
+	}
 
 	private fun requestNotificationsPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(

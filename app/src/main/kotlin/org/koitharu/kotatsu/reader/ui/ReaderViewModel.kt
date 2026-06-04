@@ -255,7 +255,7 @@ class ReaderViewModel @Inject constructor(
         historyUpdateUseCase.invokeAsync(
             manga = getMangaOrNull() ?: return,
             readerState = readerState,
-            percent = computePercent(readerState.chapterId, readerState.page),
+            percent = computePercent(readerState.chapterId, readerState.page, loadedPagesCount(readerState.chapterId)),
         )
     }
 
@@ -357,7 +357,9 @@ class ReaderViewModel @Inject constructor(
                 return@launchJob
             }
             ensureActive()
-            val autoLoadAllowed = readerMode.value != ReaderMode.WEBTOON || !isWebtoonPullGestureEnabled.value
+            val mode = readerMode.value
+            val autoLoadAllowed = mode != ReaderMode.VERTICAL &&
+                (mode != ReaderMode.WEBTOON || !isWebtoonPullGestureEnabled.value)
             if (autoLoadAllowed) {
                 if (upperPos >= pages.lastIndex - BOUNDS_PAGE_OFFSET) {
                     loadPrevNextChapter(pages.last().chapterId, isNext = true)
@@ -393,7 +395,7 @@ class ReaderViewModel @Inject constructor(
                     scroll = state.scroll,
                     imageUrl = page.preview.ifNullOrEmpty { page.url },
                     createdAt = Instant.now(),
-                    percent = computePercent(state.chapterId, state.page),
+                    percent = computePercent(state.chapterId, state.page, loadedPagesCount(state.chapterId)),
                 )
                 bookmarksRepository.addBookmark(bookmark)
                 onShowToast.call(R.string.bookmark_added)
@@ -447,7 +449,7 @@ class ReaderViewModel @Inject constructor(
                         // save state
                         if (!isIncognitoMode.firstNotNull()) {
                             readingState.value?.let {
-                                val percent = computePercent(it.chapterId, it.page)
+                                val percent = computePercent(it.chapterId, it.page, loadedPagesCount(it.chapterId))
                                 historyUpdateUseCase(manga, it, percent)
                             }
                         }
@@ -515,14 +517,15 @@ class ReaderViewModel @Inject constructor(
         val chapter = chaptersLoader.peekChapter(state.chapterId) ?: return
         val m = mangaDetails.value ?: return
         val chapterIndex = m.chapters[chapter.branch]?.indexOfFirst { it.id == chapter.id } ?: -1
+        val totalPages = displayedPagesCount(chapter.id, state.page)
         val newState = ReaderUiState(
             mangaName = m.toManga().title,
             chapter = chapter,
             chapterIndex = chapterIndex,
             chaptersTotal = m.chapters[chapter.branch].sizeOrZero(),
-            totalPages = chaptersLoader.getPagesCount(chapter.id),
-            currentPage = state.page,
-            percent = computePercent(state.chapterId, state.page),
+            totalPages = totalPages,
+            currentPage = state.page.coerceAtMost(totalPages - 1),
+            percent = computePercent(state.chapterId, state.page, totalPages),
             incognito = isIncognitoMode.value == true,
         )
         uiState.value = newState
@@ -532,12 +535,27 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun computePercent(chapterId: Long, pageIndex: Int): Float {
-        val pagesCount = chaptersLoader.getPagesCount(chapterId)
+    private fun computePercent(chapterId: Long, pageIndex: Int, pagesCountOverride: Int? = null): Float {
+        val pagesCount = pagesCountOverride ?: chaptersLoader.getPagesCount(chapterId)
         if (pagesCount == 0) {
             return PROGRESS_NONE
         }
         return ((pageIndex + 1) / pagesCount.toFloat()).coerceIn(0f, 1f)
+    }
+
+    private fun loadedPagesCount(chapterId: Long): Int? {
+        return content.value.pages.count { it.chapterId == chapterId }.takeIf { it > 0 }
+    }
+
+    private fun displayedPagesCount(chapterId: Long, pageIndex: Int): Int {
+        val loaded = loadedPagesCount(chapterId)
+        val expected = chaptersLoader.getPagesCount(chapterId)
+        return when {
+            loaded != null && pageIndex >= loaded - 1 -> loaded
+            expected > 0 -> expected
+            loaded != null -> loaded
+            else -> 1
+        }
     }
 
     private fun observeIsWebtoonZoomEnabled() = settings.observeAsFlow(

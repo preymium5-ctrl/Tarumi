@@ -24,6 +24,7 @@ import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.util.ext.getDisplayName
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.toLocale
@@ -65,6 +66,9 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		viewBinding.buttonDownload.setOnClickListener {
 			router.showDownloadDialog(viewModel.state.value.manga, viewBinding.root)
 		}
+		viewBinding.buttonChapters.setOnClickListener {
+			showChaptersDialog()
+		}
 		viewBinding.textEmpty.setOnClickListener {
 			viewModel.retry()
 		}
@@ -95,13 +99,17 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 
 		viewBinding.imageViewCover.setImageAsync(coverUrl, manga)
 		viewBinding.textViewTitle.text = manga.title
-		val authorText = manga.authors.joinToString(", ").ifNullOrBlank("N/A")
+		val authorText = manga.authors
+			.filterNot { it.equals("updating", ignoreCase = true) || it.equals("updated", ignoreCase = true) }
+			.joinToString(", ")
+			.ifNullOrBlank("N/A")
 		viewBinding.textViewSubtitle.text = authorText
 		viewBinding.textViewGroup.text = sourceTitle
 		viewBinding.textViewType.text = typeText
 		viewBinding.textViewLanguage.text = languageText
 		viewBinding.textViewSeries.text = seriesText
 		viewBinding.textViewFooter.text = formatDate(manga.chapters.orEmpty().firstOrNull()?.uploadDate)
+		viewBinding.buttonChapters.isVisible = manga.chapters.orEmpty().size >= 2
 		viewBinding.textViewSubtitle.setOnClickListener {
 			if (authorText != "N/A") {
 				router.openNsfwBrowserMode(manga.source, authorText)
@@ -139,6 +147,31 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		val intent = ReaderIntent.Builder(this)
 			.manga(viewModel.state.value.manga)
 			.state(ReaderState(chapterId, pageIndex, 0))
+			.browserMode()
+			.build()
+		router.openReader(intent)
+	}
+
+	private fun showChaptersDialog() {
+		val chapters = viewModel.state.value.manga.chapters.orEmpty()
+		if (chapters.size < 2) {
+			return
+		}
+		val labels = chapters.mapIndexed { index, chapter ->
+			chapter.name.ifNullOrBlank(getString(R.string.chapter_number, index + 1))
+		}.toTypedArray()
+		buildAlertDialog(this, isCentered = true) {
+			setTitle(R.string.chapters)
+			setItems(labels) { _, which ->
+				openReaderAtChapter(chapters[which].id)
+			}
+		}.show()
+	}
+
+	private fun openReaderAtChapter(chapterId: Long) {
+		val intent = ReaderIntent.Builder(this)
+			.manga(viewModel.state.value.manga)
+			.state(ReaderState(chapterId, 0, 0))
 			.browserMode()
 			.build()
 		router.openReader(intent)

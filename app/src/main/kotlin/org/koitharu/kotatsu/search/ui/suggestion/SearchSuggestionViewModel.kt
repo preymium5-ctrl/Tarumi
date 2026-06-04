@@ -30,8 +30,8 @@ import org.koitharu.kotatsu.search.domain.MangaSearchRepository
 import org.koitharu.kotatsu.search.ui.suggestion.model.SearchSuggestionItem
 import javax.inject.Inject
 
-private const val DEBOUNCE_TIMEOUT = 300L
-private const val MAX_MANGA_ITEMS = 20
+private const val DEBOUNCE_TIMEOUT = 150L
+private const val MAX_MANGA_ITEMS = 30
 private const val MAX_QUERY_ITEMS = 16
 private const val MAX_HINTS_ITEMS = 3
 private const val MAX_AUTHORS_ITEMS = 2
@@ -106,7 +106,10 @@ class SearchSuggestionViewModel @Inject constructor(
 		types: Set<SearchSuggestionType>,
 	): List<SearchSuggestionItem> = coroutineScope {
 		if (searchQuery.isNotBlank()) {
-			return@coroutineScope getManga(searchQuery)
+			val manga = async { getManga(searchQuery) }
+			val hints = async { getQueryHints(searchQuery) }
+			val recent = async { getRecentQueries(searchQuery) }
+			return@coroutineScope manga.await() + hints.await() + recent.await()
 		}
 		listOfNotNull(
 			if (SearchSuggestionType.GENRES in types) {

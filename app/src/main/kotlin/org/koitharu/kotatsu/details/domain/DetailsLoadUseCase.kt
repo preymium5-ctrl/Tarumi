@@ -30,6 +30,7 @@ import org.koitharu.kotatsu.local.data.LocalMangaRepository
 import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.exception.NotFoundException
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.recoverNotNull
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -54,7 +55,7 @@ class DetailsLoadUseCase @Inject constructor(
                 manga = manga,
                 localManga = null,
                 override = override,
-                description = manga.description?.parseAsHtml(withImages = false),
+                description = manga.descriptionForDisplay()?.parseAsHtml(withImages = false),
                 isLoaded = false,
             ),
         )
@@ -78,7 +79,7 @@ class DetailsLoadUseCase @Inject constructor(
                 manga = localDetails,
                 localManga = null,
                 override = override,
-                description = localDetails.description?.parseAsHtml(withImages = false),
+                description = localDetails.descriptionForDisplay()?.parseAsHtml(withImages = false),
                 isLoaded = skipNetworkLoad,
             ),
         )
@@ -92,7 +93,7 @@ class DetailsLoadUseCase @Inject constructor(
                     manga = localDetails,
                     localManga = null,
                     override = override,
-                    description = localDetails.description?.parseAsHtml(withImages = true),
+                    description = localDetails.descriptionForDisplay()?.parseAsHtml(withImages = true),
                     isLoaded = true,
                 ),
             )
@@ -102,7 +103,7 @@ class DetailsLoadUseCase @Inject constructor(
                 manga = remoteDetails ?: remoteManga,
                 localManga = LocalManga(localDetails),
                 override = override,
-                description = (remoteDetails ?: localDetails).description?.parseAsHtml(withImages = true),
+                description = (remoteDetails ?: localDetails).descriptionForDisplay()?.parseAsHtml(withImages = true),
                 isLoaded = true,
             )
             emit(mangaDetails)
@@ -131,18 +132,18 @@ class DetailsLoadUseCase @Inject constructor(
                     manga = manga,
                     localManga = localManga,
                     override = override,
-                    description = localManga.manga.description?.parseAsHtml(withImages = true),
+                    description = localManga.manga.descriptionForDisplay()?.parseAsHtml(withImages = true),
                     isLoaded = false,
                 ),
             )
         }
         val remoteDetails = remoteDeferred.await().getOrThrow()
         val mangaDetails = MangaDetails(
-            manga = remoteDetails,
+            manga = remoteDetails.normalizeSourceMetadata(),
             localManga = localManga,
             override = override,
-            description = (remoteDetails.description
-                ?: localManga?.manga?.description)?.parseAsHtml(withImages = true),
+            description = (remoteDetails.normalizeSourceMetadata().descriptionForDisplay()
+                ?: localManga?.manga?.descriptionForDisplay())?.parseAsHtml(withImages = true),
             isLoaded = true,
         )
         emit(mangaDetails)
@@ -151,16 +152,51 @@ class DetailsLoadUseCase @Inject constructor(
 
     private suspend fun getDetails(seed: Manga, force: Boolean) = runCatchingCancellable {
         val repository = mangaRepositoryFactory.create(seed.source)
-        if (repository is CachingMangaRepository) {
+        val details = if (repository is CachingMangaRepository) {
             repository.getDetails(seed, if (force) CachePolicy.WRITE_ONLY else CachePolicy.ENABLED)
         } else {
             repository.getDetails(seed)
         }
+        details.normalizeSourceMetadata()
     }.recoverNotNull { e ->
         if (e is NotFoundException) {
             recoverUseCase(seed)
         } else {
             null
+        }
+    }
+
+    private fun Manga.descriptionForDisplay(): String? {
+        val text = description ?: return null
+        if (source.name != MangaParserSource.DEMONICSCANS.name) {
+            return text
+        }
+        val marker = Regex("""\bThe\s+Summary\s+is\b[:\s]*""", RegexOption.IGNORE_CASE).find(text)
+            ?: return text
+        val summary = text.substring(marker.range.last + 1).trim()
+        return summary.ifBlank { text }
+    }
+
+    private fun Manga.normalizeSourceMetadata(): Manga {
+        if (source.name != MangaParserSource.DEMONICSCANS.name) {
+            return this
+        }
+        val cleanedAuthors = authors
+            .filterNot { it.equals("updating", ignoreCase = true) || it.equals("updated", ignoreCase = true) }
+            .ifEmpty {
+                tags
+                    .filter { tag ->
+                        tag.key.contains("author", ignoreCase = true) ||
+                            tag.key.contains("artist", ignoreCase = true)
+                    }
+                    .map { it.title }
+                    .filter { it.isNotBlank() }
+            }
+            .toSet()
+        return if (cleanedAuthors == authors) {
+            this
+        } else {
+            copy(authors = cleanedAuthors)
         }
     }
 

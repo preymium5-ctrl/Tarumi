@@ -83,7 +83,8 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	fun setQuery(query: String) {
 		val normalized = query.trim()
 		val current = _state.value
-		if (current.query == normalized) {
+		val selectedTags = parseTagsFromQuery(normalized, current.availableTags)
+		if (current.query == normalized && current.selectedTags == selectedTags) {
 			return
 		}
 		_state.value = current.copy(
@@ -92,7 +93,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			page = 0,
 			knownPageCount = if (current.selectedSource == null) 0 else 1,
 			hasNext = false,
-			selectedTags = emptyList(),
+			selectedTags = selectedTags,
 			error = null,
 		)
 		pageSignatures.clear()
@@ -171,7 +172,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			}
 			pageSignatures[page] = pageResult.signature
 			val visibleManga = hydrateDetails(repository, pageResult.items)
-				.filter { selectedTags.isNotEmpty() || it.matchesBrowserQuery(query) }
+				.filter { it.matchesBrowserFilters(query, selectedTags) }
 			_state.value = _state.value.copy(
 				isLoading = false,
 				items = visibleManga,
@@ -192,7 +193,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	): BrowserPageResult {
 		val previousSignature = pageSignatures[page - 1]
 		val filter = if (selectedTags.isNotEmpty()) {
-			MangaListFilter(tags = selectedTags.toSet())
+			MangaListFilter(tags = setOf(selectedTags.first()))
 		} else if (query.isBlank()) {
 			MangaListFilter.EMPTY
 		} else {
@@ -202,16 +203,21 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		var fallback: BrowserPageResult? = null
 		for (offset in offsets) {
 			val raw = repository.getList(offset, order, filter)
-			val window = when {
-				raw.size > PAGE_SIZE -> raw.take(PAGE_SIZE)
-				else -> raw.take(PAGE_SIZE)
+			val window = if (offset == 0 && page > 0 && raw.size > page * PAGE_SIZE) {
+				raw.drop(page * PAGE_SIZE).take(PAGE_SIZE)
+			} else {
+				raw.take(PAGE_SIZE)
 			}
+			if (window.isEmpty()) {
+				continue
+			}
+			val hasNextFromWholeList = offset == 0 && raw.size > (page + 1) * PAGE_SIZE
 			val result = BrowserPageResult(
 				items = window,
 				signature = window.mapTo(LinkedHashSet()) { it.url.ifEmpty { it.id.toString() } },
-				hasNext = raw.size >= PAGE_SIZE,
+				hasNext = hasNextFromWholeList || raw.size >= PAGE_SIZE,
 			)
-			if (fallback == null) {
+			if (fallback == null && result.signature != previousSignature) {
 				fallback = result
 			}
 			if (result.items.isNotEmpty() && result.signature != previousSignature) {
@@ -241,6 +247,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			return listOf(0)
 		}
 		return listOf(
+			0,
 			page * PAGE_SIZE,
 			page * SOURCE_PAGE_HINT,
 			page,
@@ -262,6 +269,21 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		}
 	}
 
+	private fun Manga.matchesBrowserFilters(query: String, selectedTags: List<MangaTag>): Boolean {
+		if (selectedTags.isNotEmpty()) {
+			return matchesBrowserTags(selectedTags)
+		}
+		return matchesBrowserQuery(query)
+	}
+
+	private fun Manga.matchesBrowserTags(selectedTags: List<MangaTag>): Boolean {
+		if (selectedTags.size <= 1 && tags.isEmpty()) {
+			return true
+		}
+		val ownTags = tags.mapTo(HashSet(tags.size)) { it.browserTagKey() }
+		return selectedTags.all { it.browserTagKey() in ownTags }
+	}
+
 	private fun Manga.matchesBrowserQuery(query: String): Boolean {
 		if (query.isBlank()) {
 			return true
@@ -273,6 +295,32 @@ class NsfwBrowserModeViewModel @Inject constructor(
 				tag.title.contains(query, ignoreCase = true) ||
 					tag.key.contains(query, ignoreCase = true)
 			}
+	}
+
+	private fun parseTagsFromQuery(query: String, availableTags: List<MangaTag>): List<MangaTag> {
+		if (query.isBlank() || availableTags.isEmpty()) {
+			return emptyList()
+		}
+		val tokens = query.split(',')
+			.map { it.trim() }
+			.filter { it.isNotBlank() }
+		if (tokens.isEmpty()) {
+			return emptyList()
+		}
+		val tagsByKey = availableTags.associateBy { it.browserTagKey() }
+		val selected = tokens.mapNotNull { token -> tagsByKey[token.browserTagKey()] }
+			.distinctBy { it.browserTagKey() }
+		return if (selected.size == tokens.size) selected else emptyList()
+	}
+
+	private fun MangaTag.browserTagKey(): String {
+		return title.ifBlank { key }
+			.browserTagKey()
+	}
+
+	private fun String.browserTagKey(): String {
+		return lowercase()
+			.replace(Regex("""[\s_\-]+"""), "")
 	}
 
 	private fun MangaParserSource.isEnglishSource(): Boolean {

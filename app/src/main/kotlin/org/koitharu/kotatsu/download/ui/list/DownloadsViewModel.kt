@@ -26,17 +26,14 @@ import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
-import org.koitharu.kotatsu.core.ui.model.DateTimeAgo
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
-import org.koitharu.kotatsu.core.util.ext.calculateTimeAgo
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.isEmpty
 import org.koitharu.kotatsu.download.domain.DownloadState
 import org.koitharu.kotatsu.download.ui.list.chapters.DownloadChapter
 import org.koitharu.kotatsu.download.ui.worker.DownloadWorker
 import org.koitharu.kotatsu.list.ui.model.EmptyState
-import org.koitharu.kotatsu.list.ui.model.ListHeader
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.local.data.LocalMangaRepository
@@ -45,7 +42,6 @@ import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.util.mapToSet
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
-import java.util.LinkedList
 import java.util.UUID
 import javax.inject.Inject
 
@@ -232,39 +228,17 @@ class DownloadsViewModel @Inject constructor(
 		if (isEmpty()) {
 			return emptyStateList()
 		}
-		val queued = LinkedList<ListModel>()
-		val running = LinkedList<ListModel>()
-		val destination = ArrayDeque<ListModel>((size * 1.4).toInt())
-		var prevDate: DateTimeAgo? = null
-		for (item in this) {
-			when (item.workState) {
-				WorkInfo.State.RUNNING -> running += item
-				WorkInfo.State.BLOCKED,
-				WorkInfo.State.ENQUEUED -> queued += item
+		return sortedWith(
+			compareBy<DownloadItemModel> {
+				when (it.workState) {
+					WorkInfo.State.RUNNING -> 0
+					WorkInfo.State.BLOCKED,
+					WorkInfo.State.ENQUEUED -> 1
 
-				else -> {
-					val date = calculateTimeAgo(item.timestamp)
-					if (prevDate != date) {
-						destination += if (date != null) {
-							ListHeader(date)
-						} else {
-							ListHeader(R.string.unknown)
-						}
-					}
-					prevDate = date
-					destination += item
+					else -> 2
 				}
-			}
-		}
-		if (running.isNotEmpty()) {
-			running.addFirst(ListHeader(R.string.in_progress))
-		}
-		destination.addAll(0, running)
-		if (queued.isNotEmpty()) {
-			queued.addFirst(ListHeader(R.string.queued))
-		}
-		destination.addAll(0, queued)
-		return destination
+			}.thenByDescending { it.timestamp },
+		)
 	}
 
 	private suspend fun WorkInfo.toUiModel(isExpanded: Boolean): DownloadItemModel? {

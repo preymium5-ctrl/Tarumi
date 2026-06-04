@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.download.ui.list
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
@@ -7,6 +8,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.view.ActionMode
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -14,17 +16,20 @@ import coil3.ImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.isNsfw
+import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseActivity
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.list.ListSelectionController
 import org.koitharu.kotatsu.core.ui.list.RecyclerScrollKeeper
-import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.databinding.ActivityDownloadsBinding
 import org.koitharu.kotatsu.download.ui.worker.DownloadWorker
 import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
+import org.koitharu.kotatsu.main.ui.MainActivity
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -38,13 +43,19 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 	@Inject
 	lateinit var scheduler: DownloadWorker.Scheduler
 
+	@Inject
+	lateinit var settings: AppSettings
+
 	private val viewModel by viewModels<DownloadsViewModel>()
 	private lateinit var selectionController: ListSelectionController
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityDownloadsBinding.inflate(layoutInflater))
-		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+		setDisplayHomeAsUp(isEnabled = false, showUpAsClose = false)
+		title = ""
+		viewBinding.toolbar.title = ""
+		viewBinding.collapsingToolbarLayout.title = ""
 		val downloadsAdapter = DownloadsAdapter(this, this)
 		val decoration = TypedListSpacingDecoration(this, false)
 		selectionController = ListSelectionController(
@@ -60,13 +71,10 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 			selectionController.attachToRecyclerView(this)
 			RecyclerScrollKeeper(this).attach()
 		}
-		addMenuProvider(DownloadsMenuProvider(this, viewModel))
+		setupBottomNav()
+		viewBinding.buttonMenu.setOnClickListener(::showDownloadsMenu)
 		viewModel.items.observe(this, downloadsAdapter)
 		viewModel.onActionDone.observeEvent(this, ReversibleActionObserver(viewBinding.recyclerView))
-		val menuInvalidator = MenuInvalidator(this)
-		viewModel.hasActiveWorks.observe(this, menuInvalidator)
-		viewModel.hasPausedWorks.observe(this, menuInvalidator)
-		viewModel.hasCancellableWorks.observe(this, menuInvalidator)
 		viewBinding.buttonNsfw.setOnClickListener {
 			viewModel.setNsfwMode(viewBinding.buttonNsfw.isChecked)
 		}
@@ -80,12 +88,17 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		viewBinding.recyclerView.updatePadding(
 			left = bars.left,
 			right = bars.right,
-			bottom = bars.bottom,
+			bottom = bars.bottom + 128.dp,
 		)
 		viewBinding.appbar.updatePadding(
 			left = bars.left,
 			right = bars.right,
 			top = bars.top,
+		)
+		viewBinding.bottomNav.updatePadding(
+			left = bars.left,
+			right = bars.right,
+			bottom = bars.bottom,
 		)
 		return WindowInsetsCompat.Builder(insets)
 			.setInsets(WindowInsetsCompat.Type.systemBars(), Insets.NONE)
@@ -204,4 +217,99 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		menu.findItem(R.id.action_remove)?.isVisible = canRemove
 		return super.onPrepareActionMode(controller, mode, menu)
 	}
+
+	private fun setupBottomNav() {
+		val nav = viewBinding.bottomNav
+		if (nav.menu.size() == 0) {
+			for (item in settings.mainNavItems) {
+				if (!item.isAvailable(settings)) {
+					continue
+				}
+				nav.menu.add(Menu.NONE, item.id, Menu.NONE, item.title).setIcon(item.icon)
+				if (nav.menu.size() >= nav.maxItemCount) {
+					break
+				}
+			}
+		}
+		nav.selectedItemId = R.id.nav_favorites
+		nav.setOnItemSelectedListener { item ->
+			when (item.itemId) {
+				R.id.nav_settings -> {
+					router.openSettings()
+					false
+				}
+
+				R.id.nav_favorites -> {
+					finishAfterTransition()
+					true
+				}
+
+				else -> {
+					openMainNav(item.itemId)
+					true
+				}
+			}
+		}
+	}
+
+	private fun openMainNav(itemId: Int) {
+		startActivity(
+			Intent(this, MainActivity::class.java)
+				.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+				.putExtra(AppRouter.KEY_NAV_ITEM, itemId),
+		)
+		finishAfterTransition()
+	}
+
+	private fun showDownloadsMenu(anchor: View) {
+		val popup = PopupMenu(this, anchor)
+		with(popup.menu) {
+			if (viewModel.hasActiveWorks.value == true) {
+				add(Menu.NONE, R.id.action_pause, Menu.NONE, R.string.pause)
+			}
+			if (viewModel.hasPausedWorks.value == true) {
+				add(Menu.NONE, R.id.action_resume, Menu.NONE, R.string.resume)
+			}
+			if (viewModel.hasCancellableWorks.value == true) {
+				add(Menu.NONE, R.id.action_cancel_all, Menu.NONE, R.string.cancel_all)
+			}
+			add(Menu.NONE, R.id.action_remove_completed, Menu.NONE, R.string.remove_completed)
+			add(Menu.NONE, R.id.action_settings, Menu.NONE, R.string.settings)
+		}
+		popup.setOnMenuItemClickListener { item ->
+			when (item.itemId) {
+				R.id.action_pause -> viewModel.pauseAll()
+				R.id.action_resume -> viewModel.resumeAll()
+				R.id.action_cancel_all -> confirmCancelAll()
+				R.id.action_remove_completed -> confirmRemoveCompleted()
+				R.id.action_settings -> router.openDownloadsSetting()
+				else -> return@setOnMenuItemClickListener false
+			}
+			true
+		}
+		popup.show()
+	}
+
+	private fun confirmCancelAll() {
+		buildAlertDialog(this, isCentered = true) {
+			setTitle(R.string.cancel_all)
+			setMessage(R.string.cancel_all_downloads_confirm)
+			setIcon(R.drawable.ic_cancel_multiple)
+			setNegativeButton(android.R.string.cancel, null)
+			setPositiveButton(R.string.confirm) { _, _ -> viewModel.cancelAll() }
+		}.show()
+	}
+
+	private fun confirmRemoveCompleted() {
+		buildAlertDialog(this, isCentered = true) {
+			setTitle(R.string.remove_completed)
+			setMessage(R.string.remove_completed_downloads_confirm)
+			setIcon(R.drawable.ic_clear_all)
+			setNegativeButton(android.R.string.cancel, null)
+			setPositiveButton(R.string.clear) { _, _ -> viewModel.removeCompleted() }
+		}.show()
+	}
+
+	private val Int.dp: Int
+		get() = (this * resources.displayMetrics.density).toInt()
 }

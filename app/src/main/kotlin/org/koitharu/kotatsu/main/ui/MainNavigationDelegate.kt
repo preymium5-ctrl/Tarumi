@@ -156,6 +156,14 @@ class MainNavigationDelegate(
 		}
 	}
 
+	fun selectItem(@IdRes itemId: Int) {
+		if (navBar.selectedItemId == itemId) {
+			onNavigationItemReselected()
+		} else {
+			navBar.selectedItemId = itemId
+		}
+	}
+
 	private fun setCounter(@IdRes id: Int, counter: Int) {
 		if (counter == 0) {
 			navBar.getBadge(id)?.isVisible = false

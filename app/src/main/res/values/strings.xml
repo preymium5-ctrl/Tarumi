@@ -194,9 +194,9 @@
     <string name="about">About</string>
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
-    <string name="check_app_updates">Check App Updates</string>
-    <string name="update_tutorial_title">Keep Tarumi updated</string>
-    <string name="update_tutorial_message">To check for a new version, open Settings, then tap Check App Updates. That screen also has the Discord server and Ko-fi support links.</string>
+    <string name="check_app_updates">Check app updates</string>
+    <string name="update_tutorial_title">New Tarumi update available</string>
+    <string name="update_tutorial_message">Tarumi %1$s is available now. Open Check app updates to download the latest version, read what changed, and keep your app up to date.</string>
     <string name="open_settings">Open Settings</string>
     <string name="support_me" translatable="false">Support me</string>
     <string name="support_tarumi_title" translatable="false">Support Tarumi</string>

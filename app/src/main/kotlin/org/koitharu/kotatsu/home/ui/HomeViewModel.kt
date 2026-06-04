@@ -594,7 +594,7 @@ class HomeViewModel @Inject constructor(
 		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
 		const val RECENT_CACHE_TTL_MS = 8L * 60L * 60L * 1000L
 		const val RECENT_CACHE_VERSION = 5
-		const val FEATURED_ROTATION_MS = HOME_CACHE_TTL_MS
+		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val WEEBCENTRAL_HOME_URL = "https://weebcentral.com/"
 
