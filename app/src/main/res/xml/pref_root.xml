@@ -37,6 +37,11 @@
         android:key="downloads"
         android:title="@string/downloads" />
 
+    <Preference
+        android:icon="@drawable/ic_ladder_stats"
+        android:key="reading_stats"
+        android:title="@string/reading_stats" />
+
     <PreferenceScreen
         android:fragment="org.koitharu.kotatsu.settings.tracker.TrackerSettingsFragment"
         android:icon="@drawable/ic_feed"

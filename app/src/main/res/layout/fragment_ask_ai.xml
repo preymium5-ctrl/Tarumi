@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/askAiRoot"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root"
+	android:clipToPadding="false"
+	android:orientation="vertical"
+	android:paddingBottom="110dp"
+	android:paddingHorizontal="14dp"
+	android:paddingTop="16dp">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="top"
+		android:orientation="horizontal">
+
+		<ImageView
+			android:layout_width="42dp"
+			android:layout_height="42dp"
+			android:background="@drawable/bg_taru_home_chip"
+			android:contentDescription="@string/ask_ai"
+			android:padding="4dp"
+			android:scaleType="centerCrop"
+			android:src="@drawable/ask_ai_safe_avatar" />
+
+		<TextView
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="10dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_home_feature"
+			android:fontFamily="sans-serif"
+			android:lineSpacingExtra="2dp"
+			android:paddingHorizontal="18dp"
+			android:paddingVertical="14dp"
+			android:text="@string/ask_ai_intro"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="15sp" />
+	</LinearLayout>
+
+	<FrameLayout
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_marginTop="12dp"
+		android:layout_weight="1">
+
+		<ScrollView
+			android:id="@+id/messagesScroll"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:clipToPadding="false"
+			android:fillViewport="true"
+			android:paddingBottom="12dp"
+			android:scrollbars="none">
+
+			<LinearLayout
+				android:id="@+id/messagesList"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical" />
+		</ScrollView>
+
+		<com.google.android.material.progressindicator.CircularProgressIndicator
+			android:id="@+id/progress"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="top|center_horizontal"
+			android:indeterminate="true"
+			android:visibility="gone"
+			app:indicatorSize="28dp"
+			tools:visibility="visible" />
+	</FrameLayout>
+
+	<LinearLayout
+		android:id="@+id/composerCard"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:background="@drawable/bg_taru_home_feature"
+		android:elevation="4dp"
+		android:orientation="vertical"
+		android:paddingHorizontal="16dp"
+		android:paddingTop="12dp"
+		android:paddingBottom="12dp">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<TextView
+				android:id="@+id/textMode"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:background="@drawable/bg_taru_home_badge"
+				android:fontFamily="sans-serif-medium"
+				android:gravity="center_vertical"
+				android:letterSpacing="0.12"
+				android:paddingHorizontal="12dp"
+				android:text="@string/ask_ai_safe_mode"
+				android:textAllCaps="true"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="11sp"
+				app:drawableStartCompat="@drawable/ic_ask_ai"
+				app:drawableTint="@color/taru_accent" />
+
+			<com.google.android.material.materialswitch.MaterialSwitch
+				android:id="@+id/switchNsfw"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginStart="12dp"
+				android:text="@string/ask_ai_nsfw_mode"
+				android:textColor="@color/taru_text_secondary"
+				android:textSize="13sp" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="10dp"
+			android:background="@drawable/bg_taru_home_chip"
+			android:gravity="center_vertical"
+			android:minHeight="58dp"
+			android:orientation="horizontal"
+			android:paddingStart="14dp"
+			android:paddingEnd="8dp">
+
+			<EditText
+				android:id="@+id/editQuery"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:background="@android:color/transparent"
+				android:fontFamily="sans-serif"
+				android:hint="@string/ask_ai_hint"
+				android:imeOptions="actionSearch"
+				android:inputType="textMultiLine|textCapSentences"
+				android:maxLines="3"
+				android:textColor="@color/taru_text_primary"
+				android:textColorHint="@color/taru_text_muted"
+				android:textSize="15sp" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/buttonAsk"
+				style="@style/Widget.Material3.Button.IconButton.Filled"
+				android:layout_width="44dp"
+				android:layout_height="44dp"
+				android:contentDescription="@string/ask_ai"
+				app:icon="@drawable/ic_ask_ai"
+				app:iconGravity="textStart"
+				app:iconTint="@color/taru_on_accent" />
+		</LinearLayout>
+	</LinearLayout>
+</LinearLayout>

@@ -23,10 +23,12 @@ enum class NavItem(
 	UPDATED(R.id.nav_updated, R.string.updated, R.drawable.ic_updated_selector),
 	BOOKMARKS(R.id.nav_bookmarks, R.string.bookmarks, R.drawable.ic_bookmark_selector),
 	STATS(R.id.nav_stats, R.string.stats, R.drawable.ic_timer),
+	ASK_AI(R.id.nav_ask_ai, R.string.ask_ai, R.drawable.ic_ask_ai),
 	SETTINGS(R.id.nav_settings, R.string.settings, R.drawable.ic_settings),
 	;
 
 	fun isAvailable(settings: AppSettings): Boolean = when (this) {
+		STATS -> false
 		SUGGESTIONS -> settings.isSuggestionsEnabled
 		UPDATED, FEED -> settings.isTrackerEnabled
 		else -> true

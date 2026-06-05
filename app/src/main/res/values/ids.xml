@@ -20,5 +20,6 @@
 	<item name="nav_suggestions" type="id" />
 	<item name="nav_bookmarks" type="id" />
 	<item name="nav_stats" type="id" />
+	<item name="nav_ask_ai" type="id" />
 	<item name="nav_settings" type="id" />
 </resources>

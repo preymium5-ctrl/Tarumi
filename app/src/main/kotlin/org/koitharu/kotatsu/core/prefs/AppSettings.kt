@@ -72,11 +72,13 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	var mainNavItems: List<NavItem>
 		get() {
 			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
-			val defaultItems = listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.STATS, NavItem.SETTINGS)
+			val defaultItems = listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.ASK_AI, NavItem.SETTINGS)
 			return if (raw.isNullOrEmpty()) {
 				defaultItems
 			} else {
 				val items = raw.mapNotNull { x -> NavItem.entries.find(x) }
+					.map { if (it == NavItem.STATS) NavItem.ASK_AI else it }
+					.distinct()
 				when (items) {
 					listOf(NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS),
 					listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS),

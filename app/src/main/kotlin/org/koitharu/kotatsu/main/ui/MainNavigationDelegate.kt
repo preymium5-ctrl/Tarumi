@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.ai.ui.AskAiFragment
 import org.koitharu.kotatsu.bookmarks.ui.AllBookmarksFragment
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -44,7 +45,6 @@ import org.koitharu.kotatsu.history.ui.HistoryListFragment
 import org.koitharu.kotatsu.home.ui.HomeFragment
 import org.koitharu.kotatsu.local.ui.LocalListFragment
 import org.koitharu.kotatsu.settings.SettingsActivity
-import org.koitharu.kotatsu.stats.ui.StatsActivity
 import org.koitharu.kotatsu.suggestions.ui.SuggestionsFragment
 import org.koitharu.kotatsu.tracker.ui.feed.FeedFragment
 import org.koitharu.kotatsu.tracker.ui.updates.UpdatesFragment
@@ -205,10 +205,7 @@ class MainNavigationDelegate(
 			R.id.nav_local -> LocalListFragment::class.java
 			R.id.nav_suggestions -> SuggestionsFragment::class.java
 			R.id.nav_bookmarks -> AllBookmarksFragment::class.java
-			R.id.nav_stats -> {
-				navBar.context.startActivity(Intent(navBar.context, StatsActivity::class.java))
-				return false
-			}
+			R.id.nav_ask_ai -> AskAiFragment::class.java
 			R.id.nav_updated -> UpdatesFragment::class.java
 			R.id.nav_settings -> {
 				navBar.context.startActivity(Intent(navBar.context, SettingsActivity::class.java))
@@ -232,6 +229,7 @@ class MainNavigationDelegate(
 		is LocalListFragment -> R.id.nav_local
 		is SuggestionsFragment -> R.id.nav_suggestions
 		is AllBookmarksFragment -> R.id.nav_bookmarks
+		is AskAiFragment -> R.id.nav_ask_ai
 		is UpdatesFragment -> R.id.nav_updated
 		else -> 0
 	}

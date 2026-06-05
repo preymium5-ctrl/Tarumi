@@ -131,7 +131,9 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 			return
 		}
 		val selectedPosition = when {
-			!recyclerView.canScrollVertically(1) -> lastVisiblePosition
+			!recyclerView.canScrollVertically(1) -> {
+				(recyclerView.adapter?.itemCount ?: 0).minus(1).coerceAtLeast(lastVisiblePosition)
+			}
 			!recyclerView.canScrollVertically(-1) -> firstVisiblePosition
 			else -> recyclerView.findCurrentPagePosition().takeIf { it != RecyclerView.NO_POSITION }
 				?: ((firstVisiblePosition + lastVisiblePosition) / 2)
@@ -270,7 +272,9 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 		val last = lm.findLastVisibleItemPosition()
 		return when {
 			first == RecyclerView.NO_POSITION || last == RecyclerView.NO_POSITION -> findCurrentPagePosition()
-			!canScrollVertically(1) -> last
+			!canScrollVertically(1) -> {
+				(adapter?.itemCount ?: 0).minus(1).coerceAtLeast(last)
+			}
 			!canScrollVertically(-1) -> first
 			else -> findCurrentPagePosition().takeIf { it != RecyclerView.NO_POSITION } ?: ((first + last) / 2)
 		}

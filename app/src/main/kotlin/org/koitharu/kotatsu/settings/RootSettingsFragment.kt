@@ -41,13 +41,17 @@ class RootSettingsFragment : BasePreferenceFragment(0) {
 			router.openList(LocalMangaSource, null, null)
 			true
 		}
+		findPreference<Preference>("reading_stats")?.setOnPreferenceClickListener {
+			router.openStatistic()
+			true
+		}
 		findPreference<Preference>("about")?.summary = getString(R.string.app_version, BuildConfig.VERSION_NAME)
 		findPreference<Preference>("check_app_updates")?.order = TARUMI_UPDATES_ORDER
 		findPreference<Preference>("about")?.order = TARUMI_ABOUT_PREF_ORDER
 		findPreference<Preference>("tarumi_about_card")?.let { pref ->
 			pref.summary = buildString {
 				append(getString(R.string.app_version, BuildConfig.VERSION_NAME))
-				append("\n\nDeveloper\nRocky Jake Santos")
+				append("\n\nDeveloper\nRJS - Taru")
 			}
 			pref.order = TARUMI_ABOUT_ORDER
 		}
