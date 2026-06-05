@@ -12,6 +12,9 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
 import org.koitharu.kotatsu.stats.domain.StatsPeriod
 import org.koitharu.kotatsu.stats.domain.StatsRecord
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.NavigableMap
 import java.util.TreeMap
 import java.util.concurrent.TimeUnit
@@ -65,6 +68,16 @@ class StatsRepository @Inject constructor(
 		return db.getStatsDao().getReadPagesCount(mangaId)
 	}
 
+	suspend fun getSummaryStats(): ReadingStatsSummary {
+		val dao = db.getStatsDao()
+		val timestamps = dao.getReadTimestamps()
+		return ReadingStatsSummary(
+			streakDays = timestamps.currentReadingStreak(),
+			totalPages = dao.getTotalReadPagesCount(),
+			totalDuration = dao.getTotalDuration(),
+		)
+	}
+
 	suspend fun getMangaTimeline(mangaId: Long): NavigableMap<Long, Int> {
 		val entities = db.getStatsDao().findAll(mangaId)
 		val map = TreeMap<Long, Int>()
@@ -87,4 +100,37 @@ class StatsRepository @Inject constructor(
 			flowOf(false)
 		}
 	}.distinctUntilChanged()
+
+	private fun List<Long>.currentReadingStreak(): Int {
+		if (isEmpty()) {
+			return 0
+		}
+		val zone = ZoneId.systemDefault()
+		val days = mapTo(HashSet(size)) {
+			Instant.ofEpochMilli(it).atZone(zone).toLocalDate()
+		}.sortedDescending()
+		val today = LocalDate.now(zone)
+		var cursor = when (days.first()) {
+			today -> today
+			today.minusDays(1) -> today.minusDays(1)
+			else -> return 0
+		}
+		var streak = 0
+		for (day in days) {
+			when {
+				day == cursor -> {
+					streak++
+					cursor = cursor.minusDays(1)
+				}
+				day.isBefore(cursor) -> break
+			}
+		}
+		return streak
+	}
 }
+
+data class ReadingStatsSummary(
+	val streakDays: Int,
+	val totalPages: Int,
+	val totalDuration: Long,
+)

@@ -45,6 +45,12 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		binding.buttonSeeMore.setOnClickListener { router.openTrending() }
 		viewModel.featuredComics.observe(viewLifecycleOwner, ::renderFeaturedComics)
 		viewModel.trendingComics.observe(viewLifecycleOwner, ::renderTrendingComics)
+		viewModel.smartRecommendationsLoading.observe(viewLifecycleOwner) { isLoading ->
+			binding.smartRecommendationLoading.isVisible = isLoading && viewModel.smartRecommendations.value.isEmpty()
+		}
+		viewModel.smartRecommendations.observe(viewLifecycleOwner) { comics ->
+			renderRecommendationRail(binding.smartRecommendationList, binding.smartRecommendationLoading, comics)
+		}
 		viewModel.manhuaRecommendationsLoading.observe(viewLifecycleOwner) { isLoading ->
 			binding.manhuaRecommendationLoading.isVisible = isLoading && viewModel.manhuaRecommendations.value.isEmpty()
 		}

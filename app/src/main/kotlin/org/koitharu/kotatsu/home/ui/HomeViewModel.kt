@@ -13,9 +13,11 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.model.distinctById
+import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
@@ -33,6 +35,7 @@ class HomeViewModel @Inject constructor(
 	@ApplicationContext context: Context,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	@BaseHttpClient private val okHttpClient: OkHttpClient,
+	private val historyRepository: HistoryRepository,
 ) : BaseViewModel() {
 
 	private val homeFeedCache = HomeFeedCache(context)
@@ -64,6 +67,12 @@ class HomeViewModel @Inject constructor(
 	private val _mangaRecommendationsLoading = MutableStateFlow(true)
 	val mangaRecommendationsLoading: StateFlow<Boolean> = _mangaRecommendationsLoading
 
+	private val _smartRecommendations = MutableStateFlow<List<Manga>>(emptyList())
+	val smartRecommendations: StateFlow<List<Manga>> = _smartRecommendations
+
+	private val _smartRecommendationsLoading = MutableStateFlow(true)
+	val smartRecommendationsLoading: StateFlow<Boolean> = _smartRecommendationsLoading
+
 	init {
 		restoreCachedHomeFeed()
 		_featuredComics.value = cachedFeaturedComics
@@ -74,13 +83,17 @@ class HomeViewModel @Inject constructor(
 		_manhuaRecommendationsLoading.value = cachedManhuaRecommendations.isEmpty() && isManhuaRecommendationsLoading
 		_mangaRecommendations.value = cachedMangaRecommendations
 		_mangaRecommendationsLoading.value = cachedMangaRecommendations.isEmpty() && isMangaRecommendationsLoading
+		_smartRecommendations.value = cachedSmartRecommendations
+		_smartRecommendationsLoading.value = cachedSmartRecommendations.isEmpty() && isSmartRecommendationsLoading
 		val featuredPeriod = currentFeaturedPeriod()
 		val recommendationPeriod = currentRecommendationPeriod()
+		val smartRecommendationPeriod = currentSmartRecommendationPeriod()
 		val isHomeCacheExpired = cachedHomeFeedAt <= 0L ||
 			System.currentTimeMillis() - cachedHomeFeedAt >= HOME_CACHE_TTL_MS
 		val isRecentUpdatesExpired = cachedRecentUpdatesAt <= 0L ||
 			System.currentTimeMillis() - cachedRecentUpdatesAt >= RECENT_CACHE_TTL_MS
 		val areRecommendationsExpired = cachedRecommendationPeriod != recommendationPeriod
+		val areSmartRecommendationsExpired = cachedSmartRecommendationPeriod != smartRecommendationPeriod
 		if (
 			(cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty() || cachedFeaturedPeriod != featuredPeriod || isHomeCacheExpired) &&
 			!isFeaturedLoading
@@ -164,6 +177,28 @@ class HomeViewModel @Inject constructor(
 				} finally {
 					_mangaRecommendationsLoading.value = false
 					isMangaRecommendationsLoading = false
+				}
+			}
+		}
+		if ((cachedSmartRecommendations.isEmpty() || areSmartRecommendationsExpired) && !isSmartRecommendationsLoading) {
+			launchJob(Dispatchers.Default) {
+				isSmartRecommendationsLoading = true
+				_smartRecommendationsLoading.value = cachedSmartRecommendations.isEmpty()
+				try {
+					val comics = loadSmartRecommendationComics(
+						period = smartRecommendationPeriod,
+						limit = RECOMMENDATION_LIMIT,
+					)
+					if (comics.isNotEmpty()) {
+						cachedSmartRecommendations = comics
+						cachedSmartRecommendationPeriod = smartRecommendationPeriod
+						cachedHomeFeedAt = System.currentTimeMillis()
+						_smartRecommendations.value = comics
+						saveHomeFeedCache()
+					}
+				} finally {
+					_smartRecommendationsLoading.value = false
+					isSmartRecommendationsLoading = false
 				}
 			}
 		}
@@ -253,6 +288,110 @@ class HomeViewModel @Inject constructor(
 			}
 		}
 		return result.distinctById().take(limit)
+	}
+
+	private suspend fun loadSmartRecommendationComics(period: Long, limit: Int): List<Manga> {
+		val history = runCatchingCancellable {
+			historyRepository.getList(0, SMART_HISTORY_LIMIT)
+		}.getOrDefault(emptyList())
+		val historyIds = history.mapTo(HashSet(history.size)) { it.id }
+		val preferredTags = history
+			.flatMap { it.tags }
+			.groupingBy { it.title.lowercase() }
+			.eachCount()
+			.entries
+			.sortedByDescending { it.value }
+			.take(SMART_TAG_LIMIT)
+			.mapTo(HashSet(SMART_TAG_LIMIT)) { it.key }
+		val preferredTypes = history
+			.groupingBy { it.detectComicType() }
+			.eachCount()
+			.entries
+			.sortedByDescending { it.value }
+			.map { it.key }
+		val preferredSources = history
+			.mapNotNull { it.source as? MangaParserSource }
+			.distinct()
+			.filterNot { it.isNsfw() }
+		val sources = (preferredSources + SMART_RECOMMENDATION_SOURCES).distinct()
+		val scored = ArrayList<Pair<Manga, Int>>(limit * 2)
+		for (source in sources) {
+			if (scored.size >= limit * 2) {
+				break
+			}
+			val repository = mangaRepositoryFactory.create(source)
+			val order = when {
+				SortOrder.POPULARITY in repository.sortOrders -> SortOrder.POPULARITY
+				SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
+				else -> repository.defaultSortOrder
+			}
+			var offset = ((period % SMART_OFFSET_BUCKETS).toInt() * limit).coerceAtLeast(0)
+			repeat(RECOMMENDATION_PAGE_ATTEMPTS) {
+				if (scored.size >= limit * 2) {
+					return@repeat
+				}
+				val page = runCatchingCancellable {
+					repository.getList(offset, order, MangaListFilter.EMPTY)
+				}.onFailure {
+					it.printStackTraceDebug()
+				}.getOrDefault(emptyList())
+				if (page.isEmpty()) {
+					return@repeat
+				}
+				for (manga in page) {
+					if (manga.id in historyIds) {
+						continue
+					}
+					val details = runCatchingCancellable {
+						repository.getDetails(manga)
+					}.getOrDefault(manga)
+					val score = details.smartScore(preferredTags, preferredTypes)
+					if (score > 0 || preferredTags.isEmpty()) {
+						scored += details to score
+					}
+					if (scored.size >= limit * 2) {
+						break
+					}
+				}
+				offset += page.size
+			}
+		}
+		return scored
+			.sortedWith(compareByDescending<Pair<Manga, Int>> { it.second }.thenByDescending { it.first.rating })
+			.map { it.first }
+			.distinctById()
+			.take(limit)
+			.ifEmpty { loadFallbackSmartRecommendations(limit) }
+	}
+
+	private suspend fun loadFallbackSmartRecommendations(limit: Int): List<Manga> {
+		val result = ArrayList<Manga>(limit)
+		for (source in SMART_RECOMMENDATION_SOURCES) {
+			if (result.size >= limit) {
+				break
+			}
+			val repository = mangaRepositoryFactory.create(source)
+			val order = when {
+				SortOrder.POPULARITY in repository.sortOrders -> SortOrder.POPULARITY
+				SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
+				else -> repository.defaultSortOrder
+			}
+			val page = runCatchingCancellable {
+				repository.getList(0, order, MangaListFilter.EMPTY)
+			}.getOrDefault(emptyList())
+			result += page
+		}
+		return result.distinctById().take(limit)
+	}
+
+	private fun Manga.smartScore(preferredTags: Set<String>, preferredTypes: List<ComicType>): Int {
+		val tagScore = tags.count { it.title.lowercase() in preferredTags } * 3
+		val typeScore = preferredTypes.indexOf(detectComicType())
+			.takeIf { it >= 0 }
+			?.let { (preferredTypes.size - it) * 2 }
+			?: 0
+		val ratingScore = (rating * 2f).toInt().coerceAtLeast(0)
+		return tagScore + typeScore + ratingScore
 	}
 
 	private suspend fun loadMangaDetailsOrDefault(manga: Manga): Manga {
@@ -512,13 +651,18 @@ class HomeViewModel @Inject constructor(
 		return System.currentTimeMillis() / RECOMMENDATION_ROTATION_MS
 	}
 
+	private fun currentSmartRecommendationPeriod(): Long {
+		return System.currentTimeMillis() / SMART_RECOMMENDATION_ROTATION_MS
+	}
+
 	private fun restoreCachedHomeFeed() {
 		if (
 			cachedFeaturedComics.isNotEmpty() ||
 			cachedTrendingComics.isNotEmpty() ||
 			cachedRecentUpdates.isNotEmpty() ||
 			cachedManhuaRecommendations.isNotEmpty() ||
-			cachedMangaRecommendations.isNotEmpty()
+			cachedMangaRecommendations.isNotEmpty() ||
+			cachedSmartRecommendations.isNotEmpty()
 		) {
 			return
 		}
@@ -531,8 +675,10 @@ class HomeViewModel @Inject constructor(
 		cachedRecentUpdates = snapshot.recentUpdates
 		cachedManhuaRecommendations = snapshot.manhuaRecommendations
 		cachedMangaRecommendations = snapshot.mangaRecommendations
+		cachedSmartRecommendations = snapshot.smartRecommendations
 		cachedFeaturedPeriod = snapshot.featuredPeriod
 		cachedRecommendationPeriod = snapshot.recommendationPeriod
+		cachedSmartRecommendationPeriod = snapshot.smartRecommendationPeriod
 		cachedHomeFeedAt = snapshot.savedAt
 		cachedRecentUpdatesAt = snapshot.recentUpdatesSavedAt
 		if (
@@ -558,6 +704,8 @@ class HomeViewModel @Inject constructor(
 				trending = cachedTrendingComics,
 				manhuaRecommendations = cachedManhuaRecommendations,
 				mangaRecommendations = cachedMangaRecommendations,
+				smartRecommendationPeriod = cachedSmartRecommendationPeriod,
+				smartRecommendations = cachedSmartRecommendations,
 				recentUpdates = cachedRecentUpdates,
 			),
 		)
@@ -569,20 +717,26 @@ class HomeViewModel @Inject constructor(
 		var cachedRecentUpdates: List<RecentUpdateGroup> = emptyList()
 		var cachedManhuaRecommendations: List<Manga> = emptyList()
 		var cachedMangaRecommendations: List<Manga> = emptyList()
+		var cachedSmartRecommendations: List<Manga> = emptyList()
 		var cachedFeaturedPeriod: Long = -1L
 		var cachedRecommendationPeriod: Long = -1L
+		var cachedSmartRecommendationPeriod: Long = -1L
 		var cachedHomeFeedAt: Long = 0L
 		var cachedRecentUpdatesAt: Long = 0L
 		var isFeaturedLoading = false
 		var isRecentUpdatesLoading = false
 		var isManhuaRecommendationsLoading = false
 		var isMangaRecommendationsLoading = false
+		var isSmartRecommendationsLoading = false
 
 		const val FEATURED_LIMIT = 15
 		const val FEATURED_POOL_LIMIT = 60
 		const val TRENDING_LIMIT = 10
 		const val RECOMMENDATION_LIMIT = 20
 		const val RECOMMENDATION_PAGE_ATTEMPTS = 4
+		const val SMART_HISTORY_LIMIT = 25
+		const val SMART_TAG_LIMIT = 8
+		const val SMART_OFFSET_BUCKETS = 5
 		const val RECENT_PAGE_SIZE = 10
 		const val RECENT_PAGE_COUNT = 6
 		const val RECENT_CHAPTERS_PER_TITLE = 3
@@ -596,6 +750,7 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_CACHE_VERSION = 5
 		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
+		const val SMART_RECOMMENDATION_ROTATION_MS = 2L * 24L * 60L * 60L * 1000L
 		const val WEEBCENTRAL_HOME_URL = "https://weebcentral.com/"
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }
@@ -626,5 +781,14 @@ class HomeViewModel @Inject constructor(
 			MangaParserSource.NINEMANGA_EN,
 			MangaParserSource.AQUAMANGA,
 		)
+
+		val SMART_RECOMMENDATION_SOURCES = (
+			MANHUA_RECOMMENDATION_SOURCES +
+				MANGA_RECOMMENDATION_SOURCES +
+				listOf(
+					MangaParserSource.WEEBCENTRAL,
+					MangaParserSource.FLAMECOMICS,
+				)
+			).distinct()
 	}
 }

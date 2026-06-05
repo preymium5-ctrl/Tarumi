@@ -38,6 +38,8 @@ class HomeFeedCache(context: Context) {
 		trending = optMangaArray("trending"),
 		manhuaRecommendations = optMangaArray("manhuaRecommendations"),
 		mangaRecommendations = optMangaArray("mangaRecommendations"),
+		smartRecommendationPeriod = optLong("smartRecommendationPeriod", -1L),
+		smartRecommendations = optMangaArray("smartRecommendations"),
 		recentUpdates = optJSONArray("recentUpdates").toRecentUpdates(),
 	)
 
@@ -51,6 +53,8 @@ class HomeFeedCache(context: Context) {
 		.put("trending", trending.toMangaArray())
 		.put("manhuaRecommendations", manhuaRecommendations.toMangaArray())
 		.put("mangaRecommendations", mangaRecommendations.toMangaArray())
+		.put("smartRecommendationPeriod", smartRecommendationPeriod)
+		.put("smartRecommendations", smartRecommendations.toMangaArray())
 		.put("recentUpdates", recentUpdates.toRecentUpdatesArray())
 
 	private fun JSONObject.optMangaArray(name: String): List<Manga> {
@@ -180,5 +184,7 @@ data class HomeFeedSnapshot(
 	val trending: List<Manga>,
 	val manhuaRecommendations: List<Manga>,
 	val mangaRecommendations: List<Manga>,
+	val smartRecommendationPeriod: Long,
+	val smartRecommendations: List<Manga>,
 	val recentUpdates: List<RecentUpdateGroup>,
 )

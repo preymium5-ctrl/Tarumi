@@ -23,6 +23,15 @@ abstract class StatsDao {
 	@Query("SELECT IFNULL(SUM(pages),0) FROM stats WHERE manga_id = :mangaId")
 	abstract suspend fun getReadPagesCount(mangaId: Long): Int
 
+	@Query("SELECT IFNULL(SUM(pages),0) FROM stats")
+	abstract suspend fun getTotalReadPagesCount(): Int
+
+	@Query("SELECT IFNULL(SUM(duration),0) FROM stats")
+	abstract suspend fun getTotalDuration(): Long
+
+	@Query("SELECT started_at FROM stats ORDER BY started_at DESC")
+	abstract suspend fun getReadTimestamps(): List<Long>
+
 	@Query("SELECT IFNULL(SUM(duration)/SUM(pages), 0) FROM stats WHERE manga_id = :mangaId")
 	abstract suspend fun getAverageTimePerPage(mangaId: Long): Long
 

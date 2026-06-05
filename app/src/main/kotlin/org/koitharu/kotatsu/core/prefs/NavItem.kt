@@ -22,6 +22,7 @@ enum class NavItem(
 	FEED(R.id.nav_feed, R.string.feed, R.drawable.ic_feed_selector),
 	UPDATED(R.id.nav_updated, R.string.updated, R.drawable.ic_updated_selector),
 	BOOKMARKS(R.id.nav_bookmarks, R.string.bookmarks, R.drawable.ic_bookmark_selector),
+	STATS(R.id.nav_stats, R.string.stats, R.drawable.ic_timer),
 	SETTINGS(R.id.nav_settings, R.string.settings, R.drawable.ic_settings),
 	;
 

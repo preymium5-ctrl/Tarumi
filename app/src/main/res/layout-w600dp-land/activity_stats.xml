@@ -71,6 +71,62 @@
 		app:trackCornerRadius="0dp"
 		tools:visibility="visible" />
 
+	<LinearLayout
+		android:id="@+id/layout_summary"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="24dp"
+		android:layout_marginTop="12dp"
+		android:orientation="horizontal"
+		app:layout_constraintEnd_toStartOf="@id/guideline_center"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/appbar">
+
+		<TextView
+			android:id="@+id/text_streak"
+			android:layout_width="0dp"
+			android:layout_height="64dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="14sp"
+			android:textStyle="bold"
+			tools:text="3 days" />
+
+		<TextView
+			android:id="@+id/text_pages_read"
+			android:layout_width="0dp"
+			android:layout_height="64dp"
+			android:layout_marginStart="8dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="14sp"
+			android:textStyle="bold"
+			tools:text="420" />
+
+		<TextView
+			android:id="@+id/text_reading_time"
+			android:layout_width="0dp"
+			android:layout_height="64dp"
+			android:layout_marginStart="8dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="14sp"
+			android:textStyle="bold"
+			tools:text="2h 5m" />
+	</LinearLayout>
+
 	<org.koitharu.kotatsu.stats.ui.views.PieChartView
 		android:id="@+id/chart"
 		android:layout_width="0dp"
@@ -80,7 +136,7 @@
 		app:layout_constraintDimensionRatio="1"
 		app:layout_constraintEnd_toStartOf="@id/guideline_center"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@id/appbar" />
+		app:layout_constraintTop_toBottomOf="@id/layout_summary" />
 
 	<androidx.recyclerview.widget.RecyclerView
 		android:id="@+id/recyclerView"

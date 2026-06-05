@@ -13,6 +13,7 @@ import org.koitharu.kotatsu.core.ui.util.ReversibleAction
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
+import org.koitharu.kotatsu.stats.data.ReadingStatsSummary
 import org.koitharu.kotatsu.stats.data.StatsRepository
 import org.koitharu.kotatsu.stats.domain.StatsPeriod
 import org.koitharu.kotatsu.stats.domain.StatsRecord
@@ -31,6 +32,7 @@ class StatsViewModel @Inject constructor(
 		.take(1)
 
 	val readingStats = MutableStateFlow<List<StatsRecord>>(emptyList())
+	val summary = MutableStateFlow(ReadingStatsSummary(0, 0, 0L))
 
 	init {
 		launchJob(Dispatchers.Default) {
@@ -42,6 +44,7 @@ class StatsViewModel @Inject constructor(
 				readingStats.value = withLoading {
 					repository.getReadingStats(p.first, p.second)
 				}
+				summary.value = repository.getSummaryStats()
 			}
 		}
 	}

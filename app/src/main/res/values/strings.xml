@@ -153,7 +153,7 @@
     <string name="vibration">Vibration</string>
     <string name="favourites_categories">Favorite categories</string>
     <string name="remove_category">Remove</string>
-    <string name="text_empty_holder_primary">It\'s kind of empty hereâ€¦</string>
+    <string name="text_empty_holder_primary">It\'s kind of empty here...</string>
     <string name="text_search_holder_secondary">Try to reformulate the query.</string>
     <string name="text_history_holder_primary">What you read will be displayed here</string>
     <string name="text_history_holder_secondary">Find what to read in the Â«ExploreÂ» section</string>
@@ -1009,4 +1009,10 @@
     <string name="see_more">See more</string>
     <string name="manhua_recommendation">Manhua Recommendation</string>
     <string name="manga_recommendation">Manga Recommendation</string>
+    <string name="smart_recommendation">Smart Recommendation</string>
+    <string name="stats">Stats</string>
+    <string name="reading_streak">Reading streak</string>
+    <string name="total_pages_read">Pages read</string>
+    <string name="total_reading_time">Reading time</string>
+    <string name="stats_days_pattern">%1$d days</string>
 </resources>

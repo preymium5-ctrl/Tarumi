@@ -203,6 +203,58 @@
 		</LinearLayout>
 
 		<LinearLayout
+			android:id="@+id/smartRecommendationSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="42dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:drawablePadding="4dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center_vertical"
+				android:text="@string/smart_recommendation"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="22sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+
+			<HorizontalScrollView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="18dp"
+				android:clipToPadding="false"
+				android:overScrollMode="never"
+				android:scrollbars="none">
+
+				<LinearLayout
+					android:id="@+id/smartRecommendationList"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:orientation="horizontal"
+					android:paddingEnd="16dp" />
+			</HorizontalScrollView>
+
+			<FrameLayout
+				android:id="@+id/smartRecommendationLoading"
+				android:layout_width="match_parent"
+				android:layout_height="96dp"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.CircularProgressIndicator
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:indeterminate="true"
+					app:indicatorSize="28dp" />
+			</FrameLayout>
+		</LinearLayout>
+
+		<LinearLayout
 			android:id="@+id/manhuaRecommendationSection"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"

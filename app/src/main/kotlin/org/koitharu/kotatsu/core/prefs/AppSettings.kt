@@ -72,14 +72,15 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	var mainNavItems: List<NavItem>
 		get() {
 			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
-			val defaultItems = listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.SETTINGS)
+			val defaultItems = listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.STATS, NavItem.SETTINGS)
 			return if (raw.isNullOrEmpty()) {
 				defaultItems
 			} else {
 				val items = raw.mapNotNull { x -> NavItem.entries.find(x) }
 				when (items) {
 					listOf(NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS),
-					listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS) -> defaultItems
+					listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS),
+					listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.SETTINGS) -> defaultItems
 					else -> if (NavItem.HOME in items) items else listOf(NavItem.HOME) + items
 				}.ifEmpty { defaultItems }
 			}
@@ -170,7 +171,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
 	val isReaderVolumeButtonsEnabled: Boolean
-		get() = prefs.getBoolean(KEY_READER_VOLUME_BUTTONS, false)
+		get() = false
 
 	val isReaderZoomButtonsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_ZOOM_BUTTONS, false)

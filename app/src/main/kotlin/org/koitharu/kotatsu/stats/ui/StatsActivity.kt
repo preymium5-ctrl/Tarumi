@@ -41,6 +41,9 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.stats.domain.StatsPeriod
 import org.koitharu.kotatsu.stats.domain.StatsRecord
 import org.koitharu.kotatsu.stats.ui.views.PieChartView
+import java.text.NumberFormat
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class StatsActivity : BaseActivity<ActivityStatsBinding>(),
@@ -70,6 +73,11 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		}
 		viewModel.period.observe(this) {
 			viewBinding.chipPeriod.setText(it.titleResId)
+		}
+		viewModel.summary.observe(this) { summary ->
+			viewBinding.textStreak.text = getString(R.string.stats_days_pattern, summary.streakDays)
+			viewBinding.textPagesRead.text = NumberFormat.getIntegerInstance(Locale.US).format(summary.totalPages)
+			viewBinding.textReadingTime.text = summary.totalDuration.formatCompactDuration()
 		}
 		viewModel.favoriteCategories.observe(this, ::createCategoriesChips)
 		viewModel.onActionDone.observeEvent(this, ReversibleActionObserver(viewBinding.recyclerView))
@@ -221,5 +229,16 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 			} != null
 		}
 		menu.show()
+	}
+
+	private fun Long.formatCompactDuration(): String {
+		val hours = TimeUnit.MILLISECONDS.toHours(this)
+		val minutes = TimeUnit.MILLISECONDS.toMinutes(this) % 60
+		return when {
+			hours > 0L && minutes > 0L -> "${hours}h ${minutes}m"
+			hours > 0L -> "${hours}h"
+			minutes > 0L -> "${minutes}m"
+			else -> getString(R.string.less_than_minute)
+		}
 	}
 }

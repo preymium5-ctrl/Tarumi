@@ -44,6 +44,7 @@ import org.koitharu.kotatsu.history.ui.HistoryListFragment
 import org.koitharu.kotatsu.home.ui.HomeFragment
 import org.koitharu.kotatsu.local.ui.LocalListFragment
 import org.koitharu.kotatsu.settings.SettingsActivity
+import org.koitharu.kotatsu.stats.ui.StatsActivity
 import org.koitharu.kotatsu.suggestions.ui.SuggestionsFragment
 import org.koitharu.kotatsu.tracker.ui.feed.FeedFragment
 import org.koitharu.kotatsu.tracker.ui.updates.UpdatesFragment
@@ -204,6 +205,10 @@ class MainNavigationDelegate(
 			R.id.nav_local -> LocalListFragment::class.java
 			R.id.nav_suggestions -> SuggestionsFragment::class.java
 			R.id.nav_bookmarks -> AllBookmarksFragment::class.java
+			R.id.nav_stats -> {
+				navBar.context.startActivity(Intent(navBar.context, StatsActivity::class.java))
+				return false
+			}
 			R.id.nav_updated -> UpdatesFragment::class.java
 			R.id.nav_settings -> {
 				navBar.context.startActivity(Intent(navBar.context, SettingsActivity::class.java))

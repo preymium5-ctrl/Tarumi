@@ -69,6 +69,116 @@
 
 	</HorizontalScrollView>
 
+	<LinearLayout
+		android:id="@+id/layout_summary"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="16dp"
+		android:layout_marginTop="10dp"
+		android:orientation="horizontal"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/scrollView_chips">
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="92dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center_vertical"
+			android:orientation="vertical"
+			android:padding="14dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.12"
+				android:text="@string/reading_streak"
+				android:textColor="@color/taru_text_muted"
+				android:textSize="10sp" />
+
+			<TextView
+				android:id="@+id/text_streak"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:ellipsize="end"
+				android:fontFamily="sans-serif"
+				android:maxLines="1"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold"
+				tools:text="3 days" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="92dp"
+			android:layout_marginStart="10dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center_vertical"
+			android:orientation="vertical"
+			android:padding="14dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.12"
+				android:text="@string/total_pages_read"
+				android:textColor="@color/taru_text_muted"
+				android:textSize="10sp" />
+
+			<TextView
+				android:id="@+id/text_pages_read"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:ellipsize="end"
+				android:fontFamily="sans-serif"
+				android:maxLines="1"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold"
+				tools:text="420" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="92dp"
+			android:layout_marginStart="10dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center_vertical"
+			android:orientation="vertical"
+			android:padding="14dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.12"
+				android:text="@string/total_reading_time"
+				android:textColor="@color/taru_text_muted"
+				android:textSize="10sp" />
+
+			<TextView
+				android:id="@+id/text_reading_time"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:ellipsize="end"
+				android:fontFamily="sans-serif"
+				android:maxLines="1"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold"
+				tools:text="2h 5m" />
+		</LinearLayout>
+	</LinearLayout>
+
 	<org.koitharu.kotatsu.stats.ui.views.PieChartView
 		android:id="@+id/chart"
 		android:layout_width="0dp"
@@ -77,7 +187,7 @@
 		app:layout_constraintDimensionRatio="1"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@id/scrollView_chips" />
+		app:layout_constraintTop_toBottomOf="@id/layout_summary" />
 
 	<androidx.recyclerview.widget.RecyclerView
 		android:id="@+id/recyclerView"

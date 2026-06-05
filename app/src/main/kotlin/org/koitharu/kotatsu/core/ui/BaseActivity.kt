@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.Toolbar
-import androidx.core.app.ActivityCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.FragmentManager
@@ -22,7 +21,6 @@ import androidx.viewbinding.ViewBinding
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -128,14 +126,6 @@ abstract class BaseActivity<B : ViewBinding> :
 	}
 
 	override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-		if (BuildConfig.DEBUG) {
-			if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-				ActivityCompat.recreate(this)
-				return true
-			} else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-				throw RuntimeException("Test crash")
-			}
-		}
 		return super.onKeyDown(keyCode, event)
 	}
 
