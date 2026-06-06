@@ -331,13 +331,13 @@
 
 			<com.google.android.material.button.MaterialButton
 				android:id="@+id/buttonAsk"
-				style="@style/Widget.Material3.Button.IconButton.Filled"
+				style="@style/Widget.Material3.Button.IconButton"
 				android:layout_width="44dp"
 				android:layout_height="44dp"
 				android:contentDescription="@string/ask_ai"
 				app:icon="@drawable/ic_send"
 				app:iconGravity="textStart"
-				app:iconTint="@color/taru_on_accent" />
+				app:iconTint="@color/taru_accent" />
 		</LinearLayout>
 	</LinearLayout>
 </LinearLayout>

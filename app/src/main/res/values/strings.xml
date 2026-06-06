@@ -697,6 +697,9 @@
     <string name="ask_ai_download_local_model">Download local model</string>
     <string name="ask_ai_retry_local_model">Retry download</string>
     <string name="ask_ai_cloud_fallback">Cloud fallback will be used when local AI is unavailable</string>
+    <string name="ask_ai_local_model_confirm_title">Download local AI?</string>
+    <string name="ask_ai_local_model_confirm_message">This downloads the local Gemma model. Actual download size: %1$s.</string>
+    <string name="ask_ai_local_model_confirm_download">Download</string>
     <string name="ask_ai_tokens_label">Daily asks</string>
     <string name="ask_ai_memory_label">AI memory</string>
     <string name="ask_ai_unlimited">Unlimited</string>
@@ -705,7 +708,7 @@
     <string name="ask_ai_expand">Expand Ask AI controls</string>
     <string name="ask_ai_tokens">%1$d/%2$d</string>
     <string name="ask_ai_tokens_reset">Resets in %1$s</string>
-    <string name="ask_ai_tokens_empty">You used today\'s Ask AI tokens. Please wait %1$s for the reset.</string>
+    <string name="ask_ai_tokens_empty">You used today\'s Ask AI tokens. Please wait %1$s for the reset, or use local AI when the model is downloaded.</string>
     <string name="ask_ai_thinking">Tarumi is thinking...</string>
     <string name="ask_ai_typing">Tarumi is typing...</string>
     <string name="other_manga">Other manga</string>

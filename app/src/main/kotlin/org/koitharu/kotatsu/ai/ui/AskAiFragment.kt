@@ -16,12 +16,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.getTitle
-import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseFragment
+import org.koitharu.kotatsu.core.util.FileSize
 import org.koitharu.kotatsu.core.util.ext.consumeAllSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
@@ -55,7 +56,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		binding.buttonComposerToggle.setOnClickListener {
 			viewModel.setComposerExpanded(!viewModel.state.value.isComposerExpanded)
 		}
-		binding.buttonLocalModel.setOnClickListener { viewModel.downloadLocalModel() }
+		binding.buttonLocalModel.setOnClickListener { confirmLocalModelDownload() }
 		binding.modeControls.setOnClickListener {
 			binding.switchNsfw.isChecked = !binding.switchNsfw.isChecked
 		}
@@ -101,6 +102,17 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		}
 		binding.editQuery.text?.clear()
 		viewModel.ask(query)
+	}
+
+	private fun confirmLocalModelDownload() {
+		val context = context ?: return
+		val size = FileSize.BYTES.format(context, viewModel.localModelSizeBytes())
+		MaterialAlertDialogBuilder(context)
+			.setTitle(R.string.ask_ai_local_model_confirm_title)
+			.setMessage(getString(R.string.ask_ai_local_model_confirm_message, size))
+			.setNegativeButton(android.R.string.cancel, null)
+			.setPositiveButton(R.string.ask_ai_local_model_confirm_download) { _, _ -> viewModel.downloadLocalModel() }
+			.show()
 	}
 
 	private fun renderState(state: AskAiState) {
@@ -336,13 +348,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 				.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
 			view.findViewById<TextView>(R.id.textView_title).text = manga.title
 			view.findViewById<TextView>(R.id.textView_type).text = manga.detectComicType().label
-			view.setOnClickListener {
-				if (manga.isNsfw()) {
-					router.openNsfwBrowserDetails(manga)
-				} else {
-					router.openDetails(manga)
-				}
-			}
+			view.setOnClickListener { router.openDetails(manga) }
 			rail.addView(
 				view,
 				LinearLayout.LayoutParams(
@@ -401,13 +407,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			view.findViewById<TextView>(R.id.textView_title).text = card.title
 			view.findViewById<TextView>(R.id.textView_type).text = card.typeLabel
 			view.setOnClickListener {
-				card.toMangaOrNull()?.let { manga ->
-					if (manga.isNsfw()) {
-						router.openNsfwBrowserDetails(manga)
-					} else {
-						router.openDetails(manga)
-					}
-				}
+				card.toMangaOrNull()?.let { manga -> router.openDetails(manga) }
 			}
 			rail.addView(
 				view,

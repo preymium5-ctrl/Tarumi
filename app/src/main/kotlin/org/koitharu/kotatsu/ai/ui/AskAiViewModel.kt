@@ -80,6 +80,8 @@ class AskAiViewModel @Inject constructor(
 		}
 	}
 
+	fun localModelSizeBytes(): Long = localAiLibrarianEngine.expectedModelSizeBytes
+
 	fun ask(query: String) {
 		val normalized = query.trim()
 		if (normalized.isEmpty()) {
@@ -87,7 +89,9 @@ class AskAiViewModel @Inject constructor(
 		}
 		searchJob?.cancel()
 		val includeNsfw = _state.value.includeNsfw
-		if (!consumeDailyToken()) {
+		val hasCloudToken = consumeDailyToken()
+		val localOnly = !hasCloudToken && _state.value.localModelStatus == LocalAiModelStatus.Ready
+		if (!hasCloudToken && !localOnly) {
 			appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
 			val resetText = formatDurationUntil(_state.value.tokenResetAtMillis)
 			_state.update { it.copy(isLoading = true) }
@@ -106,7 +110,8 @@ class AskAiViewModel @Inject constructor(
 		appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
 		_state.update { it.copy(isLoading = true) }
 		searchJob = launchJob(Dispatchers.Default) {
-			val historyContext = buildReadingContext(includeNsfw)
+			val useReadingHistory = shouldUseReadingHistory(normalized)
+			val historyContext = if (useReadingHistory) buildReadingContext(includeNsfw) else ""
 			val conversationContext = buildConversationContext(_state.value.messages, includeNsfw)
 			val intent = parseRecommendationIntent(normalized)
 			if (!intent.isRecommendationRequest) {
@@ -115,12 +120,16 @@ class AskAiViewModel @Inject constructor(
 					includeNsfw = includeNsfw,
 					libraryContext = historyContext,
 					conversationContext = conversationContext,
-				) ?: cloudAiLibrarianEngine.generateConversationReply(
-					query = normalized,
-					includeNsfw = includeNsfw,
-					libraryContext = historyContext,
-					conversationContext = conversationContext,
-				)
+				) ?: if (localOnly) {
+					null
+				} else {
+					cloudAiLibrarianEngine.generateConversationReply(
+						query = normalized,
+						includeNsfw = includeNsfw,
+						libraryContext = historyContext,
+						conversationContext = conversationContext,
+					)
+				}
 					?: buildConversationFallback(normalized, includeNsfw)
 				streamAssistantReply(
 					message = AskAiMessage(
@@ -137,7 +146,7 @@ class AskAiViewModel @Inject constructor(
 			} else {
 				SAFE_SOURCE_NAMES.resolveSources()
 			}
-			val history = loadReadingHistory(includeNsfw)
+			val history = if (useReadingHistory) loadReadingHistory(includeNsfw) else emptyList()
 			val results = findRecommendations(sources, normalized, intent, history, includeNsfw)
 			val reply = localAiLibrarianEngine.generateRecommendationReply(
 				query = normalized,
@@ -145,13 +154,17 @@ class AskAiViewModel @Inject constructor(
 				results = results,
 				libraryContext = historyContext,
 				conversationContext = conversationContext,
-			) ?: cloudAiLibrarianEngine.generateReply(
-				query = normalized,
-				includeNsfw = includeNsfw,
-				results = results,
-				libraryContext = historyContext,
-				conversationContext = conversationContext,
-			)
+			) ?: if (localOnly) {
+				null
+			} else {
+				cloudAiLibrarianEngine.generateReply(
+					query = normalized,
+					includeNsfw = includeNsfw,
+					results = results,
+					libraryContext = historyContext,
+					conversationContext = conversationContext,
+				)
+			}
 				?: buildFallbackReply(normalized, includeNsfw, results)
 			appendMessages(
 				AskAiMessage(
@@ -206,6 +219,7 @@ class AskAiViewModel @Inject constructor(
 			.filterNot { manga -> reference != null && manga.sameTitleAs(reference) }
 			.filter { manga -> manga.matchesRequestedType(intent.requestedType) }
 			.filter { manga -> manga.matchesSafetyMode(includeNsfw) }
+			.filter { manga -> manga.matchesRequiredTraits(intent.traits) }
 			.map { manga ->
 				manga to manga.recommendationScore(
 					query = query,
@@ -789,6 +803,23 @@ class AskAiViewModel @Inject constructor(
 		return isNsfw() == includeNsfw
 	}
 
+	private fun Manga.matchesRequiredTraits(traits: Set<String>): Boolean {
+		val required = traits.intersect(REQUIRED_TRAITS)
+		if (required.isEmpty()) {
+			return true
+		}
+		val tagText = normalizedTags()
+		val haystack = searchableText().normalizedMetadata()
+		return required.all { trait ->
+			val aliases = TRAIT_ALIASES[trait].orEmpty() + trait
+			aliases.any { alias ->
+				val normalizedAlias = alias.normalizedMetadata()
+				tagText.any { tag -> tag.contains(normalizedAlias) || normalizedAlias.contains(tag) } ||
+					haystack.contains(normalizedAlias)
+			}
+		}
+	}
+
 	private fun Manga.inferredComicType(): ComicType {
 		val detected = detectComicType()
 		if (detected != ComicType.COMIC) {
@@ -854,6 +885,12 @@ class AskAiViewModel @Inject constructor(
 		.map { it.filter(Char::isLetterOrDigit) }
 		.filter { it.length >= MIN_WORD_LENGTH && it !in STOP_WORDS }
 		.toSet()
+
+	private fun shouldUseReadingHistory(query: String): Boolean {
+		return Regex(
+			"""(?i)\b(?:my\s+history|reading\s+history|my\s+library|what\s+i\s+read|what\s+i'?ve\s+read|based\s+on\s+(?:my\s+)?(?:history|library|reading)|from\s+my\s+(?:history|library))\b""",
+		).containsMatchIn(query)
+	}
 
 	private fun parseRecommendationIntent(query: String): RecommendationIntent {
 		val words = searchableWords(query)
@@ -940,7 +977,7 @@ class AskAiViewModel @Inject constructor(
 		private const val MAX_CONTEXT_MESSAGE_CHARS = 600
 		private const val MAX_STORED_MESSAGES = 80
 		private const val CHAT_RETENTION_MS = 2L * 24L * 60L * 60L * 1000L
-		private const val DAILY_TOKEN_LIMIT = 20
+		private const val DAILY_TOKEN_LIMIT = 10
 		private const val DAILY_TOKEN_RESET_MS = 24L * 60L * 60L * 1000L
 		private const val DETAIL_BATCH_SIZE = 8
 		private const val SOURCE_TIMEOUT_MS = 8_000L
@@ -990,7 +1027,11 @@ class AskAiViewModel @Inject constructor(
 			"harem" to setOf("harem", "wives", "wife", "multiple wives", "concubine", "romance"),
 			"revenge" to setOf("revenge", "betrayal", "payback"),
 			"fantasy" to setOf("fantasy", "magic", "tower", "dungeon", "martial", "murim"),
+			"murim" to setOf("murim", "murin", "martial arts", "martial", "wuxia", "jianghu"),
 			"action" to setOf("action", "fight", "battle", "combat"),
+			"sexy" to setOf("sexy", "ecchi", "smut", "adult", "mature", "erotic"),
+			"incest" to setOf("incest", "sibling", "sister", "brother", "family"),
+			"young protagonist" to setOf("young protagonist", "young mc", "young male lead", "young female lead", "boy protagonist", "girl protagonist", "child protagonist"),
 			"zombie" to setOf("zombie", "zombies", "undead", "infection", "infected", "apocalypse"),
 			"female lead" to setOf(
 				"female lead",
@@ -1026,6 +1067,13 @@ class AskAiViewModel @Inject constructor(
 			"HentaiRead",
 			"18PornComic",
 		)
+
+		private val REQUIRED_TRAITS = setOf(
+			"colored",
+			"incest",
+			"sexy",
+			"young protagonist",
+		)
 	}
 }
 
@@ -1047,8 +1095,8 @@ data class AskAiState(
 	val isLoading: Boolean = false,
 	val isComposerExpanded: Boolean = true,
 	val localModelStatus: LocalAiModelStatus = LocalAiModelStatus.NotDownloaded,
-	val remainingTokens: Int = 20,
-	val maxTokens: Int = 20,
+	val remainingTokens: Int = 10,
+	val maxTokens: Int = 10,
 	val tokenResetAtMillis: Long = System.currentTimeMillis() + 24L * 60L * 60L * 1000L,
 	val messages: List<AskAiMessage> = emptyList(),
 )

@@ -41,6 +41,8 @@ class LocalAiLibrarianEngine @Inject constructor(
 	)
 	val status: StateFlow<LocalAiModelStatus> = _status.asStateFlow()
 
+	val expectedModelSizeBytes: Long = BuildConfig.AI_LOCAL_MODEL_SIZE_BYTES
+
 	suspend fun downloadModel() = withContext(Dispatchers.IO) {
 		if (BuildConfig.AI_LOCAL_MODEL_URL.isBlank()) {
 			_status.value = LocalAiModelStatus.NotConfigured
