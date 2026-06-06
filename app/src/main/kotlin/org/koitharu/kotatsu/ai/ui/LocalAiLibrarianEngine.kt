@@ -199,9 +199,11 @@ class LocalAiLibrarianEngine @Inject constructor(
 			$cards
 
 			Current mode: ${if (includeNsfw) "18+ only. Recommend adult/NSFW candidates only." else "Safe only. Recommend non-adult candidates only."}
-			Use the recent conversation to understand follow-ups. Explain the shared story mood, genre, trope,
-			or character setup. Do not invent titles outside the candidate list. Tell the user the cards below
-			are the best source-backed matches.
+			Think carefully before answering. Use the recent conversation to understand follow-ups. Compare titles,
+			tags, source names, author names, and descriptions. Explain the shared story mood, genre, trope, fandom,
+			parody target, or character setup. Do not invent titles outside the candidate list. Tell the user the
+			cards below are the best source-backed matches. End with one short suggestion, like asking whether they
+			want more unique picks or a narrower search.
 		""".trimIndent()
 	}
 
@@ -225,16 +227,19 @@ class LocalAiLibrarianEngine @Inject constructor(
 			${libraryContext.ifBlank { "No reading history context is available yet." }}
 			User message: "$query"
 			Current mode: ${if (includeNsfw) "18+ conversation only. Do not recommend safe-mode sources unless the user turns 18+ mode off." else "Safe conversation only. Do not discuss or recommend adult/NSFW comics."}
+			Think carefully before answering. Use conversation context and library context like retrieval results.
 			Reply naturally and answer directly. You can chat about the app, comics, characters, recommendation
-			ideas, or general topics. If useful, invite them to ask for manga, manhwa, or manhua recommendations
-			by mood, trope, genre, or similar title.
+			ideas, or general topics. If the user needs source-backed comic results, invite them to ask for manga,
+			manhwa, manhua, doujin, or hentai recommendations by mood, trope, genre, fandom/title, tag, or similar title.
+			If the exact answer needs fresh web facts that are not in context, be honest and suggest a source-backed
+			comic search query the app can crawl. When useful, ask a short follow-up that helps narrow the next result.
 		""".trimIndent()
 	}
 
 	companion object {
 		private const val MODEL_DIR_NAME = "ai_models"
-		private const val MAX_TOKENS = 768
-		private const val MAX_TOP_K = 40
+		private const val MAX_TOKENS = 1536
+		private const val MAX_TOP_K = 64
 		private const val MODEL_INVALID_MESSAGE = "Downloaded model is not a valid local AI .task file"
 		private const val MODEL_DAMAGED_MESSAGE = "Local AI model file is damaged. Please retry download."
 	}

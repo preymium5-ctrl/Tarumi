@@ -546,11 +546,20 @@
 					android:layout_height="640dp"
 					android:background="@drawable/bg_taru_home_feature"
 					android:nestedScrollingEnabled="false"
-					app:layout_constraintBottom_toBottomOf="parent"
 					app:layout_constraintEnd_toEndOf="parent"
 					app:layout_constraintStart_toStartOf="parent"
 					app:layout_constraintTop_toBottomOf="@id/textViewChapterFeed"
 					tools:layout="@layout/sheet_chapters_pages" />
+
+				<include
+					android:id="@+id/comments_preview"
+					layout="@layout/layout_comments_preview"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					app:layout_constraintBottom_toBottomOf="parent"
+					app:layout_constraintEnd_toEndOf="parent"
+					app:layout_constraintStart_toStartOf="parent"
+					app:layout_constraintTop_toBottomOf="@id/container_bottom_sheet" />
 
 			</androidx.constraintlayout.widget.ConstraintLayout>
 

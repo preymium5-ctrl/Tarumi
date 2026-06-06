@@ -351,6 +351,8 @@
 
 			</LinearLayout>
 
+			<include layout="@layout/layout_comments_preview" />
+
 		</LinearLayout>
 
 	</androidx.core.widget.NestedScrollView>

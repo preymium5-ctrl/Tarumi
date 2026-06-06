@@ -711,6 +711,16 @@
     <string name="ask_ai_tokens_empty">You used today\'s Ask AI tokens. Please wait %1$s for the reset, or use local AI when the model is downloaded.</string>
     <string name="ask_ai_thinking">Tarumi is thinking...</string>
     <string name="ask_ai_typing">Tarumi is typing...</string>
+    <string name="ask_ai_override_title">AI limit override</string>
+    <string name="ask_ai_override_summary">Enter the private override code for Ask AI.</string>
+    <string name="ask_ai_override_prompt">Type the private code to remove the daily Ask AI limit on this device.</string>
+    <string name="ask_ai_override_enabled">Ask AI daily limit override enabled.</string>
+    <string name="ask_ai_override_failed">Override code was not accepted.</string>
+    <string name="comments">Comments</string>
+    <string name="comment_placeholder">Write a comment...</string>
+    <string name="comment_preview_first">Reader note: This area is ready for chapter and manga discussions.</string>
+    <string name="comment_preview_second">Community replies will appear here when comments are enabled.</string>
+    <string name="comment_coming_soon">Comment posting is coming soon.</string>
     <string name="other_manga">Other manga</string>
     <string name="less_than_minute">Less than a minute</string>
     <string name="statistics">Statistics</string>

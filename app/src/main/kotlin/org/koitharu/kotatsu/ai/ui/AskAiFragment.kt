@@ -1,5 +1,8 @@
 package org.koitharu.kotatsu.ai.ui
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -119,7 +122,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		val binding = viewBinding ?: return
 		binding.progress.isVisible = false
 		binding.thinkingRow.isVisible = false
-		binding.tokenProgress.isVisible = true
+		binding.tokenProgress.isVisible = state.isComposerExpanded && !state.isLimitOverrideEnabled
 		binding.tokenProgress.max = state.maxTokens
 		binding.tokenProgress.progress = state.remainingTokens
 		binding.textTokenLabel.setText(R.string.ask_ai_tokens_label)
@@ -133,6 +136,10 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			formatDurationUntil(state.tokenResetAtMillis),
 		) + " • " + getString(R.string.ask_ai_memory_note)
 		binding.tokenCard.isVisible = state.isComposerExpanded
+		if (state.isLimitOverrideEnabled) {
+			binding.textTokenUsage.setText(R.string.ask_ai_unlimited)
+			binding.textTokenReset.setText(R.string.ask_ai_memory_note)
+		}
 		binding.introRow.isVisible = state.isComposerExpanded
 		binding.modeControls.isVisible = state.isComposerExpanded
 		binding.localModelCard.isVisible = state.isComposerExpanded
@@ -300,19 +307,39 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			setBackgroundResource(R.drawable.bg_taru_home_chip)
 			setPadding(4.dp(this), 4.dp(this), 4.dp(this), 4.dp(this))
 		}
+		startAvatarPulse(avatar)
 		row.addView(
 			avatar,
 			LinearLayout.LayoutParams(42.dp(container), 42.dp(container)).apply {
 				marginEnd = 10.dp(container)
 			},
 		)
-		val bubble = TextView(container.context).apply {
+		val bubble = LinearLayout(container.context).apply {
 			setBackgroundResource(R.drawable.bg_taru_home_feature)
+			gravity = Gravity.CENTER_VERTICAL
+			orientation = LinearLayout.HORIZONTAL
+			setPadding(18.dp(this), 12.dp(this), 18.dp(this), 12.dp(this))
+		}
+		val label = TextView(container.context).apply {
+			setText(R.string.ask_ai_typing)
 			setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
 			textSize = 14f
 			typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
-			setPadding(18.dp(this), 12.dp(this), 18.dp(this), 12.dp(this))
-			setText(R.string.ask_ai_typing)
+		}
+		bubble.addView(label)
+		val dots = List(3) {
+			View(container.context).apply {
+				setBackgroundResource(R.drawable.bg_ask_ai_typing_dot)
+				alpha = 0.35f
+			}
+		}
+		for ((dotIndex, dot) in dots.withIndex()) {
+			bubble.addView(
+				dot,
+				LinearLayout.LayoutParams(6.dp(container), 6.dp(container)).apply {
+					marginStart = if (dotIndex == 0) 8.dp(container) else 5.dp(container)
+				},
+			)
 		}
 		row.addView(
 			bubble,
@@ -330,6 +357,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 				topMargin = if (index == 0) 0 else 12.dp(container)
 			},
 		)
+		startTypingDots(dots)
 	}
 
 	private fun addResults(container: LinearLayout, results: List<Manga>) {
@@ -470,6 +498,36 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			hours > 0L -> "${hours}h"
 			minutes > 0L -> "${minutes}m"
 			else -> getString(R.string.less_than_minute)
+		}
+	}
+
+	private fun startAvatarPulse(view: View) {
+		val scaleX = ObjectAnimator.ofFloat(view, View.SCALE_X, 0.95f, 1.04f, 0.95f)
+		val scaleY = ObjectAnimator.ofFloat(view, View.SCALE_Y, 0.95f, 1.04f, 0.95f)
+		AnimatorSet().apply {
+			playTogether(scaleX, scaleY)
+			duration = 980L
+			childAnimations.forEach { animator ->
+				(animator as? ValueAnimator)?.repeatCount = ValueAnimator.INFINITE
+			}
+			start()
+		}
+	}
+
+	private fun startTypingDots(dots: List<View>) {
+		dots.forEachIndexed { index, dot ->
+			ObjectAnimator.ofFloat(dot, View.ALPHA, 0.28f, 1f, 0.28f).apply {
+				duration = 820L
+				startDelay = index * 140L
+				repeatCount = ValueAnimator.INFINITE
+				start()
+			}
+			ObjectAnimator.ofFloat(dot, View.TRANSLATION_Y, 0f, -3.dp(dot).toFloat(), 0f).apply {
+				duration = 820L
+				startDelay = index * 140L
+				repeatCount = ValueAnimator.INFINITE
+				start()
+			}
 		}
 	}
 }

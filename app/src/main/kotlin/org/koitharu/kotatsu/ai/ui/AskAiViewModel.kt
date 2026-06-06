@@ -8,18 +8,25 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jsoup.Jsoup
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.model.distinctById
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
@@ -37,6 +44,7 @@ import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,6 +53,7 @@ class AskAiViewModel @Inject constructor(
 	private val historyRepository: HistoryRepository,
 	private val localAiLibrarianEngine: LocalAiLibrarianEngine,
 	private val cloudAiLibrarianEngine: CloudAiLibrarianEngine,
+	@BaseHttpClient private val okHttpClient: OkHttpClient,
 	@ApplicationContext private val context: Context,
 ) : BaseViewModel() {
 
@@ -54,11 +63,14 @@ class AskAiViewModel @Inject constructor(
 	val state: StateFlow<AskAiState> = _state
 
 	private var searchJob: Job? = null
-	private val historyPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+	private val historyPrefs = context.getSharedPreferences(AskAiLimitPrefs.PREFS_NAME, Context.MODE_PRIVATE)
 	private val json = Json {
 		ignoreUnknownKeys = true
 		isLenient = true
 	}
+	private val webDiscoveryCache = LinkedHashMap<String, List<String>>(WEB_DISCOVERY_CACHE_MAX_ITEMS, 0.75f, true)
+	private val searchCache = LinkedHashMap<String, List<Manga>>(SEARCH_CACHE_MAX_ITEMS, 0.75f, true)
+	private val detailsCache = LinkedHashMap<Long, Manga>(DETAILS_CACHE_MAX_ITEMS, 0.75f, true)
 
 	init {
 		refreshTokenState()
@@ -89,116 +101,166 @@ class AskAiViewModel @Inject constructor(
 		}
 		searchJob?.cancel()
 		val includeNsfw = _state.value.includeNsfw
-		val hasCloudToken = consumeDailyToken()
-		val localOnly = !hasCloudToken && _state.value.localModelStatus == LocalAiModelStatus.Ready
-		if (!hasCloudToken && !localOnly) {
-			appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
-			val resetText = formatDurationUntil(_state.value.tokenResetAtMillis)
-			_state.update { it.copy(isLoading = true) }
-			searchJob = launchJob {
-				streamAssistantReply(
-					message = AskAiMessage(
-						role = AskAiRole.ASSISTANT,
-						query = normalized,
-						includeNsfw = includeNsfw,
-					),
-					finalText = context.getString(R.string.ask_ai_tokens_empty, resetText),
-				)
-			}
-			return
-		}
 		appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
 		_state.update { it.copy(isLoading = true) }
 		searchJob = launchJob(Dispatchers.Default) {
-			val messagesBeforeCurrent = _state.value.messages.dropLast(1)
-			val useReadingHistory = shouldUseReadingHistory(normalized)
-			val historyContext = if (useReadingHistory) buildReadingContext(includeNsfw) else ""
-			val conversationContext = buildConversationContext(messagesBeforeCurrent, includeNsfw)
-			val requestedIntent = parseRecommendationIntent(normalized)
-			val previousRecommendation = if (requestedIntent.isMoreRequest) {
-				messagesBeforeCurrent.lastOrNull { message ->
-					message.role == AskAiRole.ASSISTANT &&
-						message.includeNsfw == includeNsfw &&
-						(message.results.isNotEmpty() || message.resultCards.isNotEmpty())
+			try {
+				val limitOverride = AskAiLimitPrefs.isLimitOverrideEnabled(context)
+				val hasCloudAsk = limitOverride || consumeDailyToken()
+				val hasLocalFallback = _state.value.localModelStatus == LocalAiModelStatus.Ready
+				if (!hasCloudAsk && !hasLocalFallback) {
+					streamAssistantReply(
+						message = AskAiMessage(
+							role = AskAiRole.ASSISTANT,
+							query = normalized,
+							includeNsfw = includeNsfw,
+						),
+						finalText = context.getString(
+							R.string.ask_ai_tokens_empty,
+							formatDurationUntil(_state.value.tokenResetAtMillis),
+						),
+					)
+					return@launchJob
 				}
-			} else {
-				null
-			}
-			val effectiveQuery = if (requestedIntent.isMoreRequest && previousRecommendation?.query?.isNotBlank() == true) {
-				previousRecommendation.query
-			} else {
-				normalized
-			}
-			val intent = if (effectiveQuery == normalized) {
-				requestedIntent
-			} else {
-				parseRecommendationIntent(effectiveQuery).copy(
-					requestedLimit = requestedIntent.requestedLimit,
-					isMoreRequest = true,
-					isRecommendationRequest = true,
-				)
-			}
-			if (!intent.isRecommendationRequest) {
-				val reply = localAiLibrarianEngine.generateConversationReply(
-					query = normalized,
-					includeNsfw = includeNsfw,
-					libraryContext = historyContext,
-					conversationContext = conversationContext,
-				) ?: if (localOnly) {
-					null
+				val messagesBeforeCurrent = _state.value.messages.dropLast(1)
+				val useReadingHistory = shouldUseReadingHistory(normalized)
+				val historyContext = if (useReadingHistory) buildReadingContext(includeNsfw) else ""
+				val conversationContext = buildConversationContext(messagesBeforeCurrent, includeNsfw)
+				val requestedIntent = parseRecommendationIntent(normalized)
+				val previousRecommendation = if (requestedIntent.isMoreRequest) {
+					messagesBeforeCurrent.lastOrNull { message ->
+						message.role == AskAiRole.ASSISTANT &&
+							message.includeNsfw == includeNsfw &&
+							(message.results.isNotEmpty() || message.resultCards.isNotEmpty())
+					}
 				} else {
-					cloudAiLibrarianEngine.generateConversationReply(
+					null
+				}
+				val effectiveQuery = if (requestedIntent.isMoreRequest && previousRecommendation?.query?.isNotBlank() == true) {
+					previousRecommendation.query
+				} else {
+					normalized
+				}
+				val intent = if (effectiveQuery == normalized) {
+					requestedIntent
+				} else {
+					parseRecommendationIntent(effectiveQuery).copy(
+						requestedLimit = requestedIntent.requestedLimit,
+						isMoreRequest = true,
+						isRecommendationRequest = true,
+					)
+				}
+				if (!intent.isRecommendationRequest) {
+					val reply = localAiLibrarianEngine.generateConversationReply(
 						query = normalized,
 						includeNsfw = includeNsfw,
 						libraryContext = historyContext,
 						conversationContext = conversationContext,
 					)
+						?: (if (hasCloudAsk) cloudAiLibrarianEngine.generateConversationReply(
+							query = normalized,
+							includeNsfw = includeNsfw,
+							libraryContext = historyContext,
+							conversationContext = conversationContext,
+						) else null)
+						?: buildConversationFallback(normalized, includeNsfw)
+					streamAssistantReply(
+						message = AskAiMessage(
+							role = AskAiRole.ASSISTANT,
+							query = normalized,
+							includeNsfw = includeNsfw,
+						),
+						finalText = reply,
+					)
+					return@launchJob
 				}
-					?: buildConversationFallback(normalized, includeNsfw)
+				val sources = if (includeNsfw) {
+					NSFW_SOURCE_NAMES.resolveSources()
+				} else {
+					SAFE_SOURCE_NAMES.resolveSources()
+				}
+				val history = if (useReadingHistory) loadReadingHistory(includeNsfw) else emptyList()
+				val excludedIds = if (intent.isMoreRequest) {
+					messagesBeforeCurrent
+						.asSequence()
+						.filter { message ->
+							message.role == AskAiRole.ASSISTANT &&
+								message.includeNsfw == includeNsfw &&
+								message.query == effectiveQuery
+						}
+						.flatMap { message -> message.results.asSequence().map { it.id } + message.resultCards.asSequence().map { it.id } }
+						.toSet()
+				} else {
+					emptySet()
+				}
+				val excludedTitles = if (intent.isMoreRequest) {
+					messagesBeforeCurrent
+						.asSequence()
+						.filter { message ->
+							message.role == AskAiRole.ASSISTANT &&
+								message.includeNsfw == includeNsfw &&
+								message.query == effectiveQuery
+						}
+						.flatMap { message -> message.results.asSequence().map { it.title } + message.resultCards.asSequence().map { it.title } }
+						.map { it.normalizedTitle() }
+						.filter { it.isNotBlank() }
+						.toSet()
+				} else {
+					emptySet()
+				}
+				val results = withTimeoutOrNull(RECOMMENDATION_SEARCH_TIMEOUT_MS) {
+					findRecommendations(
+						sources = sources,
+						query = effectiveQuery,
+						intent = intent,
+						history = history,
+						includeNsfw = includeNsfw,
+						excludedIds = excludedIds,
+						excludedTitles = excludedTitles,
+					)
+				}.orEmpty()
+				val reply = if (results.isEmpty()) {
+					buildTimedSearchFallback(normalized, effectiveQuery, includeNsfw, intent, previousRecommendation != null)
+				} else {
+					buildRecommendationReply(
+						query = normalized,
+						effectiveQuery = effectiveQuery,
+						includeNsfw = includeNsfw,
+						results = results,
+						intent = intent,
+						hasPreviousRecommendations = previousRecommendation != null,
+					)
+				}
+				appendMessages(
+					AskAiMessage(
+						role = AskAiRole.ASSISTANT,
+						query = effectiveQuery,
+						includeNsfw = includeNsfw,
+						results = results,
+						resultCards = results.map { it.toResultCard() },
+					),
+					persist = false,
+				)
+				streamLastAssistantReply(
+					finalText = reply,
+					results = results,
+					resultCards = results.map { it.toResultCard() },
+				)
+			} catch (e: CancellationException) {
+				throw e
+			} catch (e: Throwable) {
+				e.printStackTraceDebug()
 				streamAssistantReply(
 					message = AskAiMessage(
 						role = AskAiRole.ASSISTANT,
 						query = normalized,
 						includeNsfw = includeNsfw,
 					),
-					finalText = reply,
+					finalText = "Tarumi hit a search problem before I could finish. Try a shorter tag, title, or genre and I will crawl the sources again.",
 				)
-				return@launchJob
+			} finally {
+				_state.update { it.copy(isLoading = false) }
 			}
-			val sources = if (includeNsfw) {
-				NSFW_SOURCE_NAMES.resolveSources()
-			} else {
-				SAFE_SOURCE_NAMES.resolveSources()
-			}
-			val history = if (useReadingHistory) loadReadingHistory(includeNsfw) else emptyList()
-			val excludedIds = previousRecommendation
-				?.let { message -> message.results.map { it.id } + message.resultCards.map { it.id } }
-				?.toSet()
-				.orEmpty()
-			val results = findRecommendations(sources, effectiveQuery, intent, history, includeNsfw, excludedIds)
-			val reply = buildRecommendationReply(
-				query = normalized,
-				effectiveQuery = effectiveQuery,
-				includeNsfw = includeNsfw,
-				results = results,
-				intent = intent,
-				hasPreviousRecommendations = previousRecommendation != null,
-			)
-			appendMessages(
-				AskAiMessage(
-					role = AskAiRole.ASSISTANT,
-					query = effectiveQuery,
-					includeNsfw = includeNsfw,
-					results = results,
-					resultCards = results.map { it.toResultCard() },
-				),
-				persist = false,
-			)
-			streamLastAssistantReply(
-				finalText = reply,
-				results = results,
-				resultCards = results.map { it.toResultCard() },
-			)
 		}
 	}
 
@@ -219,9 +281,10 @@ class AskAiViewModel @Inject constructor(
 		history: List<Manga>,
 		includeNsfw: Boolean,
 		excludedIds: Set<Long> = emptySet(),
+		excludedTitles: Set<String> = emptySet(),
 	): List<Manga> {
 		val resultLimit = intent.requestedLimit.coerceIn(1, MAX_REQUESTED_RESULTS)
-		val candidateLimit = (resultLimit + excludedIds.size + EXTRA_CANDIDATE_BUFFER)
+		val candidateLimit = maxOf(resultLimit * 2, resultLimit + excludedIds.size + EXTRA_CANDIDATE_BUFFER)
 			.coerceIn(resultLimit, MAX_CANDIDATE_POOL)
 		val reference = intent.referenceTitle
 			?.let { title -> resolveReference(sources, title) }
@@ -229,7 +292,7 @@ class AskAiViewModel @Inject constructor(
 		val seeds = if (reference != null) {
 			loadSimilarityCandidates(sources, reference, candidateLimit)
 		} else {
-			loadTraitCandidates(sources, intent, candidateLimit)
+			loadTraitCandidatesWithAgents(sources, query, intent, candidateLimit, includeNsfw)
 		}
 		val detailed = loadDetails(
 			(seeds + listOfNotNull(reference))
@@ -239,6 +302,7 @@ class AskAiViewModel @Inject constructor(
 		return detailed
 			.asSequence()
 			.filterNot { manga -> manga.id in excludedIds }
+			.filterNot { manga -> manga.title.normalizedTitle() in excludedTitles }
 			.filterNot { manga -> reference != null && manga.sameTitleAs(reference) }
 			.filter { manga -> manga.matchesRequestedType(intent.requestedType) }
 			.filter { manga -> manga.matchesSafetyMode(includeNsfw) }
@@ -254,6 +318,7 @@ class AskAiViewModel @Inject constructor(
 			}
 			.sortedWith(
 				compareByDescending<Pair<Manga, Int>> { it.second }
+					.thenByDescending { it.first.sourcePriorityScore(includeNsfw) }
 					.thenByDescending { it.first.rating },
 			)
 			.map { it.first }
@@ -284,7 +349,7 @@ class AskAiViewModel @Inject constructor(
 				it.printStackTraceDebug()
 			}.getOrDefault(emptyList())
 		}.orEmpty().appendUniqueTo(candidates, limit)
-		for (source in sources) {
+		for (source in sources.prioritizedForRecommendations()) {
 			if (candidates.size >= limit) {
 				break
 			}
@@ -297,23 +362,166 @@ class AskAiViewModel @Inject constructor(
 		sources: List<MangaParserSource>,
 		intent: RecommendationIntent,
 		limit: Int,
+		webDiscoveryQueries: List<String>,
+		allowBrowse: Boolean,
 	): List<Manga> {
 		val candidates = ArrayList<Manga>(limit)
-		val queries = intent.searchQueries()
-		for (searchQuery in queries) {
-			if (candidates.size >= limit) {
-				break
-			}
-			searchSources(sources, searchQuery, limit - candidates.size)
+		val queries = (webDiscoveryQueries + intent.searchQueries()).distinct()
+		val perQueryLimit = querySearchLimit(limit)
+		supervisorScope {
+			queries
+				.take(MAX_PARALLEL_QUERY_SEARCHES)
+				.map { searchQuery ->
+					async(Dispatchers.IO) { searchSources(sources, searchQuery, perQueryLimit) }
+				}
+				.awaitAll()
+				.flatten()
 				.appendUniqueTo(candidates, limit)
 		}
-		for (source in sources) {
-			if (candidates.size >= limit) {
-				break
+		if (allowBrowse) {
+			for (source in sources.prioritizedForRecommendations()) {
+				if (candidates.size >= limit) {
+					break
+				}
+				browseSource(source, limit - candidates.size).appendUniqueTo(candidates, limit)
 			}
-			browseSource(source, limit - candidates.size).appendUniqueTo(candidates, limit)
 		}
 		return candidates
+	}
+
+	private suspend fun loadTraitCandidatesWithAgents(
+		sources: List<MangaParserSource>,
+		query: String,
+		intent: RecommendationIntent,
+		limit: Int,
+		includeNsfw: Boolean,
+	): List<Manga> = supervisorScope {
+		val sourceAgent = async(Dispatchers.IO) {
+			loadTraitCandidates(
+				sources = sources,
+				intent = intent,
+				limit = limit,
+				webDiscoveryQueries = emptyList(),
+				allowBrowse = false,
+			)
+		}
+		val webAgent = async(Dispatchers.IO) {
+			discoverWebQueries(query, intent, includeNsfw)
+		}
+		val candidates = ArrayList<Manga>(limit)
+		sourceAgent.await().appendUniqueTo(candidates, limit)
+		val webQueries = webAgent.await()
+		if (webQueries.isNotEmpty() && candidates.size < limit) {
+			loadTraitCandidates(
+				sources = sources,
+				intent = intent,
+				limit = limit - candidates.size,
+				webDiscoveryQueries = webQueries,
+				allowBrowse = false,
+			).appendUniqueTo(candidates, limit)
+		}
+		if (candidates.size < limit) {
+			for (source in sources.prioritizedForRecommendations()) {
+				if (candidates.size >= limit) {
+					break
+				}
+				browseSource(source, limit - candidates.size).appendUniqueTo(candidates, limit)
+			}
+		}
+		return@supervisorScope candidates
+	}
+
+	private suspend fun discoverWebQueries(
+		query: String,
+		intent: RecommendationIntent,
+		includeNsfw: Boolean,
+	): List<String> = withContext(Dispatchers.IO) {
+		val discoverySearches = buildWebDiscoverySearches(query, intent, includeNsfw)
+		if (discoverySearches.isEmpty()) {
+			return@withContext emptyList()
+		}
+		withTimeoutOrNull(WEB_DISCOVERY_TIMEOUT_MS) {
+			supervisorScope {
+				discoverySearches.map { search ->
+					async(Dispatchers.IO) {
+						runCatchingCancellable {
+							discoverWebQueriesForSearch(search)
+						}.onFailure {
+							it.printStackTraceDebug()
+						}.getOrDefault(emptyList())
+					}
+				}.awaitAll().flatten()
+			}
+				.distinctBy { it.normalizedMetadata() }
+				.take(WEB_DISCOVERY_QUERY_LIMIT)
+		}.orEmpty()
+	}
+
+	private fun buildWebDiscoverySearches(
+		query: String,
+		intent: RecommendationIntent,
+		includeNsfw: Boolean,
+	): List<String> {
+		val modeWords = if (includeNsfw) {
+			"adult hentai doujin comic"
+		} else {
+			when (intent.requestedType) {
+				ComicType.MANHWA -> "manhwa recommendations"
+				ComicType.MANHUA -> "manhua recommendations"
+				ComicType.MANGA -> "manga recommendations"
+				else -> "manga manhwa manhua recommendations"
+			}
+		}
+		val traitText = intent.traits.joinToString(" ")
+		return listOf(
+			"$query $modeWords",
+			"$query site:reddit.com $modeWords",
+			"${intent.searchQuery} $traitText $modeWords",
+			"${intent.searchQuery} $traitText reddit recommendations",
+			"${intent.searchQuery} similar comics $modeWords",
+			"${intent.searchQuery} best similar manga manhwa manhua",
+		)
+			.map { it.replace(MULTIPLE_SPACES_REGEX, " ").trim() }
+			.filter { it.length >= MIN_WORD_LENGTH }
+			.distinct()
+			.take(WEB_DISCOVERY_SEARCH_LIMIT)
+	}
+
+	private fun discoverWebQueriesForSearch(search: String): List<String> {
+		val cacheKey = "web|${search.normalizedMetadata()}"
+		getCachedWebDiscovery(cacheKey)?.let { cached ->
+			return cached
+		}
+		val url = WEB_DISCOVERY_URL.toHttpUrl()
+			.newBuilder()
+			.addQueryParameter("q", search)
+			.build()
+		val request = Request.Builder()
+			.url(url)
+			.header("User-Agent", WEB_DISCOVERY_USER_AGENT)
+			.build()
+		okHttpClient.newBuilder()
+			.callTimeout(WEB_DISCOVERY_CALL_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+			.build()
+			.newCall(request)
+			.execute()
+			.use { response ->
+			if (!response.isSuccessful) {
+				return emptyList()
+			}
+			val document = Jsoup.parse(response.body.string())
+			val queries = document.select("a.result__a, .result__snippet")
+				.asSequence()
+				.map { it.text() }
+				.flatMap { text -> text.toDiscoveredComicQueries().asSequence() }
+				.filter { it.length >= MIN_WORD_LENGTH }
+				.filterNot { it in STOP_WORDS }
+				.distinctBy { it.normalizedMetadata() }
+				.take(WEB_DISCOVERY_QUERY_LIMIT)
+				.toList()
+			cacheWebDiscovery(cacheKey, queries)
+			return queries
+		}
 	}
 
 	private suspend fun searchSources(
@@ -321,12 +529,16 @@ class AskAiViewModel @Inject constructor(
 		query: String,
 		limit: Int = RESULT_LIMIT,
 	): List<Manga> = supervisorScope {
-		sources.map { source ->
+		sources.prioritizedForRecommendations().map { source ->
 			async(Dispatchers.IO) { searchSource(source, query, limit) }
 		}.awaitAll().flatten().distinctById().take(limit)
 	}
 
 	private suspend fun searchSource(source: MangaParserSource, query: String, limit: Int): List<Manga> {
+		val cacheKey = "source|${source.name}|${query.normalizedMetadata()}|$limit"
+		getCachedSearch(cacheKey)?.let { cached ->
+			return cached
+		}
 		val repository = mangaRepositoryFactory.create(source)
 		val order = when {
 			SortOrder.RELEVANCE in repository.sortOrders -> SortOrder.RELEVANCE
@@ -339,13 +551,20 @@ class AskAiViewModel @Inject constructor(
 		} else {
 			MangaListFilter.EMPTY
 		}
-		return withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
-			runCatchingCancellable {
-				repository.getList(0, order, filter)
-			}.onFailure {
-				it.printStackTraceDebug()
-			}.getOrDefault(emptyList())
-		}.orEmpty().take(limit)
+		val candidates = ArrayList<Manga>(limit)
+		for (page in 0 until SOURCE_PAGE_ATTEMPTS) {
+			if (candidates.size >= limit) {
+				break
+			}
+			withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
+				runCatchingCancellable {
+					repository.getList(page, order, filter)
+				}.onFailure {
+					it.printStackTraceDebug()
+				}.getOrDefault(emptyList())
+			}.orEmpty().appendUniqueTo(candidates, limit)
+		}
+		return candidates.also { cacheSearch(cacheKey, it) }
 	}
 
 	private suspend fun browseSource(source: MangaParserSource, limit: Int = RESULT_LIMIT): List<Manga> {
@@ -366,13 +585,18 @@ class AskAiViewModel @Inject constructor(
 			if (candidates.size >= limit) {
 				break
 			}
-			withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
-				runCatchingCancellable {
-					repository.getList(0, order, MangaListFilter.EMPTY)
-				}.onFailure {
-					it.printStackTraceDebug()
-				}.getOrDefault(emptyList())
-			}.orEmpty().appendUniqueTo(candidates, limit)
+			for (page in 0 until SOURCE_PAGE_ATTEMPTS) {
+				if (candidates.size >= limit) {
+					break
+				}
+				withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
+					runCatchingCancellable {
+						repository.getList(page, order, MangaListFilter.EMPTY)
+					}.onFailure {
+						it.printStackTraceDebug()
+					}.getOrDefault(emptyList())
+				}.orEmpty().appendUniqueTo(candidates, limit)
+			}
 		}
 		return candidates
 	}
@@ -382,13 +606,16 @@ class AskAiViewModel @Inject constructor(
 			supervisorScope {
 				batch.map { manga ->
 					async(Dispatchers.IO) {
+						getCachedDetails(manga.id)?.let { cached ->
+							return@async cached
+						}
 						withTimeoutOrNull(DETAIL_TIMEOUT_MS) {
 							runCatchingCancellable {
 								mangaRepositoryFactory.create(manga.source).getDetails(manga)
 							}.onFailure {
 								it.printStackTraceDebug()
 							}.getOrDefault(manga)
-						} ?: manga
+						}?.also { details -> cacheDetails(details) } ?: manga
 					}
 				}.awaitAll()
 			}
@@ -424,7 +651,7 @@ class AskAiViewModel @Inject constructor(
 			"I found ${results.size} comics"
 		}
 		val modeText = if (includeNsfw) {
-			"from HentaiRead and 18PornComic"
+			"from 18PornComic and HentaiRead"
 		} else {
 			"from Manga Plus English and ManhwaZ"
 		}
@@ -433,11 +660,98 @@ class AskAiViewModel @Inject constructor(
 		} else {
 			"as more picks for \"$effectiveQuery\""
 		}
-		return if (includeNsfw) {
-			"Spicy librarian mode is on. $countText $requestText $modeText. The cards below are the source-backed matches."
+		val matchSummary = buildRecommendationMatchSummary(effectiveQuery, results, intent)
+		val followUp = buildRecommendationFollowUp(includeNsfw, results, intent)
+		val base = if (includeNsfw) {
+			"Spicy librarian mode is on. $countText $requestText $modeText after checking web hints and source details."
 		} else {
-			"$countText $requestText $modeText. The cards below are the source-backed matches."
+			"$countText $requestText $modeText after checking web hints and source details."
 		}
+		return "$base $matchSummary The cards below are the source-backed matches. $followUp"
+	}
+
+	private fun buildRecommendationMatchSummary(
+		query: String,
+		results: List<Manga>,
+		intent: RecommendationIntent,
+	): String {
+		val queryWords = (searchableWords(query) + intent.traits.flatMap { searchableWords(it) })
+			.filterNot { it in STOP_WORDS }
+			.toSet()
+		val matchedTags = results
+			.flatMap { it.tags }
+			.map { it.title.trim() }
+			.filter { tag ->
+				val normalizedTag = tag.lowercase()
+				intent.traits.any { normalizedTag.contains(it) } ||
+					queryWords.any { normalizedTag.contains(it) || it.contains(normalizedTag) }
+			}
+			.distinctBy { it.lowercase() }
+			.take(4)
+		val titleMatches = results
+			.map { it.title }
+			.filter { title ->
+				val normalizedTitle = title.lowercase()
+				queryWords.any { normalizedTitle.contains(it) }
+			}
+			.distinct()
+			.take(2)
+		val sourceNames = results
+			.map { it.source.getTitle(context) }
+			.distinct()
+			.take(2)
+		val pieces = buildList {
+			if (matchedTags.isNotEmpty()) {
+				add("tags like ${matchedTags.joinToString()}")
+			}
+			if (titleMatches.isNotEmpty()) {
+				add("title matches such as ${titleMatches.joinToString()}")
+			}
+			if (sourceNames.isNotEmpty()) {
+				add("fresh details from ${sourceNames.joinToString()}")
+			}
+		}
+		return if (pieces.isEmpty()) {
+			"I used the web hints to understand the intent, then checked each source page title, tags, and description before ranking the list."
+		} else {
+			"I used the web hints to understand the intent, then matched ${pieces.joinToString(separator = "; ")}."
+		}
+	}
+
+	private fun buildRecommendationFollowUp(
+		includeNsfw: Boolean,
+		results: List<Manga>,
+		intent: RecommendationIntent,
+	): String {
+		val narrowBy = if (includeNsfw) {
+			"a fandom, parody target, tag, or art style"
+		} else {
+			"a tighter trope, genre, art style, or character setup"
+		}
+		return if (results.size < intent.requestedLimit) {
+			"Want me to search broader, or narrow it by $narrowBy?"
+		} else {
+			"Want more unique picks, or should I narrow it by $narrowBy?"
+		}
+	}
+
+	private fun buildTimedSearchFallback(
+		query: String,
+		effectiveQuery: String,
+		includeNsfw: Boolean,
+		intent: RecommendationIntent,
+		hasPreviousRecommendations: Boolean,
+	): String {
+		if (intent.isMoreRequest && !hasPreviousRecommendations) {
+			return "I can show more comics after I have a previous recommendation list to continue from. Ask me for a genre, tag, or title first."
+		}
+		val modeText = if (includeNsfw) {
+			"18PornComic and HentaiRead"
+		} else {
+			"Manga Plus English and ManhwaZ"
+		}
+		val requestText = if (effectiveQuery == query) "\"$query\"" else "\"$effectiveQuery\""
+		return "I checked web hints and crawled $modeText, but I could not finish a solid card list for $requestText in time. Try a shorter title, tag, fandom, or genre and I will search again."
 	}
 
 	private fun buildConversationFallback(query: String, includeNsfw: Boolean): String {
@@ -642,9 +956,21 @@ class AskAiViewModel @Inject constructor(
 	}
 
 	private fun refreshTokenState() {
+		if (AskAiLimitPrefs.isLimitOverrideEnabled(context)) {
+			_state.update {
+				it.copy(
+					isLimitOverrideEnabled = true,
+					remainingTokens = DAILY_TOKEN_LIMIT,
+					maxTokens = DAILY_TOKEN_LIMIT,
+					tokenResetAtMillis = System.currentTimeMillis() + DAILY_TOKEN_RESET_MS,
+				)
+			}
+			return
+		}
 		val window = readTokenWindow()
 		_state.update {
 			it.copy(
+				isLimitOverrideEnabled = false,
 				remainingTokens = DAILY_TOKEN_LIMIT - window.used,
 				maxTokens = DAILY_TOKEN_LIMIT,
 				tokenResetAtMillis = window.resetAtMillis,
@@ -653,6 +979,10 @@ class AskAiViewModel @Inject constructor(
 	}
 
 	private fun consumeDailyToken(): Boolean {
+		if (AskAiLimitPrefs.isLimitOverrideEnabled(context)) {
+			refreshTokenState()
+			return true
+		}
 		val window = readTokenWindow()
 		if (window.used >= DAILY_TOKEN_LIMIT) {
 			refreshTokenState()
@@ -721,14 +1051,36 @@ class AskAiViewModel @Inject constructor(
 	}
 
 	private fun List<String>.resolveSources(): List<MangaParserSource> {
-		val requested = map { it.normalizedSourceName() }.toSet()
-		return MangaParserSource.entries.filter { source ->
-			source.name.normalizedSourceName() in requested ||
-				source.getTitle(context).normalizedSourceName() in requested
+		return mapNotNull { requestedName ->
+			val normalized = requestedName.normalizedSourceName()
+			MangaParserSource.entries.firstOrNull { source ->
+				source.name.normalizedSourceName() == normalized ||
+					source.getTitle(context).normalizedSourceName() == normalized
+			}
 		}.distinct()
 	}
 
 	private fun String.normalizedSourceName(): String = lowercase().filter { it.isLetterOrDigit() }
+
+	private fun List<MangaParserSource>.prioritizedForRecommendations(): List<MangaParserSource> {
+		return sortedWith(compareByDescending<MangaParserSource> { it.recommendationSourcePriority() })
+	}
+
+	private fun Manga.sourcePriorityScore(includeNsfw: Boolean): Int {
+		return if (includeNsfw) {
+			(source as? MangaParserSource)?.recommendationSourcePriority() ?: 0
+		} else {
+			0
+		}
+	}
+
+	private fun MangaParserSource.recommendationSourcePriority(): Int {
+		return when (name.normalizedSourceName()) {
+			"18porncomic", "porncomic18" -> 100
+			"hentairead" -> 50
+			else -> 0
+		}
+	}
 
 	private fun Manga.toResultCard(): AskAiResultCard {
 		return AskAiResultCard(
@@ -783,6 +1135,44 @@ class AskAiViewModel @Inject constructor(
 		}
 	}
 
+	private fun querySearchLimit(totalLimit: Int): Int {
+		return (totalLimit / QUERY_SEARCH_LIMIT_DIVISOR)
+			.coerceIn(MIN_QUERY_SEARCH_LIMIT, MAX_QUERY_SEARCH_LIMIT)
+	}
+
+	private fun getCachedWebDiscovery(key: String): List<String>? = synchronized(webDiscoveryCache) {
+		webDiscoveryCache[key]
+	}
+
+	private fun cacheWebDiscovery(key: String, value: List<String>) = synchronized(webDiscoveryCache) {
+		webDiscoveryCache[key] = value
+		while (webDiscoveryCache.size > WEB_DISCOVERY_CACHE_MAX_ITEMS) {
+			webDiscoveryCache.remove(webDiscoveryCache.keys.first())
+		}
+	}
+
+	private fun getCachedSearch(key: String): List<Manga>? = synchronized(searchCache) {
+		searchCache[key]
+	}
+
+	private fun cacheSearch(key: String, value: List<Manga>) = synchronized(searchCache) {
+		searchCache[key] = value
+		while (searchCache.size > SEARCH_CACHE_MAX_ITEMS) {
+			searchCache.remove(searchCache.keys.first())
+		}
+	}
+
+	private fun getCachedDetails(id: Long): Manga? = synchronized(detailsCache) {
+		detailsCache[id]
+	}
+
+	private fun cacheDetails(value: Manga) = synchronized(detailsCache) {
+		detailsCache[value.id] = value
+		while (detailsCache.size > DETAILS_CACHE_MAX_ITEMS) {
+			detailsCache.remove(detailsCache.keys.first())
+		}
+	}
+
 	private fun Manga.recommendationScore(
 		query: String,
 		reference: Manga?,
@@ -805,6 +1195,11 @@ class AskAiViewModel @Inject constructor(
 			}
 		}
 		val haystack = searchableText()
+		val normalizedQuery = query.normalizedTitle()
+		val normalizedTitle = title.normalizedTitle()
+		if (normalizedQuery.isNotBlank() && (normalizedTitle.contains(normalizedQuery) || normalizedQuery.contains(normalizedTitle))) {
+			score += EXACT_QUERY_TITLE_SCORE
+		}
 		for (trait in traits) {
 			if (haystack.contains(trait)) {
 				score += TRAIT_MATCH_SCORE
@@ -830,6 +1225,9 @@ class AskAiViewModel @Inject constructor(
 		for (word in searchableWords(query)) {
 			if (title.contains(word, ignoreCase = true)) {
 				score += TITLE_WORD_SCORE
+			}
+			if (altTitles.any { it.contains(word, ignoreCase = true) }) {
+				score += ALT_TITLE_WORD_SCORE
 			}
 			if (haystack.contains(word)) {
 				score += QUERY_WORD_SCORE
@@ -934,6 +1332,42 @@ class AskAiViewModel @Inject constructor(
 		.replace(MULTIPLE_SPACES_REGEX, " ")
 		.trim()
 
+	private fun String.toDiscoveredComicQueries(): List<String> {
+		val compact = lowercase()
+			.replace(WEB_RESULT_SITE_SUFFIX_REGEX, " ")
+			.replace(WEB_RESULT_NOISE_REGEX, " ")
+			.replace(NON_ALPHANUMERIC_REGEX, " ")
+			.replace(MULTIPLE_SPACES_REGEX, " ")
+			.trim()
+		if (compact.isBlank()) {
+			return emptyList()
+		}
+		val chunks = WEB_RESULT_SPLIT_REGEX.split(compact)
+			.asSequence()
+			.map { chunk ->
+				chunk.replace(WEB_RESULT_LEADING_NUMBER_REGEX, " ")
+					.replace(WEB_RESULT_NOISE_REGEX, " ")
+					.replace(MULTIPLE_SPACES_REGEX, " ")
+					.trim()
+			}
+			.filter { it.isLikelyDiscoveredTitle() }
+			.toMutableList()
+		if (compact.isLikelyDiscoveredTitle()) {
+			chunks += compact
+		}
+		return chunks
+			.distinctBy { it.normalizedMetadata() }
+			.take(WEB_DISCOVERY_TITLES_PER_RESULT)
+	}
+
+	private fun String.isLikelyDiscoveredTitle(): Boolean {
+		val words = split(MULTIPLE_SPACES_REGEX).filter { it.isNotBlank() }
+		return words.size in 1..WEB_DISCOVERY_MAX_TITLE_WORDS &&
+			any(Char::isLetter) &&
+			none { it.isISOControl() } &&
+			normalizedMetadata() !in WEB_DISCOVERY_BAD_QUERIES
+	}
+
 	private fun searchableWords(value: String): Set<String> = value.lowercase()
 		.split(WORD_SPLIT_REGEX)
 		.asSequence()
@@ -970,8 +1404,7 @@ class AskAiViewModel @Inject constructor(
 			?.removePrefix("The ")
 			?.takeIf { it.isNotBlank() }
 		val searchQuery = referenceTitle ?: query
-			.replace(Regex("""(?i)\b(?:recommend|suggest|show|find|give|me|please|a|an|some)\b"""), " ")
-			.replace(Regex("""(?i)\b(?:manga|manhwa|manhua|comic|comics)\b"""), " ")
+			.replace(REQUEST_CLEANUP_REGEX, " ")
 			.replace(QUERY_FILLER_REGEX, " ")
 			.replace(Regex("\\s+"), " ")
 			.trim()
@@ -1032,6 +1465,11 @@ class AskAiViewModel @Inject constructor(
 			) {
 				add("system")
 			}
+			if (Regex("""(?i)\b(?:hentai|doujin|doujinshi|parody|fan.?made|rule\s*34)\b""")
+				.containsMatchIn(query)
+			) {
+				add("hentai")
+			}
 		}
 	}
 
@@ -1059,10 +1497,10 @@ class AskAiViewModel @Inject constructor(
 	companion object {
 
 		private const val RESULT_LIMIT = 10
-		private const val MAX_REQUESTED_RESULTS = 20
-		private const val EXTRA_CANDIDATE_BUFFER = 12
-		private const val MAX_CANDIDATE_POOL = 60
-		private const val MAX_SEARCH_QUERIES = 18
+		private const val MAX_REQUESTED_RESULTS = 100
+		private const val EXTRA_CANDIDATE_BUFFER = 24
+		private const val MAX_CANDIDATE_POOL = 160
+		private const val MAX_SEARCH_QUERIES = 28
 		private const val MAX_TRAITS_FOR_PAIR_SEARCH = 5
 		private const val HISTORY_CONTEXT_LIMIT = 30
 		private const val HISTORY_TAG_LIMIT = 12
@@ -1071,18 +1509,35 @@ class AskAiViewModel @Inject constructor(
 		private const val MAX_CONTEXT_MESSAGE_CHARS = 600
 		private const val MAX_STORED_MESSAGES = 80
 		private const val CHAT_RETENTION_MS = 2L * 24L * 60L * 60L * 1000L
-		private const val DAILY_TOKEN_LIMIT = 10
+		private const val WEB_DISCOVERY_CACHE_MAX_ITEMS = 48
+		private const val SEARCH_CACHE_MAX_ITEMS = 96
+		private const val DETAILS_CACHE_MAX_ITEMS = 320
+		private const val DAILY_TOKEN_LIMIT = 15
 		private const val DAILY_TOKEN_RESET_MS = 24L * 60L * 60L * 1000L
 		private const val DETAIL_BATCH_SIZE = 8
 		private const val SOURCE_TIMEOUT_MS = 8_000L
 		private const val DETAIL_TIMEOUT_MS = 6_000L
+		private const val SOURCE_PAGE_ATTEMPTS = 4
+		private const val RECOMMENDATION_SEARCH_TIMEOUT_MS = 45_000L
+		private const val WEB_DISCOVERY_TIMEOUT_MS = 6_000L
+		private const val WEB_DISCOVERY_CALL_TIMEOUT_MS = 3_000L
+		private const val WEB_DISCOVERY_SEARCH_LIMIT = 6
+		private const val WEB_DISCOVERY_QUERY_LIMIT = 24
+		private const val WEB_DISCOVERY_TITLES_PER_RESULT = 3
+		private const val WEB_DISCOVERY_MAX_TITLE_WORDS = 9
+		private const val MAX_PARALLEL_QUERY_SEARCHES = 12
+		private const val QUERY_SEARCH_LIMIT_DIVISOR = 4
+		private const val MIN_QUERY_SEARCH_LIMIT = 12
+		private const val MAX_QUERY_SEARCH_LIMIT = 36
 		private const val MIN_WORD_LENGTH = 3
 		private const val TYPE_MATCH_SCORE = 100
 		private const val REFERENCE_TYPE_SCORE = 30
+		private const val EXACT_QUERY_TITLE_SCORE = 90
 		private const val TAG_MATCH_SCORE = 24
 		private const val SYNOPSIS_MATCH_SCORE = 3
 		private const val MAX_SYNOPSIS_MATCHES = 12
 		private const val TITLE_WORD_SCORE = 8
+		private const val ALT_TITLE_WORD_SCORE = 6
 		private const val QUERY_WORD_SCORE = 2
 		private const val TAG_WORD_SCORE = 14
 		private const val TRAIT_MATCH_SCORE = 18
@@ -1093,24 +1548,49 @@ class AskAiViewModel @Inject constructor(
 		private const val HISTORY_TYPE_SCORE = 12
 		private const val MAX_HISTORY_TAG_MATCHES = 6
 		private const val RATING_MULTIPLIER = 2f
-		private const val PREFS_NAME = "ask_ai_history"
 		private const val KEY_MESSAGES = "messages"
 		private const val KEY_TOKEN_USED = "tokens_used"
 		private const val KEY_TOKEN_RESET_AT = "tokens_reset_at"
 		private const val STREAM_WORD_DELAY_MS = 34L
 		private val WORD_SPLIT_REGEX = Regex("[\\s,./:;!?()\\[\\]{}'\"_-]+")
+		private const val WEB_DISCOVERY_URL = "https://duckduckgo.com/html/"
+		private const val WEB_DISCOVERY_USER_AGENT = "Mozilla/5.0 Tarumi/AskAI"
 		private val REFERENCE_REGEX = Regex(
 			"""(?i)\b(?:same\s+as|similar\s+to|like)\s+(.+?)(?:[?.!,;]|$)""",
 		)
+		private val REQUEST_CLEANUP_REGEX = Regex(
+			"""(?i)\b(?:recommend|recommendation|suggest|suggestion|show|find|give|please|some|more|another|next|continue|mangas?|manhwas?|manhuas?|comics?|doujins?|doujinshi|hentai|webtoons?|reads?|reading|titles?|picks?)\b""",
+		)
 		private val QUERY_FILLER_REGEX = Regex(
-			"""(?i)\b(?:that|is|are|was|were|has|have|had|and|or|with|about|where|there|it|its|to|for|in)\b""",
+			"""(?i)\b(?:i|me|my|you|your|that|is|are|was|were|has|have|had|and|or|with|about|where|there|it|its|to|for|in|of|on|based|want|wants|wanted|like|likes|liked)\b""",
 		)
 		private val REQUESTED_LIMIT_REGEX = Regex(
-			"""(?i)\b([1-9]\d?)\s*(?:more|recommendations?|suggestions?|picks?|comics?|manga|manhwa|manhua|titles?)\b""",
+			"""(?i)\b(100|[1-9]\d?)\s*(?:more|recommendations?|suggestions?|picks?|comics?|manga|manhwa|manhua|titles?)\b""",
 		)
 		private val MORE_REQUEST_REGEX = Regex("""(?i)\b(?:more|another|next|continue)\b""")
 		private val NON_ALPHANUMERIC_REGEX = Regex("[^a-z0-9]+")
 		private val MULTIPLE_SPACES_REGEX = Regex("\\s+")
+		private val WEB_RESULT_SPLIT_REGEX = Regex(
+			"""(?i)\s+(?:and|or|plus|similar to|like|for fans of)\s+|[|:;•]+|(?:\s+-\s+)""",
+		)
+		private val WEB_RESULT_SITE_SUFFIX_REGEX = Regex(
+			"""(?i)\b(?:read|manga|manhwa|manhua|comic|comics|hentai|doujinshi|doujin|webtoon|chapter|chapters|online|wiki|fandom|reddit|recommendations?|suggestions?|similar|list|lists|best|top|official|english|scanlation|reviews?)\b""",
+		)
+		private val WEB_RESULT_NOISE_REGEX = Regex(
+			"""(?i)\b(?:the|a|an|of|to|for|with|about|based|on|free|latest|updated|complete|ongoing|novel|anime|characters?|episode|episodes?|season|seasons?)\b""",
+		)
+		private val WEB_RESULT_LEADING_NUMBER_REGEX = Regex("""^\s*\d+\s+""")
+		private val WEB_DISCOVERY_BAD_QUERIES = setOf(
+			"best",
+			"top",
+			"recommendation",
+			"recommendations",
+			"suggestion",
+			"suggestions",
+			"online",
+			"read",
+			"latest",
+		)
 		private val STOP_WORDS = setOf(
 			"about", "after", "also", "and", "are", "because", "been", "before", "but", "can",
 			"comic", "comics", "find", "for", "from", "give", "has", "have", "like", "manga",
@@ -1154,6 +1634,7 @@ class AskAiViewModel @Inject constructor(
 				"ranker",
 				"hunter rank",
 			),
+			"hentai" to setOf("hentai", "doujin", "doujinshi", "parody", "fan made", "fanmade"),
 			"action" to setOf("action", "fight", "battle", "combat"),
 			"sexy" to setOf("sexy", "ecchi", "smut", "adult", "mature", "erotic"),
 			"incest" to setOf("incest", "sibling", "sister", "brother", "family"),
@@ -1211,8 +1692,8 @@ class AskAiViewModel @Inject constructor(
 		)
 
 		private val NSFW_SOURCE_NAMES = listOf(
-			"HentaiRead",
 			"18PornComic",
+			"HentaiRead",
 		)
 
 		private val REQUIRED_TRAITS = setOf(
@@ -1244,8 +1725,9 @@ data class AskAiState(
 	val isLoading: Boolean = false,
 	val isComposerExpanded: Boolean = true,
 	val localModelStatus: LocalAiModelStatus = LocalAiModelStatus.NotDownloaded,
-	val remainingTokens: Int = 10,
-	val maxTokens: Int = 10,
+	val remainingTokens: Int = 15,
+	val maxTokens: Int = 15,
+	val isLimitOverrideEnabled: Boolean = false,
 	val tokenResetAtMillis: Long = System.currentTimeMillis() + 24L * 60L * 60L * 1000L,
 	val messages: List<AskAiMessage> = emptyList(),
 )
