@@ -40,6 +40,7 @@
 *.key
 keystore.properties
 signing.properties
+gemma-e2b.task
 
 # Local screenshots and debug dumps
 device-current.png

@@ -55,13 +55,7 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		viewBinding.recyclerViewRelated.layoutManager = LinearLayoutManager(this)
 		viewBinding.recyclerViewRelated.adapter = relatedAdapter
 		viewBinding.buttonReadOnline.setOnClickListener {
-			val chapterId = viewModel.state.value.manga.chapters.orEmpty().firstOrNull()?.id
-			val intent = ReaderIntent.Builder(this)
-				.manga(viewModel.state.value.manga)
-				.state(chapterId?.let { ReaderState(it, 0, 0) })
-				.browserMode()
-				.build()
-			router.openReader(intent)
+			openReaderAtPage(0)
 		}
 		viewBinding.buttonDownload.setOnClickListener {
 			router.showDownloadDialog(viewModel.state.value.manga, viewBinding.root)
@@ -132,6 +126,8 @@ class NsfwBrowserDetailsActivity : BaseActivity<ActivityNsfwBrowserDetailsBindin
 		)
 		pagesAdapter.submitItems(state.pages)
 		relatedAdapter.submitItems(state.related)
+		viewBinding.buttonReadOnline.isEnabled = state.pages.isNotEmpty()
+		viewBinding.buttonReadOnline.alpha = if (state.pages.isNotEmpty()) 1f else 0.55f
 		viewBinding.layoutRelated.isVisible = state.related.isNotEmpty()
 		viewBinding.progress.isVisible = state.isLoading
 		viewBinding.textEmpty.isVisible = !state.isLoading && state.pages.isEmpty()

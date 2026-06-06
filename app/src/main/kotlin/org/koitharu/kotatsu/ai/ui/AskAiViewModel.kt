@@ -1,25 +1,38 @@
 package org.koitharu.kotatsu.ai.ui
 
 import android.content.Context
+import androidx.core.content.edit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.distinctById
 import org.koitharu.kotatsu.core.model.getTitle
+import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.home.ui.ComicType
 import org.koitharu.kotatsu.home.ui.detectComicType
+import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaState
+import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
@@ -29,6 +42,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AskAiViewModel @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	private val historyRepository: HistoryRepository,
+	private val localAiLibrarianEngine: LocalAiLibrarianEngine,
 	private val cloudAiLibrarianEngine: CloudAiLibrarianEngine,
 	@ApplicationContext private val context: Context,
 ) : BaseViewModel() {
@@ -39,9 +54,30 @@ class AskAiViewModel @Inject constructor(
 	val state: StateFlow<AskAiState> = _state
 
 	private var searchJob: Job? = null
+	private val historyPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+	private val json = Json {
+		ignoreUnknownKeys = true
+		isLenient = true
+	}
+
+	init {
+		refreshTokenState()
+		restoreConversation()
+		launchJob {
+			localAiLibrarianEngine.status.collect { status ->
+				_state.update { it.copy(localModelStatus = status) }
+			}
+		}
+	}
 
 	fun setNsfw(enabled: Boolean) {
 		_state.update { it.copy(includeNsfw = enabled) }
+	}
+
+	fun downloadLocalModel() {
+		launchJob(Dispatchers.IO) {
+			localAiLibrarianEngine.downloadModel()
+		}
 	}
 
 	fun ask(query: String) {
@@ -51,28 +87,49 @@ class AskAiViewModel @Inject constructor(
 		}
 		searchJob?.cancel()
 		val includeNsfw = _state.value.includeNsfw
-		_state.update {
-			it.copy(
-				isLoading = true,
-				messages = it.messages + AskAiMessage(role = AskAiRole.USER, text = normalized),
-			)
+		if (!consumeDailyToken()) {
+			appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
+			val resetText = formatDurationUntil(_state.value.tokenResetAtMillis)
+			_state.update { it.copy(isLoading = true) }
+			searchJob = launchJob {
+				streamAssistantReply(
+					message = AskAiMessage(
+						role = AskAiRole.ASSISTANT,
+						query = normalized,
+						includeNsfw = includeNsfw,
+					),
+					finalText = context.getString(R.string.ask_ai_tokens_empty, resetText),
+				)
+			}
+			return
 		}
+		appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
+		_state.update { it.copy(isLoading = true) }
 		searchJob = launchJob(Dispatchers.Default) {
+			val historyContext = buildReadingContext(includeNsfw)
+			val conversationContext = buildConversationContext(_state.value.messages, includeNsfw)
 			val intent = parseRecommendationIntent(normalized)
 			if (!intent.isRecommendationRequest) {
-				val reply = cloudAiLibrarianEngine.generateConversationReply(normalized, includeNsfw)
+				val reply = localAiLibrarianEngine.generateConversationReply(
+					query = normalized,
+					includeNsfw = includeNsfw,
+					libraryContext = historyContext,
+					conversationContext = conversationContext,
+				) ?: cloudAiLibrarianEngine.generateConversationReply(
+					query = normalized,
+					includeNsfw = includeNsfw,
+					libraryContext = historyContext,
+					conversationContext = conversationContext,
+				)
 					?: buildConversationFallback(normalized, includeNsfw)
-				_state.update {
-					it.copy(
-						isLoading = false,
-						messages = it.messages + AskAiMessage(
-							role = AskAiRole.ASSISTANT,
-							text = reply,
-							query = normalized,
-							includeNsfw = includeNsfw,
-						),
-					)
-				}
+				streamAssistantReply(
+					message = AskAiMessage(
+						role = AskAiRole.ASSISTANT,
+						query = normalized,
+						includeNsfw = includeNsfw,
+					),
+					finalText = reply,
+				)
 				return@launchJob
 			}
 			val sources = if (includeNsfw) {
@@ -80,28 +137,56 @@ class AskAiViewModel @Inject constructor(
 			} else {
 				SAFE_SOURCE_NAMES.resolveSources()
 			}
-			val results = findRecommendations(sources, normalized, intent)
-			val reply = cloudAiLibrarianEngine.generateReply(normalized, includeNsfw, results)
+			val history = loadReadingHistory(includeNsfw)
+			val results = findRecommendations(sources, normalized, intent, history, includeNsfw)
+			val reply = localAiLibrarianEngine.generateRecommendationReply(
+				query = normalized,
+				includeNsfw = includeNsfw,
+				results = results,
+				libraryContext = historyContext,
+				conversationContext = conversationContext,
+			) ?: cloudAiLibrarianEngine.generateReply(
+				query = normalized,
+				includeNsfw = includeNsfw,
+				results = results,
+				libraryContext = historyContext,
+				conversationContext = conversationContext,
+			)
 				?: buildFallbackReply(normalized, includeNsfw, results)
-			_state.update {
-				it.copy(
-					isLoading = false,
-					messages = it.messages + AskAiMessage(
-						role = AskAiRole.ASSISTANT,
-						text = reply,
-						query = normalized,
-						includeNsfw = includeNsfw,
-						results = results,
-					),
-				)
-			}
+			appendMessages(
+				AskAiMessage(
+					role = AskAiRole.ASSISTANT,
+					query = normalized,
+					includeNsfw = includeNsfw,
+					results = results,
+					resultCards = results.map { it.toResultCard() },
+				),
+				persist = false,
+			)
+			streamLastAssistantReply(
+				finalText = reply,
+				results = results,
+				resultCards = results.map { it.toResultCard() },
+			)
 		}
+	}
+
+	fun clearConversation() {
+		searchJob?.cancel()
+		historyPrefs.edit { remove(KEY_MESSAGES) }
+		_state.update { it.copy(isLoading = false, messages = emptyList()) }
+	}
+
+	fun setComposerExpanded(expanded: Boolean) {
+		_state.update { it.copy(isComposerExpanded = expanded) }
 	}
 
 	private suspend fun findRecommendations(
 		sources: List<MangaParserSource>,
 		query: String,
 		intent: RecommendationIntent,
+		history: List<Manga>,
+		includeNsfw: Boolean,
 	): List<Manga> {
 		val reference = intent.referenceTitle
 			?.let { title -> resolveReference(sources, title) }
@@ -120,12 +205,14 @@ class AskAiViewModel @Inject constructor(
 			.asSequence()
 			.filterNot { manga -> reference != null && manga.sameTitleAs(reference) }
 			.filter { manga -> manga.matchesRequestedType(intent.requestedType) }
+			.filter { manga -> manga.matchesSafetyMode(includeNsfw) }
 			.map { manga ->
 				manga to manga.recommendationScore(
 					query = query,
 					reference = reference,
 					requestedType = intent.requestedType,
 					traits = intent.traits,
+					history = history,
 				)
 			}
 			.sortedWith(
@@ -150,46 +237,57 @@ class AskAiViewModel @Inject constructor(
 	private suspend fun loadSimilarityCandidates(
 		sources: List<MangaParserSource>,
 		reference: Manga,
-	): List<Manga> = supervisorScope {
-		val related = async(Dispatchers.IO) {
-			withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
-				runCatchingCancellable {
-					mangaRepositoryFactory.create(reference.source).getRelated(reference)
-				}.onFailure {
-					it.printStackTraceDebug()
-				}.getOrDefault(emptyList())
-			}.orEmpty()
+	): List<Manga> {
+		val candidates = ArrayList<Manga>(RESULT_LIMIT)
+		withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
+			runCatchingCancellable {
+				mangaRepositoryFactory.create(reference.source).getRelated(reference)
+			}.onFailure {
+				it.printStackTraceDebug()
+			}.getOrDefault(emptyList())
+		}.orEmpty().appendUniqueTo(candidates, RESULT_LIMIT)
+		for (source in sources) {
+			if (candidates.size >= RESULT_LIMIT) {
+				break
+			}
+			browseSource(source, RESULT_LIMIT - candidates.size).appendUniqueTo(candidates, RESULT_LIMIT)
 		}
-		val catalogPages = sources.map { source ->
-			async(Dispatchers.IO) { browseSource(source) }
-		}
-		(related.await() + catalogPages.awaitAll().flatten()).distinctById()
+		return candidates
 	}
 
 	private suspend fun loadTraitCandidates(
 		sources: List<MangaParserSource>,
 		intent: RecommendationIntent,
-	): List<Manga> = supervisorScope {
+	): List<Manga> {
+		val candidates = ArrayList<Manga>(RESULT_LIMIT)
 		val queries = intent.searchQueries()
-		val searched = queries.map { searchQuery ->
-			async(Dispatchers.IO) { searchSources(sources, searchQuery) }
+		for (searchQuery in queries) {
+			if (candidates.size >= RESULT_LIMIT) {
+				break
+			}
+			searchSources(sources, searchQuery, RESULT_LIMIT - candidates.size)
+				.appendUniqueTo(candidates, RESULT_LIMIT)
 		}
-		val catalogPages = sources.map { source ->
-			async(Dispatchers.IO) { browseSource(source) }
+		for (source in sources) {
+			if (candidates.size >= RESULT_LIMIT) {
+				break
+			}
+			browseSource(source, RESULT_LIMIT - candidates.size).appendUniqueTo(candidates, RESULT_LIMIT)
 		}
-		(searched.awaitAll().flatten() + catalogPages.awaitAll().flatten()).distinctById()
+		return candidates
 	}
 
 	private suspend fun searchSources(
 		sources: List<MangaParserSource>,
 		query: String,
+		limit: Int = RESULT_LIMIT,
 	): List<Manga> = supervisorScope {
 		sources.map { source ->
-			async(Dispatchers.IO) { searchSource(source, query) }
-		}.awaitAll().flatten().distinctById()
+			async(Dispatchers.IO) { searchSource(source, query, limit) }
+		}.awaitAll().flatten().distinctById().take(limit)
 	}
 
-	private suspend fun searchSource(source: MangaParserSource, query: String): List<Manga> {
+	private suspend fun searchSource(source: MangaParserSource, query: String, limit: Int): List<Manga> {
 		val repository = mangaRepositoryFactory.create(source)
 		val order = when {
 			SortOrder.RELEVANCE in repository.sortOrders -> SortOrder.RELEVANCE
@@ -208,10 +306,10 @@ class AskAiViewModel @Inject constructor(
 			}.onFailure {
 				it.printStackTraceDebug()
 			}.getOrDefault(emptyList())
-		}.orEmpty()
+		}.orEmpty().take(limit)
 	}
 
-	private suspend fun browseSource(source: MangaParserSource): List<Manga> {
+	private suspend fun browseSource(source: MangaParserSource, limit: Int = RESULT_LIMIT): List<Manga> {
 		val repository = mangaRepositoryFactory.create(source)
 		val orders = buildList {
 			if (SortOrder.POPULARITY in repository.sortOrders) {
@@ -224,15 +322,20 @@ class AskAiViewModel @Inject constructor(
 				add(repository.defaultSortOrder)
 			}
 		}.distinct()
-		return orders.flatMap { order ->
+		val candidates = ArrayList<Manga>(limit)
+		for (order in orders) {
+			if (candidates.size >= limit) {
+				break
+			}
 			withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
 				runCatchingCancellable {
 					repository.getList(0, order, MangaListFilter.EMPTY)
 				}.onFailure {
 					it.printStackTraceDebug()
 				}.getOrDefault(emptyList())
-			}.orEmpty()
-		}.distinctById()
+			}.orEmpty().appendUniqueTo(candidates, limit)
+		}
+		return candidates
 	}
 
 	private suspend fun loadDetails(items: List<Manga>): List<Manga> {
@@ -279,8 +382,272 @@ class AskAiViewModel @Inject constructor(
 				}
 			}
 			else -> {
-				"I can chat, but I’m best when you ask for recommendations. Try something like: “recommend me a manhwa where the weak MC becomes powerful with romance.”"
+				"I’m here with you. I can talk normally, remember this chat for 2 days, and when you want comics I can crawl the allowed libraries for source-backed picks."
 			}
+		}
+	}
+
+	private suspend fun loadReadingHistory(includeNsfw: Boolean): List<Manga> {
+		return runCatchingCancellable {
+			historyRepository.getList(0, HISTORY_CONTEXT_LIMIT)
+		}.onFailure {
+			it.printStackTraceDebug()
+		}.getOrDefault(emptyList())
+			.filter { it.isNsfw() == includeNsfw }
+	}
+
+	private suspend fun buildReadingContext(includeNsfw: Boolean): String {
+		val history = loadReadingHistory(includeNsfw)
+		val popularTags = history
+			.flatMap { it.tags }
+			.distinctBy { it.key.ifBlank { it.title } }
+			.take(HISTORY_TAG_LIMIT)
+		val popularSources = history
+			.map { it.source }
+			.distinctBy { it.name }
+			.take(HISTORY_SOURCE_LIMIT)
+		return buildString {
+			if (history.isNotEmpty()) {
+				append("Recent reading history: ")
+				append(history.take(8).joinToString("; ") { manga ->
+					val tags = manga.tags.take(4).joinToString { it.title }
+					"${manga.title} (${manga.detectComicType().label}${if (tags.isBlank()) "" else ", $tags"})"
+				})
+				appendLine()
+			}
+			if (popularTags.isNotEmpty()) {
+				append("Frequent tags: ")
+				append(popularTags.joinToString { it.title })
+				appendLine()
+			}
+			if (popularSources.isNotEmpty()) {
+				append("Frequent sources: ")
+				append(popularSources.joinToString { it.getTitle(context) })
+			}
+		}.trim()
+	}
+
+	private fun restoreConversation() {
+		val messages = readStoredMessages()
+		_state.update { it.copy(messages = messages) }
+		persistMessages(messages)
+	}
+
+	private fun appendMessages(vararg messages: AskAiMessage, persist: Boolean = true) {
+		_state.update { state ->
+			val updated = (state.messages + messages).takeLast(MAX_STORED_MESSAGES)
+			if (persist) {
+				persistMessages(updated)
+			}
+			state.copy(messages = updated)
+		}
+	}
+
+	private suspend fun streamAssistantReply(message: AskAiMessage, finalText: String) {
+		appendMessages(message.copy(isStreaming = true), persist = false)
+		streamLastAssistantReply(
+			finalText = finalText,
+			results = message.results,
+			resultCards = message.resultCards,
+		)
+	}
+
+	private suspend fun streamLastAssistantReply(
+		finalText: String,
+		results: List<Manga>,
+		resultCards: List<AskAiResultCard>,
+	) {
+		val words = finalText.split(Regex("\\s+")).filter { it.isNotBlank() }
+		if (words.isEmpty()) {
+			finishLastAssistantMessage(finalText, results, resultCards)
+			return
+		}
+		val builder = StringBuilder()
+		for ((index, word) in words.withIndex()) {
+			if (index > 0) {
+				builder.append(' ')
+			}
+			builder.append(word)
+			updateLastAssistantMessage(
+				text = builder.toString(),
+				results = emptyList(),
+				resultCards = emptyList(),
+				isStreaming = true,
+				persist = false,
+			)
+			delay(STREAM_WORD_DELAY_MS)
+		}
+		finishLastAssistantMessage(finalText, results, resultCards)
+	}
+
+	private fun finishLastAssistantMessage(
+		finalText: String,
+		results: List<Manga>,
+		resultCards: List<AskAiResultCard>,
+	) {
+		updateLastAssistantMessage(
+			text = finalText,
+			results = results,
+			resultCards = resultCards,
+			isStreaming = false,
+			persist = true,
+		)
+		_state.update { it.copy(isLoading = false) }
+	}
+
+	private fun updateLastAssistantMessage(
+		text: String,
+		results: List<Manga>,
+		resultCards: List<AskAiResultCard>,
+		isStreaming: Boolean,
+		persist: Boolean,
+	) {
+		_state.update { state ->
+			val index = state.messages.indexOfLast { it.role == AskAiRole.ASSISTANT }
+			if (index < 0) {
+				return@update state
+			}
+			val updated = state.messages.toMutableList()
+			updated[index] = updated[index].copy(
+				text = text,
+				results = results,
+				resultCards = resultCards,
+				isStreaming = isStreaming,
+			)
+			if (persist) {
+				persistMessages(updated)
+			}
+			state.copy(messages = updated)
+		}
+	}
+
+	private fun readStoredMessages(): List<AskAiMessage> {
+		val raw = historyPrefs.getString(KEY_MESSAGES, null) ?: return emptyList()
+		val cutoff = System.currentTimeMillis() - CHAT_RETENTION_MS
+		return try {
+			json.decodeFromString<List<StoredAskAiMessage>>(raw)
+				.asSequence()
+				.filter { it.createdAt >= cutoff }
+				.map {
+					AskAiMessage(
+						role = it.role,
+						text = it.text,
+						query = it.query,
+						includeNsfw = it.includeNsfw,
+						createdAt = it.createdAt,
+						resultCards = it.resultCards,
+						results = it.resultCards.mapNotNull { card -> card.toManga() },
+					)
+				}
+				.toList()
+		} catch (_: SerializationException) {
+			emptyList()
+		} catch (_: IllegalArgumentException) {
+			emptyList()
+		}
+	}
+
+	private fun persistMessages(messages: List<AskAiMessage>) {
+		val now = System.currentTimeMillis()
+		val cutoff = now - CHAT_RETENTION_MS
+		val stored = messages
+			.takeLast(MAX_STORED_MESSAGES)
+			.map {
+				StoredAskAiMessage(
+					role = it.role,
+					text = it.text,
+					query = it.query,
+					includeNsfw = it.includeNsfw,
+					resultCards = it.resultCards.ifEmpty { it.results.map { manga -> manga.toResultCard() } },
+					createdAt = it.createdAt,
+				)
+			}
+			.filter { it.createdAt >= cutoff }
+		historyPrefs.edit {
+			if (stored.isEmpty()) {
+				remove(KEY_MESSAGES)
+			} else {
+				putString(KEY_MESSAGES, json.encodeToString(stored))
+			}
+		}
+	}
+
+	private fun refreshTokenState() {
+		val window = readTokenWindow()
+		_state.update {
+			it.copy(
+				remainingTokens = DAILY_TOKEN_LIMIT - window.used,
+				maxTokens = DAILY_TOKEN_LIMIT,
+				tokenResetAtMillis = window.resetAtMillis,
+			)
+		}
+	}
+
+	private fun consumeDailyToken(): Boolean {
+		val window = readTokenWindow()
+		if (window.used >= DAILY_TOKEN_LIMIT) {
+			refreshTokenState()
+			return false
+		}
+		val used = window.used + 1
+		historyPrefs.edit {
+			putInt(KEY_TOKEN_USED, used)
+			putLong(KEY_TOKEN_RESET_AT, window.resetAtMillis)
+		}
+		_state.update {
+			it.copy(
+				remainingTokens = DAILY_TOKEN_LIMIT - used,
+				maxTokens = DAILY_TOKEN_LIMIT,
+				tokenResetAtMillis = window.resetAtMillis,
+			)
+		}
+		return true
+	}
+
+	private fun readTokenWindow(): TokenWindow {
+		val now = System.currentTimeMillis()
+		val storedResetAt = historyPrefs.getLong(KEY_TOKEN_RESET_AT, 0L)
+		val resetAt = storedResetAt.takeIf { it > now } ?: (now + DAILY_TOKEN_RESET_MS)
+		val used = if (storedResetAt > now) {
+			historyPrefs.getInt(KEY_TOKEN_USED, 0).coerceIn(0, DAILY_TOKEN_LIMIT)
+		} else {
+			0
+		}
+		if (storedResetAt <= now) {
+			historyPrefs.edit {
+				putInt(KEY_TOKEN_USED, 0)
+				putLong(KEY_TOKEN_RESET_AT, resetAt)
+			}
+		}
+		return TokenWindow(used = used, resetAtMillis = resetAt)
+	}
+
+	private fun formatDurationUntil(targetMillis: Long): String {
+		val remaining = (targetMillis - System.currentTimeMillis()).coerceAtLeast(0L)
+		val totalMinutes = (remaining + 59_999L) / 60_000L
+		val hours = totalMinutes / 60L
+		val minutes = totalMinutes % 60L
+		return when {
+			hours > 0L && minutes > 0L -> "${hours}h ${minutes}m"
+			hours > 0L -> "${hours}h"
+			minutes > 0L -> "${minutes}m"
+			else -> context.getString(R.string.less_than_minute)
+		}
+	}
+
+	private fun buildConversationContext(messages: List<AskAiMessage>, includeNsfw: Boolean): String {
+		val recent = messages
+			.filter { it.includeNsfw == includeNsfw }
+			.takeLast(CONVERSATION_CONTEXT_LIMIT)
+		if (recent.isEmpty()) {
+			return ""
+		}
+		return recent.joinToString(separator = "\n") { message ->
+			val role = when (message.role) {
+				AskAiRole.USER -> "User"
+				AskAiRole.ASSISTANT -> "Tarumi"
+			}
+			"$role: ${message.text.take(MAX_CONTEXT_MESSAGE_CHARS)}"
 		}
 	}
 
@@ -294,11 +661,65 @@ class AskAiViewModel @Inject constructor(
 
 	private fun String.normalizedSourceName(): String = lowercase().filter { it.isLetterOrDigit() }
 
+	private fun Manga.toResultCard(): AskAiResultCard {
+		return AskAiResultCard(
+			id = id,
+			title = title,
+			url = url,
+			publicUrl = publicUrl,
+			rating = rating,
+			contentRating = contentRating?.name ?: ContentRating.SAFE.name,
+			coverUrl = coverUrl.orEmpty(),
+			largeCoverUrl = largeCoverUrl,
+			description = description.orEmpty(),
+			sourceName = (source as? MangaParserSource)?.name ?: source.name,
+			typeLabel = detectComicType().label,
+			state = state?.name ?: MangaState.ONGOING.name,
+			authors = authors.toList(),
+			altTitles = altTitles.toList(),
+			tags = tags.map { AskAiResultTag(title = it.title, key = it.key) },
+		)
+	}
+
+	private fun AskAiResultCard.toManga(): Manga? {
+		val parserSource = MangaParserSource.entries.firstOrNull { it.name == sourceName } ?: return null
+		return Manga(
+			id = id,
+			title = title,
+			altTitles = altTitles.toSet(),
+			url = url,
+			publicUrl = publicUrl,
+			rating = rating,
+			contentRating = runCatching { ContentRating.valueOf(contentRating) }.getOrDefault(ContentRating.SAFE),
+			coverUrl = coverUrl,
+			tags = tags.mapTo(linkedSetOf()) { MangaTag(it.title, it.key, parserSource) },
+			state = runCatching { MangaState.valueOf(state) }.getOrDefault(MangaState.ONGOING),
+			authors = authors.toSet(),
+			largeCoverUrl = largeCoverUrl,
+			description = description,
+			chapters = emptyList(),
+			source = parserSource,
+		)
+	}
+
+	private fun List<Manga>.appendUniqueTo(destination: MutableList<Manga>, limit: Int) {
+		val existingIds = destination.mapTo(hashSetOf()) { it.id }
+		for (manga in this) {
+			if (destination.size >= limit) {
+				break
+			}
+			if (existingIds.add(manga.id)) {
+				destination.add(manga)
+			}
+		}
+	}
+
 	private fun Manga.recommendationScore(
 		query: String,
 		reference: Manga?,
 		requestedType: ComicType?,
 		traits: Set<String>,
+		history: List<Manga>,
 	): Int {
 		var score = 0
 		if (requestedType != null && inferredComicType() == requestedType) {
@@ -325,6 +746,18 @@ class AskAiViewModel @Inject constructor(
 				}
 			}
 		}
+		val tagText = normalizedTags()
+		for (trait in traits) {
+			if (tagText.any { it.contains(trait) || trait.contains(it) }) {
+				score += TAG_GENRE_MATCH_SCORE
+			}
+			for (alias in TRAIT_ALIASES[trait].orEmpty()) {
+				val normalizedAlias = alias.normalizedMetadata()
+				if (tagText.any { it.contains(normalizedAlias) || normalizedAlias.contains(it) }) {
+					score += TAG_GENRE_ALIAS_MATCH_SCORE
+				}
+			}
+		}
 		for (word in searchableWords(query)) {
 			if (title.contains(word, ignoreCase = true)) {
 				score += TITLE_WORD_SCORE
@@ -332,6 +765,17 @@ class AskAiViewModel @Inject constructor(
 			if (haystack.contains(word)) {
 				score += QUERY_WORD_SCORE
 			}
+			if (tagText.any { it.contains(word) }) {
+				score += TAG_WORD_SCORE
+			}
+		}
+		val historyTags = history.flatMapTo(linkedSetOf()) { it.normalizedTags() }
+		if (historyTags.isNotEmpty()) {
+			score += normalizedTags().intersect(historyTags).size.coerceAtMost(MAX_HISTORY_TAG_MATCHES) *
+				HISTORY_TAG_MATCH_SCORE
+		}
+		if (history.any { it.inferredComicType() == inferredComicType() }) {
+			score += HISTORY_TYPE_SCORE
 		}
 		score += (rating * RATING_MULTIPLIER).toInt().coerceAtLeast(0)
 		return score
@@ -339,6 +783,10 @@ class AskAiViewModel @Inject constructor(
 
 	private fun Manga.matchesRequestedType(requestedType: ComicType?): Boolean {
 		return requestedType == null || inferredComicType() == requestedType
+	}
+
+	private fun Manga.matchesSafetyMode(includeNsfw: Boolean): Boolean {
+		return isNsfw() == includeNsfw
 	}
 
 	private fun Manga.inferredComicType(): ComicType {
@@ -429,7 +877,12 @@ class AskAiViewModel @Inject constructor(
 			.trim()
 			.ifBlank { query }
 		val traits = detectTraits(query)
+		val asksForComics = Regex(
+			"""(?i)\b(?:manga|manhwa|manhua|comic|comics|doujin|doujinshi|hentai|webtoon|read|reading)\b""",
+		).containsMatchIn(query)
 		val isRecommendationRequest = referenceTitle != null ||
+			requestedType != null ||
+			asksForComics ||
 			traits.isNotEmpty() ||
 			words.any { it in RECOMMENDATION_WORDS }
 		return RecommendationIntent(
@@ -458,6 +911,11 @@ class AskAiViewModel @Inject constructor(
 			if (normalized.contains("multiple wives")) {
 				add("harem")
 			}
+			if (Regex("""(?i)\b(?:colored|colour|coloured|full\s*color|full\s*colour|full-color|full-colour|colorized|colourized)\b""")
+				.containsMatchIn(query)
+			) {
+				add("colored")
+			}
 		}
 	}
 
@@ -473,8 +931,17 @@ class AskAiViewModel @Inject constructor(
 	companion object {
 
 		private const val RESULT_LIMIT = 10
-		private const val MAX_DETAIL_CANDIDATES = 72
+		private const val MAX_DETAIL_CANDIDATES = RESULT_LIMIT
 		private const val MAX_SEARCH_QUERIES = 12
+		private const val HISTORY_CONTEXT_LIMIT = 30
+		private const val HISTORY_TAG_LIMIT = 12
+		private const val HISTORY_SOURCE_LIMIT = 6
+		private const val CONVERSATION_CONTEXT_LIMIT = 12
+		private const val MAX_CONTEXT_MESSAGE_CHARS = 600
+		private const val MAX_STORED_MESSAGES = 80
+		private const val CHAT_RETENTION_MS = 2L * 24L * 60L * 60L * 1000L
+		private const val DAILY_TOKEN_LIMIT = 20
+		private const val DAILY_TOKEN_RESET_MS = 24L * 60L * 60L * 1000L
 		private const val DETAIL_BATCH_SIZE = 8
 		private const val SOURCE_TIMEOUT_MS = 8_000L
 		private const val DETAIL_TIMEOUT_MS = 6_000L
@@ -486,9 +953,20 @@ class AskAiViewModel @Inject constructor(
 		private const val MAX_SYNOPSIS_MATCHES = 12
 		private const val TITLE_WORD_SCORE = 8
 		private const val QUERY_WORD_SCORE = 2
+		private const val TAG_WORD_SCORE = 14
 		private const val TRAIT_MATCH_SCORE = 18
 		private const val TRAIT_ALIAS_MATCH_SCORE = 12
+		private const val TAG_GENRE_MATCH_SCORE = 42
+		private const val TAG_GENRE_ALIAS_MATCH_SCORE = 28
+		private const val HISTORY_TAG_MATCH_SCORE = 5
+		private const val HISTORY_TYPE_SCORE = 12
+		private const val MAX_HISTORY_TAG_MATCHES = 6
 		private const val RATING_MULTIPLIER = 2f
+		private const val PREFS_NAME = "ask_ai_history"
+		private const val KEY_MESSAGES = "messages"
+		private const val KEY_TOKEN_USED = "tokens_used"
+		private const val KEY_TOKEN_RESET_AT = "tokens_reset_at"
+		private const val STREAM_WORD_DELAY_MS = 34L
 		private val WORD_SPLIT_REGEX = Regex("[\\s,./:;!?()\\[\\]{}'\"_-]+")
 		private val REFERENCE_REGEX = Regex(
 			"""(?i)\b(?:same\s+as|similar\s+to|like)\s+(.+?)(?:[?.!,;]|$)""",
@@ -516,29 +994,37 @@ class AskAiViewModel @Inject constructor(
 			"zombie" to setOf("zombie", "zombies", "undead", "infection", "infected", "apocalypse"),
 			"female lead" to setOf(
 				"female lead",
+				"female mc",
 				"female protagonist",
 				"girl protagonist",
+				"girl mc",
 				"girl main character",
 				"female main character",
+				"female main lead",
+				"woman protagonist",
 				"heroine",
 			),
 			"regression" to setOf("regression", "regressor", "returner", "second chance"),
 			"reincarnation" to setOf("reincarnation", "reincarnated", "isekai", "transmigration"),
+			"romance" to setOf("romance", "romantic", "love", "couple", "relationship"),
+			"comedy" to setOf("comedy", "funny", "humor", "humour", "gag"),
+			"drama" to setOf("drama", "melodrama", "emotional"),
+			"horror" to setOf("horror", "scary", "ghost", "monster", "survival horror"),
+			"slice of life" to setOf("slice of life", "school life", "daily life", "school"),
+			"sports" to setOf("sports", "sport", "basketball", "football", "soccer", "baseball"),
+			"mystery" to setOf("mystery", "detective", "crime", "investigation", "thriller"),
+			"sci fi" to setOf("sci fi", "sci-fi", "science fiction", "future", "cyberpunk"),
+			"colored" to setOf("colored", "colour", "coloured", "full color", "full colour", "full-color", "colorized"),
 		)
 
 		private val SAFE_SOURCE_NAMES = listOf(
-			"WEEBCENTRAL",
-			"FLAMECOMICS",
-			"MANGAFIRE_EN",
-			"AQUAMANGA",
-			"MANHUAFAST",
 			"MANGAPLUSPARSER_EN",
+			"MANHWAZ",
 		)
 
 		private val NSFW_SOURCE_NAMES = listOf(
-			"HENTAIREAD",
-			"18PORNCOMIC",
-			"PORNCOMIC18",
+			"HentaiRead",
+			"18PornComic",
 		)
 	}
 }
@@ -551,21 +1037,70 @@ private data class RecommendationIntent(
 	val isRecommendationRequest: Boolean,
 )
 
+private data class TokenWindow(
+	val used: Int,
+	val resetAtMillis: Long,
+)
+
 data class AskAiState(
 	val includeNsfw: Boolean = false,
 	val isLoading: Boolean = false,
+	val isComposerExpanded: Boolean = true,
+	val localModelStatus: LocalAiModelStatus = LocalAiModelStatus.NotDownloaded,
+	val remainingTokens: Int = 20,
+	val maxTokens: Int = 20,
+	val tokenResetAtMillis: Long = System.currentTimeMillis() + 24L * 60L * 60L * 1000L,
 	val messages: List<AskAiMessage> = emptyList(),
 )
 
 data class AskAiMessage(
 	val role: AskAiRole,
-	val text: String,
+	val text: String = "",
 	val query: String = "",
 	val includeNsfw: Boolean = false,
 	val results: List<Manga> = emptyList(),
+	val resultCards: List<AskAiResultCard> = emptyList(),
+	val isStreaming: Boolean = false,
+	val createdAt: Long = System.currentTimeMillis(),
 )
 
+@Serializable
 enum class AskAiRole {
 	USER,
 	ASSISTANT,
 }
+
+@Serializable
+private data class StoredAskAiMessage(
+	val role: AskAiRole,
+	val text: String,
+	val query: String = "",
+	val includeNsfw: Boolean = false,
+	val resultCards: List<AskAiResultCard> = emptyList(),
+	val createdAt: Long,
+)
+
+@Serializable
+data class AskAiResultCard(
+	val id: Long,
+	val title: String,
+	val url: String,
+	val publicUrl: String,
+	val rating: Float,
+	val contentRating: String,
+	val coverUrl: String,
+	val largeCoverUrl: String?,
+	val description: String,
+	val sourceName: String,
+	val typeLabel: String,
+	val state: String,
+	val authors: List<String> = emptyList(),
+	val altTitles: List<String> = emptyList(),
+	val tags: List<AskAiResultTag> = emptyList(),
+)
+
+@Serializable
+data class AskAiResultTag(
+	val title: String,
+	val key: String,
+)

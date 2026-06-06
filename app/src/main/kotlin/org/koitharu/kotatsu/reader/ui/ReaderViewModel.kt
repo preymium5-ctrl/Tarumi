@@ -577,6 +577,10 @@ class ReaderViewModel @Inject constructor(
         if (isIncognitoMode.value != null) {
             return
         }
+        if (savedStateHandle.get<Boolean>(ReaderIntent.EXTRA_BROWSER_MODE) == true) {
+            isIncognitoMode.value = false
+            return
+        }
         launchJob(Dispatchers.Default) {
             interactor.observeIncognitoMode(manga)
                 .collect {

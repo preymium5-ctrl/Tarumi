@@ -9,19 +9,140 @@
 	android:background="@drawable/bg_taru_home_root"
 	android:clipToPadding="false"
 	android:orientation="vertical"
-	android:paddingBottom="110dp"
 	android:paddingHorizontal="14dp"
-	android:paddingTop="16dp">
+	android:paddingTop="12dp">
 
 	<LinearLayout
+		android:id="@+id/titleRow"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="horizontal">
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/buttonBack"
+			style="@style/Widget.Material3.Button.IconButton"
+			android:layout_width="42dp"
+			android:layout_height="42dp"
+			android:background="@drawable/bg_taru_home_chip"
+			android:contentDescription="@string/back"
+			app:icon="@drawable/ic_reader_back"
+			app:iconTint="@color/taru_text_primary" />
+
+		<TextView
+			android:id="@+id/textAskAiTitle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="10dp"
+			android:layout_weight="1"
+			android:fontFamily="sans-serif-medium"
+			android:text="@string/ask_ai_title"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="22sp" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/buttonClearChat"
+			style="@style/Widget.Material3.Button.TextButton"
+			android:layout_width="wrap_content"
+			android:layout_height="42dp"
+			android:minWidth="0dp"
+			android:paddingHorizontal="12dp"
+			android:text="@string/clear"
+			android:textColor="@color/taru_text_secondary"
+			android:textSize="12sp" />
+	</LinearLayout>
+
+	<FrameLayout
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_marginTop="8dp"
+		android:layout_weight="1">
+
+		<ScrollView
+			android:id="@+id/messagesScroll"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:clipToPadding="false"
+			android:fillViewport="true"
+			android:paddingBottom="12dp"
+			android:scrollbars="none">
+
+			<LinearLayout
+				android:id="@+id/scrollContent"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical">
+
+	<LinearLayout
+		android:id="@+id/tokenCard"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@drawable/bg_taru_home_feature"
+		android:orientation="vertical"
+		android:paddingHorizontal="16dp"
+		android:paddingVertical="10dp">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<TextView
+				android:id="@+id/textTokenLabel"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.12"
+				android:text="@string/ask_ai_memory_label"
+				android:textAllCaps="true"
+				android:textColor="@color/taru_text_secondary"
+				android:textSize="11sp" />
+
+			<TextView
+				android:id="@+id/textTokenUsage"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:text="@string/ask_ai_unlimited"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="13sp"
+				tools:text="Unlimited" />
+		</LinearLayout>
+
+		<com.google.android.material.progressindicator.LinearProgressIndicator
+			android:id="@+id/tokenProgress"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:max="10"
+			android:progress="10"
+			app:indicatorColor="@color/taru_accent"
+			app:trackColor="@color/taru_outline" />
+
+		<TextView
+			android:id="@+id/textTokenReset"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="7dp"
+			android:fontFamily="sans-serif"
+			android:textColor="@color/taru_text_muted"
+			android:textSize="12sp"
+			android:text="@string/ask_ai_memory_note" />
+	</LinearLayout>
+
+	<LinearLayout
+		android:id="@+id/introRow"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
 		android:gravity="top"
 		android:orientation="horizontal">
 
 		<ImageView
-			android:layout_width="42dp"
-			android:layout_height="42dp"
+			android:layout_width="38dp"
+			android:layout_height="38dp"
 			android:background="@drawable/bg_taru_home_chip"
 			android:contentDescription="@string/ask_ai"
 			android:padding="4dp"
@@ -36,33 +157,19 @@
 			android:background="@drawable/bg_taru_home_feature"
 			android:fontFamily="sans-serif"
 			android:lineSpacingExtra="2dp"
-			android:paddingHorizontal="18dp"
-			android:paddingVertical="14dp"
+			android:paddingHorizontal="14dp"
+			android:paddingVertical="12dp"
 			android:text="@string/ask_ai_intro"
 			android:textColor="@color/taru_text_primary"
-			android:textSize="15sp" />
+			android:textSize="14sp" />
 	</LinearLayout>
-
-	<FrameLayout
-		android:layout_width="match_parent"
-		android:layout_height="0dp"
-		android:layout_marginTop="12dp"
-		android:layout_weight="1">
-
-		<ScrollView
-			android:id="@+id/messagesScroll"
-			android:layout_width="match_parent"
-			android:layout_height="match_parent"
-			android:clipToPadding="false"
-			android:fillViewport="true"
-			android:paddingBottom="12dp"
-			android:scrollbars="none">
 
 			<LinearLayout
 				android:id="@+id/messagesList"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:orientation="vertical" />
+			</LinearLayout>
 		</ScrollView>
 
 		<com.google.android.material.progressindicator.CircularProgressIndicator
@@ -74,21 +181,52 @@
 			android:visibility="gone"
 			app:indicatorSize="28dp"
 			tools:visibility="visible" />
+
+		<LinearLayout
+			android:id="@+id/thinkingRow"
+			android:layout_width="wrap_content"
+			android:layout_height="40dp"
+			android:layout_gravity="bottom|center_horizontal"
+			android:layout_marginBottom="8dp"
+			android:background="@drawable/bg_taru_home_chip"
+			android:gravity="center_vertical"
+			android:orientation="horizontal"
+			android:paddingHorizontal="14dp"
+			android:visibility="gone"
+			tools:visibility="visible">
+
+			<com.google.android.material.progressindicator.CircularProgressIndicator
+				android:layout_width="22dp"
+				android:layout_height="22dp"
+				android:indeterminate="true"
+				app:indicatorColor="@color/taru_accent"
+				app:indicatorSize="18dp" />
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginStart="8dp"
+				android:fontFamily="sans-serif-medium"
+				android:text="@string/ask_ai_thinking"
+				android:textColor="@color/taru_text_secondary"
+				android:textSize="12sp" />
+		</LinearLayout>
 	</FrameLayout>
 
 	<LinearLayout
 		android:id="@+id/composerCard"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:layout_marginTop="8dp"
+		android:layout_marginTop="6dp"
 		android:background="@drawable/bg_taru_home_feature"
 		android:elevation="4dp"
 		android:orientation="vertical"
-		android:paddingHorizontal="16dp"
-		android:paddingTop="12dp"
-		android:paddingBottom="12dp">
+		android:paddingHorizontal="12dp"
+		android:paddingTop="10dp"
+		android:paddingBottom="10dp">
 
 		<LinearLayout
+			android:id="@+id/modeControls"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:gravity="center_vertical"
@@ -122,12 +260,47 @@
 		</LinearLayout>
 
 		<LinearLayout
+			android:id="@+id/localModelCard"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:background="@drawable/bg_taru_home_badge"
+			android:gravity="center_vertical"
+			android:orientation="horizontal"
+			android:paddingHorizontal="12dp"
+			android:paddingVertical="8dp">
+
+			<TextView
+				android:id="@+id/textLocalModelStatus"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:fontFamily="sans-serif"
+				android:text="@string/ask_ai_local_model_not_downloaded"
+				android:textColor="@color/taru_text_secondary"
+				android:textSize="12sp" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/buttonLocalModel"
+				style="@style/Widget.Material3.Button.TextButton"
+				android:layout_width="wrap_content"
+				android:layout_height="40dp"
+				android:layout_marginStart="8dp"
+				android:minWidth="0dp"
+				android:paddingHorizontal="10dp"
+				android:text="@string/ask_ai_download_local_model"
+				android:textSize="11sp"
+				app:icon="@drawable/ic_download"
+				app:iconSize="16dp" />
+		</LinearLayout>
+
+		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:layout_marginTop="10dp"
 			android:background="@drawable/bg_taru_home_chip"
 			android:gravity="center_vertical"
-			android:minHeight="58dp"
+			android:minHeight="54dp"
 			android:orientation="horizontal"
 			android:paddingStart="14dp"
 			android:paddingEnd="8dp">
@@ -148,12 +321,21 @@
 				android:textSize="15sp" />
 
 			<com.google.android.material.button.MaterialButton
+				android:id="@+id/buttonComposerToggle"
+				style="@style/Widget.Material3.Button.IconButton"
+				android:layout_width="44dp"
+				android:layout_height="44dp"
+				android:contentDescription="@string/ask_ai_minimize"
+				app:icon="@drawable/ic_arrow_down"
+				app:iconTint="@color/taru_text_secondary" />
+
+			<com.google.android.material.button.MaterialButton
 				android:id="@+id/buttonAsk"
 				style="@style/Widget.Material3.Button.IconButton.Filled"
 				android:layout_width="44dp"
 				android:layout_height="44dp"
 				android:contentDescription="@string/ask_ai"
-				app:icon="@drawable/ic_ask_ai"
+				app:icon="@drawable/ic_send"
 				app:iconGravity="textStart"
 				app:iconTint="@color/taru_on_accent" />
 		</LinearLayout>

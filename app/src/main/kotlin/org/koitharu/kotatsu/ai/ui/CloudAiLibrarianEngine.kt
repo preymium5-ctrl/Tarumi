@@ -39,8 +39,10 @@ class CloudAiLibrarianEngine @Inject constructor(
 		query: String,
 		includeNsfw: Boolean,
 		results: List<Manga>,
+		libraryContext: String = "",
+		conversationContext: String = "",
 	): String? = withContext(Dispatchers.IO) {
-		val prompt = buildPrompt(query, includeNsfw, results)
+		val prompt = buildPrompt(query, includeNsfw, results, libraryContext, conversationContext)
 		val providers = listOf(
 			AiProvider(
 				name = "Groq",
@@ -82,8 +84,10 @@ class CloudAiLibrarianEngine @Inject constructor(
 	suspend fun generateConversationReply(
 		query: String,
 		includeNsfw: Boolean,
+		libraryContext: String = "",
+		conversationContext: String = "",
 	): String? = withContext(Dispatchers.IO) {
-		val prompt = buildConversationPrompt(query, includeNsfw)
+		val prompt = buildConversationPrompt(query, includeNsfw, libraryContext, conversationContext)
 		val providers = listOf(
 			AiProvider(
 				name = "Groq",
@@ -129,7 +133,7 @@ class CloudAiLibrarianEngine @Inject constructor(
 				add(
 					buildJsonObject {
 						put("role", JsonPrimitive("system"))
-						put("content", JsonPrimitive("You are Tarumi AI, a concise comics librarian. Reply in plain text only."))
+						put("content", JsonPrimitive("You are Tarumi AI, a capable conversational assistant and source-backed comics librarian. Reply in plain text only."))
 					},
 				)
 				add(
@@ -139,8 +143,8 @@ class CloudAiLibrarianEngine @Inject constructor(
 					},
 				)
 			})
-			put("temperature", JsonPrimitive(0.55))
-			put("max_tokens", JsonPrimitive(320))
+			put("temperature", JsonPrimitive(0.7))
+			put("max_tokens", JsonPrimitive(700))
 		}.toString()
 		val request = Request.Builder()
 			.url(url)
@@ -174,7 +178,13 @@ class CloudAiLibrarianEngine @Inject constructor(
 		}
 	}
 
-	private fun buildPrompt(query: String, includeNsfw: Boolean, results: List<Manga>): String {
+	private fun buildPrompt(
+		query: String,
+		includeNsfw: Boolean,
+		results: List<Manga>,
+		libraryContext: String,
+		conversationContext: String,
+	): String {
 		val personality = if (includeNsfw) {
 			"You are the 18+ Tarumi librarian. Be playful and cheeky, but do not write explicit sexual content."
 		} else {
@@ -192,17 +202,29 @@ class CloudAiLibrarianEngine @Inject constructor(
 		}
 		return """
 			$personality
+			Recent conversation:
+			${conversationContext.ifBlank { "No prior chat turns are available." }}
+
+			Library context:
+			${libraryContext.ifBlank { "No reading history context is available yet." }}
 			User request: "$query"
 			Use only these candidate comics for recommendations:
 			$cards
 
-			Honor every requested format such as manga, manhwa, or manhua. Briefly explain the shared genre,
-			trope, or story qualities that make these candidates relevant. Write 2 short sentences and mention
-			that the cards below are the best matches. Do not invent titles outside the candidate list.
+			Current mode: ${if (includeNsfw) "18+ only. Recommend adult/NSFW candidates only." else "Safe only. Recommend non-adult candidates only."}
+			Honor every requested format such as manga, manhwa, or manhua. Use the conversation context to answer
+			follow-ups naturally. Briefly explain the shared genre, trope, or story qualities that make these
+			candidates relevant. Mention that the cards below are the best source-backed matches. Do not invent
+			titles outside the candidate list.
 		""".trimIndent()
 	}
 
-	private fun buildConversationPrompt(query: String, includeNsfw: Boolean): String {
+	private fun buildConversationPrompt(
+		query: String,
+		includeNsfw: Boolean,
+		libraryContext: String,
+		conversationContext: String,
+	): String {
 		val personality = if (includeNsfw) {
 			"You are Tarumi AI in 18+ mode. Be playful and cheeky, but do not write explicit sexual content."
 		} else {
@@ -210,10 +232,17 @@ class CloudAiLibrarianEngine @Inject constructor(
 		}
 		return """
 			$personality
-			The user is chatting, not asking for comic search results yet.
+			Recent conversation:
+			${conversationContext.ifBlank { "No prior chat turns are available." }}
+
+			Library context:
+			${libraryContext.ifBlank { "No reading history context is available yet." }}
 			User message: "$query"
 
-			Reply naturally in 1-2 short sentences. If helpful, invite them to ask for a manga, manhwa, or manhua recommendation by mood, trope, genre, or similar title.
+			Current mode: ${if (includeNsfw) "18+ conversation only. Do not recommend safe-mode sources unless the user turns 18+ mode off." else "Safe conversation only. Do not discuss or recommend adult/NSFW comics."}
+			Reply naturally and answer the message directly. You can discuss the app, comics, characters,
+			recommendation ideas, or general topics. If the user asks for source-backed comic picks, suggest
+			they ask by mood, trope, genre, or similar title.
 		""".trimIndent()
 	}
 

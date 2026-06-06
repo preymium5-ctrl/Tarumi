@@ -13,6 +13,7 @@ import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.viewModels
 import androidx.appcompat.view.ActionMode
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.ai.ui.AskAiFragment
 import org.koitharu.kotatsu.backups.ui.periodical.PeriodicalBackupService
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -207,10 +209,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	}
 
 	override fun onFragmentChanged(fragment: Fragment, fromUser: Boolean) {
-		adjustFabVisibility(topFragment = fragment)
-		adjustAppbar(topFragment = fragment)
+		val isAskAi = fragment is AskAiFragment
 		if (fromUser) {
 			actionModeDelegate.finishActionMode()
+		}
+		adjustFabVisibility(topFragment = fragment)
+		adjustAppbar(topFragment = fragment)
+		adjustContainerBehavior(isFullscreen = isAskAi)
+		bottomNav?.showOrHide(!isAskAi)
+		updateContainerBottomMargin()
+		viewBinding.container.requestApplyInsets()
+		if (fromUser) {
 			viewBinding.appbar.setExpanded(true)
 		}
 	}
@@ -382,6 +391,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	}
 
 	private fun adjustAppbar(topFragment: Fragment) {
+		if (topFragment is AskAiFragment) {
+			viewBinding.appbar.isVisible = false
+			fadingAppbarMediator.unbind()
+			return
+		}
 		viewBinding.appbar.isVisible = true
 		viewBinding.appbar.fitsSystemWindows = false
 		val hideHomeLandscapeHeader = topFragment is HomeFragment &&
@@ -390,6 +404,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		(viewBinding.layoutSearch ?: viewBinding.searchBar).visibility =
 			if (hideHomeLandscapeHeader) View.GONE else View.VISIBLE
 		fadingAppbarMediator.unbind()
+	}
+
+	private fun adjustContainerBehavior(isFullscreen: Boolean) {
+		viewBinding.container.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+			behavior = if (isFullscreen) {
+				null
+			} else if (behavior is AppBarLayout.ScrollingViewBehavior) {
+				behavior
+			} else {
+				AppBarLayout.ScrollingViewBehavior()
+			}
+		}
 	}
 
 	private fun adjustFabVisibility(
