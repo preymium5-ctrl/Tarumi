@@ -110,10 +110,34 @@ class AskAiViewModel @Inject constructor(
 		appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
 		_state.update { it.copy(isLoading = true) }
 		searchJob = launchJob(Dispatchers.Default) {
+			val messagesBeforeCurrent = _state.value.messages.dropLast(1)
 			val useReadingHistory = shouldUseReadingHistory(normalized)
 			val historyContext = if (useReadingHistory) buildReadingContext(includeNsfw) else ""
-			val conversationContext = buildConversationContext(_state.value.messages, includeNsfw)
-			val intent = parseRecommendationIntent(normalized)
+			val conversationContext = buildConversationContext(messagesBeforeCurrent, includeNsfw)
+			val requestedIntent = parseRecommendationIntent(normalized)
+			val previousRecommendation = if (requestedIntent.isMoreRequest) {
+				messagesBeforeCurrent.lastOrNull { message ->
+					message.role == AskAiRole.ASSISTANT &&
+						message.includeNsfw == includeNsfw &&
+						(message.results.isNotEmpty() || message.resultCards.isNotEmpty())
+				}
+			} else {
+				null
+			}
+			val effectiveQuery = if (requestedIntent.isMoreRequest && previousRecommendation?.query?.isNotBlank() == true) {
+				previousRecommendation.query
+			} else {
+				normalized
+			}
+			val intent = if (effectiveQuery == normalized) {
+				requestedIntent
+			} else {
+				parseRecommendationIntent(effectiveQuery).copy(
+					requestedLimit = requestedIntent.requestedLimit,
+					isMoreRequest = true,
+					isRecommendationRequest = true,
+				)
+			}
 			if (!intent.isRecommendationRequest) {
 				val reply = localAiLibrarianEngine.generateConversationReply(
 					query = normalized,
@@ -147,29 +171,23 @@ class AskAiViewModel @Inject constructor(
 				SAFE_SOURCE_NAMES.resolveSources()
 			}
 			val history = if (useReadingHistory) loadReadingHistory(includeNsfw) else emptyList()
-			val results = findRecommendations(sources, normalized, intent, history, includeNsfw)
-			val reply = localAiLibrarianEngine.generateRecommendationReply(
+			val excludedIds = previousRecommendation
+				?.let { message -> message.results.map { it.id } + message.resultCards.map { it.id } }
+				?.toSet()
+				.orEmpty()
+			val results = findRecommendations(sources, effectiveQuery, intent, history, includeNsfw, excludedIds)
+			val reply = buildRecommendationReply(
 				query = normalized,
+				effectiveQuery = effectiveQuery,
 				includeNsfw = includeNsfw,
 				results = results,
-				libraryContext = historyContext,
-				conversationContext = conversationContext,
-			) ?: if (localOnly) {
-				null
-			} else {
-				cloudAiLibrarianEngine.generateReply(
-					query = normalized,
-					includeNsfw = includeNsfw,
-					results = results,
-					libraryContext = historyContext,
-					conversationContext = conversationContext,
-				)
-			}
-				?: buildFallbackReply(normalized, includeNsfw, results)
+				intent = intent,
+				hasPreviousRecommendations = previousRecommendation != null,
+			)
 			appendMessages(
 				AskAiMessage(
 					role = AskAiRole.ASSISTANT,
-					query = normalized,
+					query = effectiveQuery,
 					includeNsfw = includeNsfw,
 					results = results,
 					resultCards = results.map { it.toResultCard() },
@@ -200,22 +218,27 @@ class AskAiViewModel @Inject constructor(
 		intent: RecommendationIntent,
 		history: List<Manga>,
 		includeNsfw: Boolean,
+		excludedIds: Set<Long> = emptySet(),
 	): List<Manga> {
+		val resultLimit = intent.requestedLimit.coerceIn(1, MAX_REQUESTED_RESULTS)
+		val candidateLimit = (resultLimit + excludedIds.size + EXTRA_CANDIDATE_BUFFER)
+			.coerceIn(resultLimit, MAX_CANDIDATE_POOL)
 		val reference = intent.referenceTitle
 			?.let { title -> resolveReference(sources, title) }
 
 		val seeds = if (reference != null) {
-			loadSimilarityCandidates(sources, reference)
+			loadSimilarityCandidates(sources, reference, candidateLimit)
 		} else {
-			loadTraitCandidates(sources, intent)
+			loadTraitCandidates(sources, intent, candidateLimit)
 		}
 		val detailed = loadDetails(
 			(seeds + listOfNotNull(reference))
 				.distinctById()
-				.take(MAX_DETAIL_CANDIDATES),
+				.take(candidateLimit),
 		)
 		return detailed
 			.asSequence()
+			.filterNot { manga -> manga.id in excludedIds }
 			.filterNot { manga -> reference != null && manga.sameTitleAs(reference) }
 			.filter { manga -> manga.matchesRequestedType(intent.requestedType) }
 			.filter { manga -> manga.matchesSafetyMode(includeNsfw) }
@@ -236,7 +259,7 @@ class AskAiViewModel @Inject constructor(
 			.map { it.first }
 			.toList()
 			.distinctById()
-			.take(RESULT_LIMIT)
+			.take(resultLimit)
 	}
 
 	private suspend fun resolveReference(
@@ -251,20 +274,21 @@ class AskAiViewModel @Inject constructor(
 	private suspend fun loadSimilarityCandidates(
 		sources: List<MangaParserSource>,
 		reference: Manga,
+		limit: Int,
 	): List<Manga> {
-		val candidates = ArrayList<Manga>(RESULT_LIMIT)
+		val candidates = ArrayList<Manga>(limit)
 		withTimeoutOrNull(SOURCE_TIMEOUT_MS) {
 			runCatchingCancellable {
 				mangaRepositoryFactory.create(reference.source).getRelated(reference)
 			}.onFailure {
 				it.printStackTraceDebug()
 			}.getOrDefault(emptyList())
-		}.orEmpty().appendUniqueTo(candidates, RESULT_LIMIT)
+		}.orEmpty().appendUniqueTo(candidates, limit)
 		for (source in sources) {
-			if (candidates.size >= RESULT_LIMIT) {
+			if (candidates.size >= limit) {
 				break
 			}
-			browseSource(source, RESULT_LIMIT - candidates.size).appendUniqueTo(candidates, RESULT_LIMIT)
+			browseSource(source, limit - candidates.size).appendUniqueTo(candidates, limit)
 		}
 		return candidates
 	}
@@ -272,21 +296,22 @@ class AskAiViewModel @Inject constructor(
 	private suspend fun loadTraitCandidates(
 		sources: List<MangaParserSource>,
 		intent: RecommendationIntent,
+		limit: Int,
 	): List<Manga> {
-		val candidates = ArrayList<Manga>(RESULT_LIMIT)
+		val candidates = ArrayList<Manga>(limit)
 		val queries = intent.searchQueries()
 		for (searchQuery in queries) {
-			if (candidates.size >= RESULT_LIMIT) {
+			if (candidates.size >= limit) {
 				break
 			}
-			searchSources(sources, searchQuery, RESULT_LIMIT - candidates.size)
-				.appendUniqueTo(candidates, RESULT_LIMIT)
+			searchSources(sources, searchQuery, limit - candidates.size)
+				.appendUniqueTo(candidates, limit)
 		}
 		for (source in sources) {
-			if (candidates.size >= RESULT_LIMIT) {
+			if (candidates.size >= limit) {
 				break
 			}
-			browseSource(source, RESULT_LIMIT - candidates.size).appendUniqueTo(candidates, RESULT_LIMIT)
+			browseSource(source, limit - candidates.size).appendUniqueTo(candidates, limit)
 		}
 		return candidates
 	}
@@ -370,18 +395,48 @@ class AskAiViewModel @Inject constructor(
 		}
 	}
 
-	private fun buildFallbackReply(query: String, includeNsfw: Boolean, results: List<Manga>): String {
+	private fun buildRecommendationReply(
+		query: String,
+		effectiveQuery: String,
+		includeNsfw: Boolean,
+		results: List<Manga>,
+		intent: RecommendationIntent,
+		hasPreviousRecommendations: Boolean,
+	): String {
 		if (results.isEmpty()) {
+			if (intent.isMoreRequest && !hasPreviousRecommendations) {
+				return "I can show more comics after I have a previous recommendation list to continue from. Ask me for a genre, tag, or title first."
+			}
+			if (intent.isMoreRequest) {
+				return "I could not find more source-backed comics for \"$effectiveQuery\" yet. Try a broader genre, tag, or title."
+			}
 			return if (includeNsfw) {
 				"Spicy librarian mode is on, but I could not find solid adult matches for \"$query\" yet. Try a broader tag, author, or title."
 			} else {
 				"I could not find strong matches for \"$query\" yet. Try a broader mood, genre, trope, or title."
 			}
 		}
-		return if (includeNsfw) {
-			"Spicy librarian mode is on. I found adult picks that match \"$query\", and the cards below are the strongest matches from HentaiRead and 18PornComic."
+		val countText = if (results.size == 1) {
+			"I only found 1 comic"
+		} else if (results.size < intent.requestedLimit) {
+			"I only found ${results.size} comics"
 		} else {
-			"I found some good matches for \"$query\". Start with these picks because their titles, tags, or source results line up best with what you asked."
+			"I found ${results.size} comics"
+		}
+		val modeText = if (includeNsfw) {
+			"from HentaiRead and 18PornComic"
+		} else {
+			"from Manga Plus English and ManhwaZ"
+		}
+		val requestText = if (effectiveQuery == query) {
+			"for \"$query\""
+		} else {
+			"as more picks for \"$effectiveQuery\""
+		}
+		return if (includeNsfw) {
+			"Spicy librarian mode is on. $countText $requestText $modeText. The cards below are the source-backed matches."
+		} else {
+			"$countText $requestText $modeText. The cards below are the source-backed matches."
 		}
 	}
 
@@ -484,8 +539,8 @@ class AskAiViewModel @Inject constructor(
 			builder.append(word)
 			updateLastAssistantMessage(
 				text = builder.toString(),
-				results = emptyList(),
-				resultCards = emptyList(),
+				results = results,
+				resultCards = resultCards,
 				isStreaming = true,
 				persist = false,
 			)
@@ -894,6 +949,13 @@ class AskAiViewModel @Inject constructor(
 
 	private fun parseRecommendationIntent(query: String): RecommendationIntent {
 		val words = searchableWords(query)
+		val requestedLimit = REQUESTED_LIMIT_REGEX.find(query)
+			?.groupValues
+			?.getOrNull(1)
+			?.toIntOrNull()
+			?.coerceIn(1, MAX_REQUESTED_RESULTS)
+			?: RESULT_LIMIT
+		val isMoreRequest = MORE_REQUEST_REGEX.containsMatchIn(query)
 		val requestedType = when {
 			Regex("""(?i)\bmanhwa(?:s)?\b""").containsMatchIn(query) -> ComicType.MANHWA
 			Regex("""(?i)\bmanhua(?:s)?\b""").containsMatchIn(query) -> ComicType.MANHUA
@@ -910,6 +972,7 @@ class AskAiViewModel @Inject constructor(
 		val searchQuery = referenceTitle ?: query
 			.replace(Regex("""(?i)\b(?:recommend|suggest|show|find|give|me|please|a|an|some)\b"""), " ")
 			.replace(Regex("""(?i)\b(?:manga|manhwa|manhua|comic|comics)\b"""), " ")
+			.replace(QUERY_FILLER_REGEX, " ")
 			.replace(Regex("\\s+"), " ")
 			.trim()
 			.ifBlank { query }
@@ -917,9 +980,13 @@ class AskAiViewModel @Inject constructor(
 		val asksForComics = Regex(
 			"""(?i)\b(?:manga|manhwa|manhua|comic|comics|doujin|doujinshi|hentai|webtoon|read|reading)\b""",
 		).containsMatchIn(query)
+		val asksForRecommendations = Regex(
+			"""(?i)\b(?:recommend|recommendation|suggest|suggestion|similar|same|find|show|looking|pick|picks|story|trope|genre)\b""",
+		).containsMatchIn(query)
 		val isRecommendationRequest = referenceTitle != null ||
 			requestedType != null ||
 			asksForComics ||
+			asksForRecommendations ||
 			traits.isNotEmpty() ||
 			words.any { it in RECOMMENDATION_WORDS }
 		return RecommendationIntent(
@@ -927,6 +994,8 @@ class AskAiViewModel @Inject constructor(
 			referenceTitle = referenceTitle,
 			searchQuery = searchQuery,
 			traits = traits,
+			requestedLimit = requestedLimit,
+			isMoreRequest = isMoreRequest,
 			isRecommendationRequest = isRecommendationRequest,
 		)
 	}
@@ -953,12 +1022,34 @@ class AskAiViewModel @Inject constructor(
 			) {
 				add("colored")
 			}
+			if (Regex("""(?i)\b(?:cultivat(?:e|es|ed|ing|ion|or|ors)|xianxia|xuanhuan|immortal|immortality|dao|qi|sect)\b""")
+				.containsMatchIn(query)
+			) {
+				add("cultivation")
+			}
+			if (Regex("""(?i)\b(?:system|systems|level(?:ing|ling|s| up)?|status window|stats?|quest|quests|hunter rank|ranker)\b""")
+				.containsMatchIn(query)
+			) {
+				add("system")
+			}
 		}
 	}
 
 	private fun RecommendationIntent.searchQueries(): List<String> {
 		val traitQueries = traits.flatMap { trait -> listOf(trait) + TRAIT_ALIASES[trait].orEmpty() }
-		return (listOf(searchQuery) + traitQueries)
+		val titleHintQueries = traits.flatMap { trait -> TRAIT_TITLE_HINTS[trait].orEmpty() }
+		val pairedTraitQueries = traits.toList()
+			.take(MAX_TRAITS_FOR_PAIR_SEARCH)
+			.flatMapIndexed { index, first ->
+				traits.toList().drop(index + 1).flatMap { second ->
+					listOf("$first $second", "$second $first")
+				}
+			}
+		val typeQueries = requestedType?.let { type ->
+			val typeName = type.name.lowercase()
+			(listOf(searchQuery) + traits + pairedTraitQueries + titleHintQueries).map { query -> "$query $typeName" }
+		}.orEmpty()
+		return (listOf(searchQuery) + pairedTraitQueries + typeQueries + titleHintQueries + traitQueries)
 			.map { it.trim() }
 			.filter { it.length >= MIN_WORD_LENGTH && it !in STOP_WORDS }
 			.distinct()
@@ -968,8 +1059,11 @@ class AskAiViewModel @Inject constructor(
 	companion object {
 
 		private const val RESULT_LIMIT = 10
-		private const val MAX_DETAIL_CANDIDATES = RESULT_LIMIT
-		private const val MAX_SEARCH_QUERIES = 12
+		private const val MAX_REQUESTED_RESULTS = 20
+		private const val EXTRA_CANDIDATE_BUFFER = 12
+		private const val MAX_CANDIDATE_POOL = 60
+		private const val MAX_SEARCH_QUERIES = 18
+		private const val MAX_TRAITS_FOR_PAIR_SEARCH = 5
 		private const val HISTORY_CONTEXT_LIMIT = 30
 		private const val HISTORY_TAG_LIMIT = 12
 		private const val HISTORY_SOURCE_LIMIT = 6
@@ -1008,6 +1102,13 @@ class AskAiViewModel @Inject constructor(
 		private val REFERENCE_REGEX = Regex(
 			"""(?i)\b(?:same\s+as|similar\s+to|like)\s+(.+?)(?:[?.!,;]|$)""",
 		)
+		private val QUERY_FILLER_REGEX = Regex(
+			"""(?i)\b(?:that|is|are|was|were|has|have|had|and|or|with|about|where|there|it|its|to|for|in)\b""",
+		)
+		private val REQUESTED_LIMIT_REGEX = Regex(
+			"""(?i)\b([1-9]\d?)\s*(?:more|recommendations?|suggestions?|picks?|comics?|manga|manhwa|manhua|titles?)\b""",
+		)
+		private val MORE_REQUEST_REGEX = Regex("""(?i)\b(?:more|another|next|continue)\b""")
 		private val NON_ALPHANUMERIC_REGEX = Regex("[^a-z0-9]+")
 		private val MULTIPLE_SPACES_REGEX = Regex("\\s+")
 		private val STOP_WORDS = setOf(
@@ -1028,6 +1129,31 @@ class AskAiViewModel @Inject constructor(
 			"revenge" to setOf("revenge", "betrayal", "payback"),
 			"fantasy" to setOf("fantasy", "magic", "tower", "dungeon", "martial", "murim"),
 			"murim" to setOf("murim", "murin", "martial arts", "martial", "wuxia", "jianghu"),
+			"cultivation" to setOf(
+				"cultivation",
+				"cultivating",
+				"cultivator",
+				"cultivators",
+				"xianxia",
+				"xuanhuan",
+				"immortal",
+				"immortality",
+				"dao",
+				"qi",
+				"sect",
+			),
+			"system" to setOf(
+				"system",
+				"leveling",
+				"levelling",
+				"level up",
+				"status window",
+				"stats",
+				"quest",
+				"quests",
+				"ranker",
+				"hunter rank",
+			),
 			"action" to setOf("action", "fight", "battle", "combat"),
 			"sexy" to setOf("sexy", "ecchi", "smut", "adult", "mature", "erotic"),
 			"incest" to setOf("incest", "sibling", "sister", "brother", "family"),
@@ -1058,6 +1184,27 @@ class AskAiViewModel @Inject constructor(
 			"colored" to setOf("colored", "colour", "coloured", "full color", "full colour", "full-color", "colorized"),
 		)
 
+		private val TRAIT_TITLE_HINTS = mapOf(
+			"cultivation" to setOf(
+				"murim",
+				"martial peak",
+				"nano machine",
+				"murim login",
+				"heavenly demon",
+				"chronicles of heavenly demon",
+				"all hail the sect leader",
+			),
+			"system" to setOf(
+				"leveling",
+				"solo leveling",
+				"player",
+				"ranker",
+				"quest supremacy",
+				"murim login",
+				"nano machine",
+			),
+		)
+
 		private val SAFE_SOURCE_NAMES = listOf(
 			"MANGAPLUSPARSER_EN",
 			"MANHWAZ",
@@ -1082,6 +1229,8 @@ private data class RecommendationIntent(
 	val referenceTitle: String?,
 	val searchQuery: String,
 	val traits: Set<String>,
+	val requestedLimit: Int,
+	val isMoreRequest: Boolean,
 	val isRecommendationRequest: Boolean,
 )
 

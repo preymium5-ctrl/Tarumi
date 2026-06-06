@@ -28,8 +28,8 @@ android {
 		applicationId 'com.tarumi.reader'
 		minSdk = 23
 		targetSdk = 36
-		versionCode = 2047
-        versionName = '1.2.4'
+		versionCode = 2048
+        versionName = '1.2.5'
 		generatedDensities = []
 		testInstrumentationRunner 'org.koitharu.kotatsu.HiltTestRunner'
 		ksp {
@@ -53,9 +53,9 @@ android {
 		buildConfigField 'String', 'AI_GROQ_MODEL', quoteBuildConfig(localProperties.getProperty('ai_groq_model', 'llama-3.1-8b-instant'))
 		buildConfigField 'String', 'AI_OPENROUTER_GEMINI_MODEL', quoteBuildConfig(localProperties.getProperty('ai_openrouter_gemini_model', 'google/gemini-2.0-flash-exp:free'))
 		buildConfigField 'String', 'AI_OPENROUTER_NEMOTRON_MODEL', quoteBuildConfig(localProperties.getProperty('ai_openrouter_nemotron_model', 'nvidia/nemotron-3-super:free'))
-		buildConfigField 'String', 'AI_LOCAL_MODEL_URL', quoteBuildConfig(localProperties.getProperty('ai_local_model_url', 'https://github.com/preymium5-ctrl/Tarumi/releases/download/ai-models/gemma-e2b.task'))
-		buildConfigField 'String', 'AI_LOCAL_MODEL_FILE', quoteBuildConfig(localProperties.getProperty('ai_local_model_file', 'tarumi-local-gemma.task'))
-		buildConfigField 'long', 'AI_LOCAL_MODEL_SIZE_BYTES', localProperties.getProperty('ai_local_model_size_bytes', '2003697664L')
+		buildConfigField 'String', 'AI_LOCAL_MODEL_URL', quoteBuildConfig(localProperties.getProperty('ai_local_model_url', 'https://huggingface.co/AfiOne/gemma3-1b-it-int4.task/resolve/main/gemma3-1b-it-int4.task'))
+		buildConfigField 'String', 'AI_LOCAL_MODEL_FILE', quoteBuildConfig(localProperties.getProperty('ai_local_model_file', 'tarumi-local-gemma3-1b.task'))
+		buildConfigField 'long', 'AI_LOCAL_MODEL_SIZE_BYTES', localProperties.getProperty('ai_local_model_size_bytes', '554661243L')
 		resValue 'string', 'tg_backup_bot_token', localProperties.getProperty('tg_backup_bot_token', '')
 	}
 	buildTypes {

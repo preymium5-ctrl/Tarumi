@@ -32,13 +32,7 @@ class LocalAiLibrarianEngine @Inject constructor(
 	private val modelFile = File(modelDir, BuildConfig.AI_LOCAL_MODEL_FILE)
 	private var inference: LlmInference? = null
 
-	private val _status = MutableStateFlow(
-		when {
-			BuildConfig.AI_LOCAL_MODEL_URL.isBlank() -> LocalAiModelStatus.NotConfigured
-			modelFile.exists() && modelFile.length() > 0L -> LocalAiModelStatus.Ready
-			else -> LocalAiModelStatus.NotDownloaded
-		},
-	)
+	private val _status = MutableStateFlow(initialStatus())
 	val status: StateFlow<LocalAiModelStatus> = _status.asStateFlow()
 
 	val expectedModelSizeBytes: Long = BuildConfig.AI_LOCAL_MODEL_SIZE_BYTES
@@ -82,6 +76,10 @@ class LocalAiLibrarianEngine @Inject constructor(
 			if (tempFile.length() == 0L) {
 				error("Downloaded model is empty")
 			}
+			if (!tempFile.hasTaskFileSignature()) {
+				tempFile.delete()
+				error(MODEL_INVALID_MESSAGE)
+			}
 			if (modelFile.exists()) {
 				modelFile.delete()
 			}
@@ -117,6 +115,11 @@ class LocalAiLibrarianEngine @Inject constructor(
 		if (!modelFile.exists() || modelFile.length() == 0L) {
 			return@withContext null
 		}
+		if (!modelFile.hasTaskFileSignature()) {
+			modelFile.delete()
+			_status.value = LocalAiModelStatus.Error(MODEL_DAMAGED_MESSAGE)
+			return@withContext null
+		}
 		runCatchingCancellable {
 			val engine = inference ?: createInference().also { inference = it }
 			engine.generateResponse(prompt)
@@ -125,8 +128,25 @@ class LocalAiLibrarianEngine @Inject constructor(
 		}.onFailure { error ->
 			error.printStackTraceDebug()
 			releaseInference()
-			_status.value = LocalAiModelStatus.Error(error.message ?: "Local model failed")
+			if (error.message?.contains("zip", ignoreCase = true) == true) {
+				modelFile.delete()
+				_status.value = LocalAiModelStatus.Error(MODEL_DAMAGED_MESSAGE)
+			} else {
+				_status.value = LocalAiModelStatus.Error(error.message?.lineSequence()?.firstOrNull() ?: "Local model failed")
+			}
 		}.getOrNull()
+	}
+
+	private fun initialStatus(): LocalAiModelStatus {
+		return when {
+			BuildConfig.AI_LOCAL_MODEL_URL.isBlank() -> LocalAiModelStatus.NotConfigured
+			!modelFile.exists() || modelFile.length() == 0L -> LocalAiModelStatus.NotDownloaded
+			modelFile.hasTaskFileSignature() -> LocalAiModelStatus.Ready
+			else -> {
+				modelFile.delete()
+				LocalAiModelStatus.Error(MODEL_DAMAGED_MESSAGE)
+			}
+		}
 	}
 
 	private fun createInference(): LlmInference {
@@ -215,7 +235,25 @@ class LocalAiLibrarianEngine @Inject constructor(
 		private const val MODEL_DIR_NAME = "ai_models"
 		private const val MAX_TOKENS = 768
 		private const val MAX_TOP_K = 40
+		private const val MODEL_INVALID_MESSAGE = "Downloaded model is not a valid local AI .task file"
+		private const val MODEL_DAMAGED_MESSAGE = "Local AI model file is damaged. Please retry download."
 	}
+}
+
+private fun File.hasTaskFileSignature(): Boolean {
+	if (!exists() || length() < 4L) {
+		return false
+	}
+	return runCatching {
+		inputStream().use { input ->
+			val signature = ByteArray(8)
+			val read = input.read(signature)
+			read >= 4 &&
+				signature.asSequence()
+					.windowed(2)
+					.any { (first, second) -> first == 0x50.toByte() && second == 0x4B.toByte() }
+		}
+	}.getOrDefault(false)
 }
 
 sealed interface LocalAiModelStatus {
