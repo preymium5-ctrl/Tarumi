@@ -575,7 +575,10 @@ class ReaderViewModel @Inject constructor(
         if (pagesCount == 0) {
             return PROGRESS_NONE
         }
-        return ((pageIndex + 1) / pagesCount.toFloat()).coerceIn(0f, 1f)
+        if (pagesCount == 1) {
+            return 1f
+        }
+        return (pageIndex / (pagesCount - 1).toFloat()).coerceIn(0f, 1f)
     }
 
     private fun loadedPagesCount(chapterId: Long): Int? {

@@ -206,7 +206,7 @@ class ReaderActionsView @JvmOverloads constructor(
 			(currentPageZeroBased * 100f / (totalPages - 1)).roundToInt().coerceIn(0, 100)
 		}
 		binding.textViewReaderMeta.text = context.getString(
-			R.string.reader_info_pattern,
+			R.string.reader_percent_chapter_pattern,
 			chapterNumber.coerceAtLeast(0),
 			chaptersTotal.coerceAtLeast(chapterNumber),
 			chapterPercent,

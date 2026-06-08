@@ -3,9 +3,9 @@
     <string name="app_name" translatable="false">Tarumi</string>
     <string name="home">HOME</string>
     <string name="discover">DISCOVER</string>
-    <string name="library">LIBRARY</string>
-    <string name="library_title">Library</string>
-    <string name="library_subtitle">Your saved bookmarks in one place</string>
+    <string name="library">BOOKMARK</string>
+    <string name="library_title">Bookmark</string>
+    <string name="library_subtitle">Your saved comics in one place</string>
     <string name="saved_count_initial">0 saved</string>
     <string name="saved_count_pattern">%1$d saved</string>
     <string name="account">ACCOUNT</string>
@@ -47,6 +47,7 @@
     <string name="chapter_feed">Chapter feed</string>
     <string name="by_author_pattern">By %1$s</string>
     <string name="reader_chapter_progress_pattern">%1$d OF %2$d CHAPTERS</string>
+    <string name="reader_percent_chapter_pattern">Ch. %1$d/%2$d - %3$d%%</string>
     <string name="reader_meta_pattern">%1$d PAGES LOADED - PORTRAIT FIT - TARUMI</string>
     <string name="local_storage">Local storage</string>
     <string name="favourites">Favorites</string>
@@ -399,7 +400,7 @@
     <string name="incognito_mode">Incognito mode</string>
     <string name="no_chapters">No chapters</string>
     <string name="automatic_scroll">Automatic scroll</string>
-    <string name="reader_info_pattern">Ch. %1$d/%2$d - %3$d%%</string>
+    <string name="reader_info_pattern">Ch. %1$d/%2$d Pg. %3$d/%4$d</string>
     <string name="reader_chapters_list">Chapter list</string>
     <string name="reader_info_bar">Show information bar in reader</string>
     <string name="comics_archive">Comics archive</string>

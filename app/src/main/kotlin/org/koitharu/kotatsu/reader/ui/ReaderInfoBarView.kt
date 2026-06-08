@@ -205,12 +205,10 @@ class ReaderInfoBarView @JvmOverloads constructor(
 	@SuppressLint("StringFormatMatches")
 	fun update(state: ReaderUiState?) {
 		text = if (state != null) {
-			val page = state.currentPage + 1
-			val total = state.totalPages.coerceAtLeast(page)
-			val percent = ((page.toFloat() / total.toFloat()) * 100f).toInt().coerceIn(0, 100)
+			val percent = (state.percent * 100f).toInt().coerceIn(0, 100)
 			val chapter = state.chapterNumber.coerceAtLeast(1)
 			val chaptersTotal = state.chaptersTotal.coerceAtLeast(chapter)
-			"$percent% - $page / $total - $chapter/$chaptersTotal chapters"
+			"$percent% - $chapter/$chaptersTotal chapters"
 		} else {
 			""
 		}
