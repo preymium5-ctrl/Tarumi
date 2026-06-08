@@ -22,4 +22,5 @@ data class StatsEntity(
 	@ColumnInfo(name = "started_at") val startedAt: Long,
 	@ColumnInfo(name = "duration") val duration: Long,
 	@ColumnInfo(name = "pages") val pages: Int,
+	@ColumnInfo(name = "chapters") val chapters: Int,
 )

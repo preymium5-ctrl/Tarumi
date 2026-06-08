@@ -39,22 +39,13 @@
 		android:layout_below="@id/scrollView_filter"
 		android:layout_alignParentStart="true"
 		android:layout_alignParentEnd="true"
-		android:layout_above="@id/comments_preview"
+		android:layout_alignParentBottom="true"
 		android:clipToPadding="false"
 		android:orientation="vertical"
 		android:scrollIndicators="top"
 		app:bubbleSize="small"
 		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
 		tools:listitem="@layout/item_chapter" />
-
-	<include
-		android:id="@+id/comments_preview"
-		layout="@layout/layout_comments_preview"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:layout_alignParentStart="true"
-		android:layout_alignParentEnd="true"
-		android:layout_alignParentBottom="true" />
 
 	<com.google.android.material.progressindicator.CircularProgressIndicator
 		android:id="@+id/progressBar"

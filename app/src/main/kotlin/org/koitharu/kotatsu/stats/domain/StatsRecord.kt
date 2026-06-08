@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 data class StatsRecord(
 	val manga: Manga?,
 	val duration: Long,
+	val chapters: Int,
 ) : ListModel {
 
 	override fun areItemsTheSame(other: ListModel): Boolean {

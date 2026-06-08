@@ -1118,7 +1118,7 @@ class AskAiViewModel @Inject constructor(
 			authors = authors.toSet(),
 			largeCoverUrl = largeCoverUrl,
 			description = description,
-			chapters = emptyList(),
+			chapters = null,
 			source = parserSource,
 		)
 	}
@@ -1516,7 +1516,7 @@ class AskAiViewModel @Inject constructor(
 		private const val DAILY_TOKEN_RESET_MS = 24L * 60L * 60L * 1000L
 		private const val DETAIL_BATCH_SIZE = 8
 		private const val SOURCE_TIMEOUT_MS = 8_000L
-		private const val DETAIL_TIMEOUT_MS = 6_000L
+		private const val DETAIL_TIMEOUT_MS = 15_000L
 		private const val SOURCE_PAGE_ATTEMPTS = 4
 		private const val RECOMMENDATION_SEARCH_TIMEOUT_MS = 45_000L
 		private const val WEB_DISCOVERY_TIMEOUT_MS = 6_000L

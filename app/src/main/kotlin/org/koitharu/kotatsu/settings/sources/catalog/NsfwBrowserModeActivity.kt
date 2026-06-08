@@ -14,7 +14,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.button.MaterialButton
@@ -60,7 +60,17 @@ class NsfwBrowserModeActivity :
 			onPreviousPage = { viewModel.previousPage() },
 			onNextPage = { viewModel.nextPage() },
 		)
-		viewBinding.recyclerView.layoutManager = LinearLayoutManager(this)
+		viewBinding.recyclerView.layoutManager = GridLayoutManager(this, BROWSER_GRID_COLUMNS).apply {
+			spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+				override fun getSpanSize(position: Int): Int {
+					return if (adapter.getItemViewType(position) == BrowserEntryAdapter.VIEW_TYPE_PAGER) {
+						BROWSER_GRID_COLUMNS
+					} else {
+						1
+					}
+				}
+			}
+		}
 		viewBinding.recyclerView.adapter = adapter
 		viewBinding.buttonSource.setOnClickListener { showSourceMenu(it) }
 		viewBinding.buttonFilter.setOnClickListener { showTagMenu(it) }
@@ -177,6 +187,7 @@ class NsfwBrowserModeActivity :
 
 	private companion object {
 		const val MENU_ALL_TAGS = -1
+		const val BROWSER_GRID_COLUMNS = 3
 	}
 }
 
@@ -356,7 +367,7 @@ private class BrowserEntryAdapter(
 		}
 	}
 
-	private companion object {
+	companion object {
 		const val VIEW_TYPE_ENTRY = 0
 		const val VIEW_TYPE_PAGER = 1
 	}

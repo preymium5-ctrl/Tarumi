@@ -41,6 +41,7 @@
     <string name="recent_back">Back</string>
     <string name="recent_next">Next</string>
     <string name="start_reading">Start reading</string>
+    <string name="continue_reading_chapter_pattern">Continue reading %s</string>
     <string name="chapter_feed">Chapter feed</string>
     <string name="by_author_pattern">By %1$s</string>
     <string name="reader_chapter_progress_pattern">%1$d OF %2$d CHAPTERS</string>
@@ -392,6 +393,7 @@
     <string name="no_chapters">No chapters</string>
     <string name="automatic_scroll">Automatic scroll</string>
     <string name="reader_info_pattern">Ch. %1$d/%2$d Pg. %3$d/%4$d</string>
+    <string name="reader_chapters_list">Chapter list</string>
     <string name="reader_info_bar">Show information bar in reader</string>
     <string name="comics_archive">Comics archive</string>
     <string name="folder_with_images">Folder with images</string>
@@ -1059,6 +1061,10 @@
     <string name="stats">Stats</string>
     <string name="reading_streak">Reading streak</string>
     <string name="total_pages_read">Pages read</string>
+    <string name="total_chapters_read">Chapters read</string>
     <string name="total_reading_time">Reading time</string>
     <string name="stats_days_pattern">%1$d days</string>
+    <string name="stats_manga_summary_pattern">%1$s - %2$d chapters</string>
+    <string name="genre_breakdown">Genre breakdown</string>
+    <string name="genre_stats_pattern">%1$s - %2$d chapters - %3$d%%</string>
 </resources>

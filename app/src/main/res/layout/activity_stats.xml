@@ -5,13 +5,17 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root"
 	android:orientation="vertical">
 
 	<com.google.android.material.appbar.AppBarLayout
 		android:id="@+id/appbar"
 		android:layout_width="0dp"
 		android:layout_height="wrap_content"
+		android:background="@android:color/transparent"
 		android:fitsSystemWindows="false"
+		app:elevation="0dp"
+		app:liftOnScroll="false"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
 		app:layout_constraintTop_toTopOf="parent">
@@ -20,6 +24,11 @@
 			android:id="@id/toolbar"
 			android:layout_width="match_parent"
 			android:layout_height="?attr/actionBarSize"
+			android:background="@android:color/transparent"
+			android:paddingHorizontal="18dp"
+			app:navigationIconTint="@color/taru_text_primary"
+			app:titleTextAppearance="@style/TextAppearance.Tarumi.Settings.Title"
+			app:titleTextColor="@color/taru_text_primary"
 			app:layout_scrollFlags="noScroll">
 
 		</com.google.android.material.appbar.MaterialToolbar>
@@ -93,10 +102,10 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:fontFamily="sans-serif-medium"
-				android:letterSpacing="0.12"
+				android:letterSpacing="0.16"
 				android:text="@string/reading_streak"
 				android:textColor="@color/taru_text_muted"
-				android:textSize="10sp" />
+				android:textSize="11sp" />
 
 			<TextView
 				android:id="@+id/text_streak"
@@ -126,10 +135,10 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:fontFamily="sans-serif-medium"
-				android:letterSpacing="0.12"
+				android:letterSpacing="0.16"
 				android:text="@string/total_pages_read"
 				android:textColor="@color/taru_text_muted"
-				android:textSize="10sp" />
+				android:textSize="11sp" />
 
 			<TextView
 				android:id="@+id/text_pages_read"
@@ -159,10 +168,43 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:fontFamily="sans-serif-medium"
-				android:letterSpacing="0.12"
+				android:letterSpacing="0.16"
+				android:text="@string/total_chapters_read"
+				android:textColor="@color/taru_text_muted"
+				android:textSize="11sp" />
+
+			<TextView
+				android:id="@+id/text_chapters_read"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:ellipsize="end"
+				android:fontFamily="sans-serif"
+				android:maxLines="1"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold"
+				tools:text="28" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="92dp"
+			android:layout_marginStart="10dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_stat_card"
+			android:gravity="center_vertical"
+			android:orientation="vertical"
+			android:padding="14dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:letterSpacing="0.16"
 				android:text="@string/total_reading_time"
 				android:textColor="@color/taru_text_muted"
-				android:textSize="10sp" />
+				android:textSize="11sp" />
 
 			<TextView
 				android:id="@+id/text_reading_time"
@@ -179,6 +221,46 @@
 		</LinearLayout>
 	</LinearLayout>
 
+	<LinearLayout
+		android:id="@+id/layout_genres"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="16dp"
+		android:layout_marginTop="10dp"
+		android:background="@drawable/bg_taru_stat_card"
+		android:orientation="vertical"
+		android:padding="14dp"
+		android:visibility="gone"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/layout_summary"
+		tools:visibility="visible">
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:fontFamily="sans-serif-medium"
+			android:letterSpacing="0.16"
+			android:text="@string/genre_breakdown"
+			android:textColor="@color/taru_text_muted"
+			android:textSize="11sp" />
+
+		<LinearLayout
+			android:id="@+id/layout_genre_bar"
+			android:layout_width="match_parent"
+			android:layout_height="18dp"
+			android:layout_marginTop="10dp"
+			android:clipToOutline="true"
+			android:orientation="horizontal" />
+
+		<LinearLayout
+			android:id="@+id/layout_genre_legend"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="10dp"
+			android:orientation="vertical" />
+	</LinearLayout>
+
 	<org.koitharu.kotatsu.stats.ui.views.PieChartView
 		android:id="@+id/chart"
 		android:layout_width="0dp"
@@ -187,7 +269,7 @@
 		app:layout_constraintDimensionRatio="1"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@id/layout_summary" />
+		app:layout_constraintTop_toBottomOf="@id/layout_genres" />
 
 	<androidx.recyclerview.widget.RecyclerView
 		android:id="@+id/recyclerView"

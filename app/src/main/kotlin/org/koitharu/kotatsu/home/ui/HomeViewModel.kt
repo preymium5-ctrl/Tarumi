@@ -4,6 +4,7 @@ import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withTimeoutOrNull
@@ -77,7 +78,7 @@ class HomeViewModel @Inject constructor(
 		restoreCachedHomeFeed()
 		_featuredComics.value = cachedFeaturedComics
 		_trendingComics.value = cachedTrendingComics
-		_recentUpdates.value = cachedRecentUpdates
+		_recentUpdates.value = cachedRecentUpdates.visibleRecentUpdates()
 		_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty() && isRecentUpdatesLoading
 		_manhuaRecommendations.value = cachedManhuaRecommendations
 		_manhuaRecommendationsLoading.value = cachedManhuaRecommendations.isEmpty() && isManhuaRecommendationsLoading
@@ -120,17 +121,14 @@ class HomeViewModel @Inject constructor(
 				_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty()
 				try {
 					val updates = runCatchingCancellable {
-						loadRecentUpdates(RECENT_PAGE_SIZE * RECENT_PAGE_COUNT)
+						loadRecentUpdates(RECENT_CACHE_LIMIT) { partial ->
+							publishRecentUpdates(partial, updateSavedAt = false)
+						}
 					}.onFailure {
 						it.printStackTraceDebug()
 					}.getOrDefault(cachedRecentUpdates)
 					if (updates.isNotEmpty()) {
-						val rankedUpdates = mergeRecentUpdates(updates, cachedRecentUpdates)
-						cachedRecentUpdates = rankedUpdates
-						cachedRecentUpdatesAt = System.currentTimeMillis()
-						_recentUpdates.value = rankedUpdates
-						setRecentUpdatesPage(_recentUpdatesPage.value)
-						saveHomeFeedCache()
+						publishRecentUpdates(updates, updateSavedAt = true)
 					}
 				} finally {
 					_recentUpdatesLoading.value = false
@@ -146,6 +144,7 @@ class HomeViewModel @Inject constructor(
 					val comics = loadRecommendationComics(
 						sources = MANHUA_RECOMMENDATION_SOURCES,
 						comicType = ComicType.MANHUA,
+						period = recommendationPeriod,
 						limit = RECOMMENDATION_LIMIT,
 					)
 					cachedManhuaRecommendations = comics
@@ -167,6 +166,7 @@ class HomeViewModel @Inject constructor(
 					val comics = loadRecommendationComics(
 						sources = MANGA_RECOMMENDATION_SOURCES,
 						comicType = ComicType.MANGA,
+						period = recommendationPeriod,
 						limit = RECOMMENDATION_LIMIT,
 					)
 					cachedMangaRecommendations = comics
@@ -245,6 +245,7 @@ class HomeViewModel @Inject constructor(
 	private suspend fun loadRecommendationComics(
 		sources: List<MangaParserSource>,
 		comicType: ComicType,
+		period: Long,
 		limit: Int,
 	): List<Manga> {
 		val result = ArrayList<Manga>(limit)
@@ -258,7 +259,7 @@ class HomeViewModel @Inject constructor(
 				SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
 				else -> repository.defaultSortOrder
 			}
-			var offset = 0
+			var offset = recommendationStartOffset(source, period, limit)
 			repeat(RECOMMENDATION_PAGE_ATTEMPTS) {
 				if (result.size >= limit) {
 					return@repeat
@@ -288,6 +289,12 @@ class HomeViewModel @Inject constructor(
 			}
 		}
 		return result.distinctById().take(limit)
+	}
+
+	private fun recommendationStartOffset(source: MangaParserSource, period: Long, limit: Int): Int {
+		val sourceBucket = (source.name.hashCode() and Int.MAX_VALUE) % RECOMMENDATION_OFFSET_BUCKETS
+		val periodBucket = ((period + sourceBucket) % RECOMMENDATION_OFFSET_BUCKETS).toInt()
+		return (periodBucket * limit).coerceAtLeast(0)
 	}
 
 	private suspend fun loadSmartRecommendationComics(period: Long, limit: Int): List<Manga> {
@@ -403,8 +410,11 @@ class HomeViewModel @Inject constructor(
 		}.getOrDefault(manga)
 	}
 
-	private suspend fun loadRecentUpdates(limit: Int): List<RecentUpdateGroup> {
-		return loadRecentUpdatesFromParser(limit)
+	private suspend fun loadRecentUpdates(
+		limit: Int,
+		onPartial: (List<RecentUpdateGroup>) -> Unit = {},
+	): List<RecentUpdateGroup> {
+		return loadRecentUpdatesFromParser(limit, onPartial)
 	}
 
 	private suspend fun loadWeebCentralLatestUpdates(limit: Int): List<RecentUpdateGroup> {
@@ -543,14 +553,17 @@ class HomeViewModel @Inject constructor(
 			?: 0f
 	}
 
-	private suspend fun loadRecentUpdatesFromParser(limit: Int): List<RecentUpdateGroup> {
+	private suspend fun loadRecentUpdatesFromParser(
+		limit: Int,
+		onPartial: (List<RecentUpdateGroup>) -> Unit,
+	): List<RecentUpdateGroup> {
 		val groups = ArrayList<RecentUpdateGroup>(limit)
 		val seenIds = HashSet<Long>(limit + RECENT_CANDIDATES_PER_SOURCE)
 		for (source in RECENT_UPDATE_SOURCES) {
 			if (groups.size >= limit) {
 				break
 			}
-			loadRecentUpdatesFromParserSource(source, groups, seenIds, limit)
+			loadRecentUpdatesFromParserSource(source, groups, seenIds, limit, onPartial)
 		}
 		return rankRecentUpdates(groups, limit)
 	}
@@ -560,6 +573,7 @@ class HomeViewModel @Inject constructor(
 		groups: MutableList<RecentUpdateGroup>,
 		seenIds: MutableSet<Long>,
 		limit: Int,
+		onPartial: (List<RecentUpdateGroup>) -> Unit,
 	) {
 		val repository = mangaRepositoryFactory.create(source)
 		val order = when {
@@ -602,9 +616,33 @@ class HomeViewModel @Inject constructor(
 					sourceTitle = (details.source as? MangaParserSource)?.title ?: details.source.name,
 					sortDate = chapters.maxOf(MangaChapter::uploadDate),
 				)
+				if (groups.size == 1 || groups.size % RECENT_PUBLISH_BATCH_SIZE == 0) {
+					onPartial(rankRecentUpdates(groups, limit))
+				}
+				if (groups.size < limit) {
+					delay(RECENT_DETAILS_DELAY_MS)
+				}
 			}
 			offset += page.size
+			if (groups.size < limit) {
+				delay(RECENT_SOURCE_PAGE_DELAY_MS)
+			}
 		}
+	}
+
+	private fun publishRecentUpdates(updates: List<RecentUpdateGroup>, updateSavedAt: Boolean) {
+		if (updates.isEmpty()) {
+			return
+		}
+		val rankedUpdates = mergeRecentUpdates(updates, cachedRecentUpdates)
+		cachedRecentUpdates = rankedUpdates
+		if (updateSavedAt) {
+			cachedRecentUpdatesAt = System.currentTimeMillis()
+		}
+		_recentUpdates.value = rankedUpdates.visibleRecentUpdates()
+		_recentUpdatesLoading.value = false
+		setRecentUpdatesPage(_recentUpdatesPage.value)
+		saveHomeFeedCache()
 	}
 
 	private fun rankRecentUpdates(groups: List<RecentUpdateGroup>, limit: Int): List<RecentUpdateGroup> {
@@ -618,7 +656,11 @@ class HomeViewModel @Inject constructor(
 		freshUpdates: List<RecentUpdateGroup>,
 		cachedUpdates: List<RecentUpdateGroup>,
 	): List<RecentUpdateGroup> {
-		return rankRecentUpdates(freshUpdates + cachedUpdates, RECENT_PAGE_SIZE * RECENT_PAGE_COUNT)
+		return rankRecentUpdates(freshUpdates + cachedUpdates, RECENT_CACHE_LIMIT)
+	}
+
+	private fun List<RecentUpdateGroup>.visibleRecentUpdates(): List<RecentUpdateGroup> {
+		return take(RECENT_VISIBLE_LIMIT)
 	}
 
 	private fun recentUpdateKey(group: RecentUpdateGroup): String {
@@ -696,7 +738,7 @@ class HomeViewModel @Inject constructor(
 		homeFeedCache.save(
 			HomeFeedSnapshot(
 				savedAt = savedAt,
-				recentUpdatesSavedAt = cachedRecentUpdatesAt.takeIf { it > 0L } ?: savedAt,
+				recentUpdatesSavedAt = cachedRecentUpdatesAt,
 				recentUpdatesCacheVersion = RECENT_CACHE_VERSION,
 				recommendationPeriod = cachedRecommendationPeriod,
 				featuredPeriod = cachedFeaturedPeriod,
@@ -706,7 +748,7 @@ class HomeViewModel @Inject constructor(
 				mangaRecommendations = cachedMangaRecommendations,
 				smartRecommendationPeriod = cachedSmartRecommendationPeriod,
 				smartRecommendations = cachedSmartRecommendations,
-				recentUpdates = cachedRecentUpdates,
+				recentUpdates = cachedRecentUpdates.take(RECENT_CACHE_LIMIT),
 			),
 		)
 	}
@@ -734,20 +776,26 @@ class HomeViewModel @Inject constructor(
 		const val TRENDING_LIMIT = 10
 		const val RECOMMENDATION_LIMIT = 20
 		const val RECOMMENDATION_PAGE_ATTEMPTS = 4
+		const val RECOMMENDATION_OFFSET_BUCKETS = 8
 		const val SMART_HISTORY_LIMIT = 25
 		const val SMART_TAG_LIMIT = 8
 		const val SMART_OFFSET_BUCKETS = 5
 		const val RECENT_PAGE_SIZE = 10
 		const val RECENT_PAGE_COUNT = 6
+		const val RECENT_VISIBLE_LIMIT = RECENT_PAGE_SIZE * RECENT_PAGE_COUNT
+		const val RECENT_CACHE_LIMIT = RECENT_VISIBLE_LIMIT
 		const val RECENT_CHAPTERS_PER_TITLE = 3
-		const val RECENT_CANDIDATES_PER_SOURCE = 60
+		const val RECENT_CANDIDATES_PER_SOURCE = RECENT_VISIBLE_LIMIT
 		const val RECENT_SOURCE_PAGE_ATTEMPTS = 8
+		const val RECENT_PUBLISH_BATCH_SIZE = 3
 		const val RECENT_SOURCE_TIMEOUT_MS = 12_000L
 		const val RECENT_PAGE_TIMEOUT_MS = 3_000L
 		const val RECENT_DETAILS_TIMEOUT_MS = 4_000L
+		const val RECENT_SOURCE_PAGE_DELAY_MS = 350L
+		const val RECENT_DETAILS_DELAY_MS = 40L
 		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
-		const val RECENT_CACHE_TTL_MS = 8L * 60L * 60L * 1000L
-		const val RECENT_CACHE_VERSION = 5
+		const val RECENT_CACHE_TTL_MS = 6L * 60L * 60L * 1000L
+		const val RECENT_CACHE_VERSION = 8
 		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val SMART_RECOMMENDATION_ROTATION_MS = 2L * 24L * 60L * 60L * 1000L
@@ -763,12 +811,9 @@ class HomeViewModel @Inject constructor(
 		)
 
 		val RECENT_UPDATE_SOURCES = listOf(
-			MangaParserSource.DEMONICSCANS,
-			MangaParserSource.MANGAFIRE_EN,
-			MangaParserSource.AQUAMANGA,
-			MangaParserSource.FLAMECOMICS,
 			MangaParserSource.MANGAPLUSPARSER_EN,
-			MangaParserSource.MANHUAFAST,
+			MangaParserSource.AQUAMANGA,
+			MangaParserSource.ASURASCANS,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(

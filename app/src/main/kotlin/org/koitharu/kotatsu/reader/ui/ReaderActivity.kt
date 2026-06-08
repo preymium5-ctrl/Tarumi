@@ -66,6 +66,7 @@ import org.koitharu.kotatsu.core.util.ext.postDelayed
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.core.util.ext.zipWithPrevious
 import org.koitharu.kotatsu.databinding.ActivityReaderBinding
+import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
 import org.koitharu.kotatsu.details.ui.pager.pages.PagesSavedObserver
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.data.TapGridSettings
@@ -138,6 +139,9 @@ class ReaderActivity :
         viewBinding.buttonTimer?.setOnClickListener(this)
         viewBinding.buttonReaderTopBack?.setOnClickListener(this)
         viewBinding.buttonReaderTopSettings?.setOnClickListener(this)
+        viewBinding.buttonEndPrevChapter?.setOnClickListener(this)
+        viewBinding.buttonEndChapters?.setOnClickListener(this)
+        viewBinding.buttonEndNextChapter?.setOnClickListener(this)
         idlingDetector.bindToLifecycle(this)
         screenOrientationHelper.applySettings()
         viewModel.isBookmarkAdded.observe(this) { viewBinding.actionsView.isBookmarkAdded = it }
@@ -309,6 +313,9 @@ class ReaderActivity :
             R.id.button_timer -> onScrollTimerClick(isLongClick = false)
             R.id.button_reader_top_back -> dispatchNavigateUp()
             R.id.button_reader_top_settings -> openMenu()
+            R.id.buttonEndPrevChapter -> switchChapterBy(-1)
+            R.id.buttonEndChapters -> router.showChapterPagesSheet(ChaptersPagesSheet.TAB_CHAPTERS)
+            R.id.buttonEndNextChapter -> switchChapterBy(1)
         }
     }
 
@@ -602,10 +609,12 @@ class ReaderActivity :
                 chapterTitle = getString(R.string.loading_),
                 chapterNumber = 0,
                 chaptersTotal = 0,
-                pagesLoaded = 0,
+                currentPage = 0,
+                totalPages = 0,
             )
             viewBinding.actionsView.setSliderValue(0, 1)
             viewBinding.actionsView.isSliderEnabled = false
+            updateEndChapterActions(null)
             return
         }
         val chapterTitle = uiState.getChapterTitle(resources)
@@ -618,7 +627,8 @@ class ReaderActivity :
             chapterTitle = chapterTitle,
             chapterNumber = uiState.chapterNumber,
             chaptersTotal = uiState.chaptersTotal,
-            pagesLoaded = uiState.totalPages,
+            currentPage = uiState.currentPage + 1,
+            totalPages = uiState.totalPages,
         )
         if (
             settings.isReaderChapterToastEnabled &&
@@ -638,6 +648,27 @@ class ReaderActivity :
         viewBinding.actionsView.isSliderEnabled = uiState.isSliderAvailable()
         viewBinding.actionsView.isNextEnabled = uiState.hasNextChapter()
         viewBinding.actionsView.isPrevEnabled = uiState.hasPreviousChapter()
+        updateEndChapterActions(uiState)
+    }
+
+    private fun updateEndChapterActions(uiState: ReaderUiState?) {
+        val actions = viewBinding.endChapterActions ?: return
+        val isAtChapterEnd = uiState != null &&
+            uiState.totalPages > 0 &&
+            uiState.currentPage >= uiState.totalPages - 1 &&
+            (uiState.hasPreviousChapter() || uiState.hasNextChapter())
+        if (actions.isVisible != isAtChapterEnd) {
+            TransitionManager.beginDelayedTransition(viewBinding.root, Fade().addTarget(actions))
+            actions.isVisible = isAtChapterEnd
+        }
+        if (uiState == null) {
+            return
+        }
+        viewBinding.textEndChapter?.text = uiState.getChapterTitle(resources)
+        viewBinding.buttonEndPrevChapter?.isEnabled = uiState.hasPreviousChapter()
+        viewBinding.buttonEndPrevChapter?.alpha = if (uiState.hasPreviousChapter()) 1f else 0.36f
+        viewBinding.buttonEndNextChapter?.isEnabled = uiState.hasNextChapter()
+        viewBinding.buttonEndNextChapter?.alpha = if (uiState.hasNextChapter()) 1f else 0.36f
     }
 
     private fun updateScrollTimerButton() {

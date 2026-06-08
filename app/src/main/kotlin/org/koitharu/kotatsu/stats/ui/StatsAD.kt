@@ -21,7 +21,11 @@ fun statsAD(
 
 	bind {
 		binding.textViewTitle.text = item.manga?.title ?: getString(R.string.other_manga)
-		binding.textViewSummary.text = item.time.format(context.resources)
+		binding.textViewSummary.text = getString(
+			R.string.stats_manga_summary_pattern,
+			item.time.format(context.resources),
+			item.chapters,
+		)
 		binding.imageViewBadge.imageTintList = ColorStateList.valueOf(KotatsuColors.ofManga(context, item.manga))
 		binding.root.isClickable = item.manga != null
 	}

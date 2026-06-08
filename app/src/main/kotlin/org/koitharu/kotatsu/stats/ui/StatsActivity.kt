@@ -1,14 +1,18 @@
 package org.koitharu.kotatsu.stats.ui
 
 import android.os.Bundle
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStub
 import android.widget.CompoundButton
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
@@ -38,6 +42,7 @@ import org.koitharu.kotatsu.databinding.ActivityStatsBinding
 import org.koitharu.kotatsu.databinding.ItemEmptyStateBinding
 import org.koitharu.kotatsu.list.ui.adapter.ListItemType
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.stats.data.GenreStatsRecord
 import org.koitharu.kotatsu.stats.domain.StatsPeriod
 import org.koitharu.kotatsu.stats.domain.StatsRecord
 import org.koitharu.kotatsu.stats.ui.views.PieChartView
@@ -77,9 +82,11 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		viewModel.summary.observe(this) { summary ->
 			viewBinding.textStreak.text = getString(R.string.stats_days_pattern, summary.streakDays)
 			viewBinding.textPagesRead.text = NumberFormat.getIntegerInstance(Locale.US).format(summary.totalPages)
+			viewBinding.textChaptersRead?.text = NumberFormat.getIntegerInstance(Locale.US).format(summary.totalChapters)
 			viewBinding.textReadingTime.text = summary.totalDuration.formatCompactDuration()
 		}
 		viewModel.favoriteCategories.observe(this, ::createCategoriesChips)
+		viewModel.genreStats.observe(this, ::renderGenreStats)
 		viewModel.onActionDone.observeEvent(this, ReversibleActionObserver(viewBinding.recyclerView))
 		viewModel.readingStats.observe(this) {
 			val sum = it.sumOf { it.duration }
@@ -97,6 +104,66 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 			adapter.emit(it)
 		}
 	}
+
+	private fun renderGenreStats(records: List<GenreStatsRecord>) {
+		val bar = viewBinding.layoutGenreBar
+		val legend = viewBinding.layoutGenreLegend
+		bar?.removeAllViews()
+		legend?.removeAllViews()
+		viewBinding.layoutGenres?.isVisible = records.isNotEmpty()
+		if (bar == null || legend == null) {
+			return
+		}
+		if (records.isEmpty()) {
+			return
+		}
+		val total = records.sumOf { it.chapters }.coerceAtLeast(1)
+		val colors = genreColors()
+		for ((index, record) in records.withIndex()) {
+			val color = colors[index % colors.size]
+			bar.addView(
+				View(this).apply { setBackgroundColor(color) },
+				LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, record.chapters.toFloat()),
+			)
+			legend.addView(createGenreLegendRow(record, color, total))
+		}
+	}
+
+	private fun createGenreLegendRow(record: GenreStatsRecord, color: Int, total: Int): View {
+		val percent = (record.chapters * 100f / total).toInt().coerceAtLeast(1)
+		return LinearLayout(this).apply {
+			gravity = Gravity.CENTER_VERTICAL
+			orientation = LinearLayout.HORIZONTAL
+			setPadding(0, 4.dp(), 0, 0)
+			addView(
+				View(context).apply { setBackgroundColor(color) },
+				LinearLayout.LayoutParams(12.dp(), 12.dp()).apply {
+					marginEnd = 8.dp()
+				},
+			)
+			addView(
+				TextView(context).apply {
+					text = getString(R.string.genre_stats_pattern, record.title, record.chapters, percent)
+					setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+					textSize = 12f
+					maxLines = 1
+					ellipsize = android.text.TextUtils.TruncateAt.END
+				},
+				LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+			)
+		}
+	}
+
+	private fun genreColors(): IntArray = intArrayOf(
+		ContextCompat.getColor(this, R.color.taru_accent),
+		ContextCompat.getColor(this, R.color.common_green),
+		ContextCompat.getColor(this, R.color.nsfw_18),
+		ContextCompat.getColor(this, R.color.common_yellow),
+		ContextCompat.getColor(this, R.color.blue_primary),
+		ContextCompat.getColor(this, R.color.warning),
+		ContextCompat.getColor(this, R.color.nsfw_16),
+		ContextCompat.getColor(this, R.color.grey),
+	)
 
 	override fun onApplyWindowInsets(
 		v: View,
@@ -241,4 +308,6 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 			else -> getString(R.string.less_than_minute)
 		}
 	}
+
+	private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 }

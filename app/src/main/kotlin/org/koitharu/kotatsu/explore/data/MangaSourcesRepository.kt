@@ -55,7 +55,7 @@ class MangaSourcesRepository @Inject constructor(
 	val allMangaSources: Set<MangaParserSource> = Collections.unmodifiableSet(
 		EnumSet.noneOf<MangaParserSource>(MangaParserSource::class.java).also {
 			MangaParserSource.entries.filterNotTo(it) { source ->
-				source.isBroken || source.isTarumiHidden()
+				source.isBroken
 			}
         }
 	)
@@ -267,7 +267,7 @@ class MangaSourcesRepository @Inject constructor(
 		val entities = new.map { x ->
 			MangaSourceEntity(
 				source = x.name,
-				isEnabled = isAllEnabled,
+				isEnabled = isAllEnabled || x.shouldEnableByDefault(),
 				sortKey = ++maxSortKey,
 				addedIn = BuildConfig.VERSION_CODE,
 				lastUsedAt = 0,
@@ -315,6 +315,11 @@ class MangaSourcesRepository @Inject constructor(
 			result.remove(e.source.toMangaSourceOrNull() ?: continue)
 		}
 		return result
+	}
+
+	private fun MangaSource.shouldEnableByDefault(): Boolean {
+		val source = this as? MangaParserSource ?: return false
+		return source.locale == "en" || source.contentType == ContentType.HENTAI
 	}
 
 	private suspend fun setSourcesPinnedImpl(sources: Collection<MangaSource>, isPinned: Boolean) {

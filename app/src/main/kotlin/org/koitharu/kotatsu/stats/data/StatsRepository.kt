@@ -32,18 +32,24 @@ class StatsRepository @Inject constructor(
 			System.currentTimeMillis() - TimeUnit.DAYS.toMillis(period.days.toLong())
 		}
 		val stats = db.getStatsDao().getDurationStats(fromDate, null, categories)
+		val chapterStats = db.getStatsDao().getChapterStats(fromDate, categories)
 		val result = ArrayList<StatsRecord>(stats.size)
-		var other = StatsRecord(null, 0)
+		var other = StatsRecord(null, 0, 0)
 		val total = stats.values.sum()
 		for ((mangaEntity, duration) in stats) {
 			val manga = mangaEntity.toManga(emptySet(), null)
 			val percent = duration.toDouble() / total
+			val chapters = chapterStats.entries
+				.firstOrNull { it.key.id == mangaEntity.id }
+				?.value
+				?.toInt() ?: 0
 			if (percent < 0.05) {
-				other = other.copy(duration = other.duration + duration)
+				other = other.copy(duration = other.duration + duration, chapters = other.chapters + chapters)
 			} else {
 				result += StatsRecord(
 					manga = manga,
 					duration = duration,
+					chapters = chapters,
 				)
 			}
 		}
@@ -74,8 +80,19 @@ class StatsRepository @Inject constructor(
 		return ReadingStatsSummary(
 			streakDays = timestamps.currentReadingStreak(),
 			totalPages = dao.getTotalReadPagesCount(),
+			totalChapters = dao.getTotalReadChaptersCount(),
 			totalDuration = dao.getTotalDuration(),
 		)
+	}
+
+	suspend fun getGenreStats(period: StatsPeriod, categories: Set<Long>): List<GenreStatsRecord> {
+		val fromDate = if (period == StatsPeriod.ALL) {
+			0L
+		} else {
+			System.currentTimeMillis() - TimeUnit.DAYS.toMillis(period.days.toLong())
+		}
+		return db.getStatsDao().getGenreChapterStats(fromDate, categories)
+			.map { GenreStatsRecord(title = it.title, chapters = it.chapters) }
 	}
 
 	suspend fun getMangaTimeline(mangaId: Long): NavigableMap<Long, Int> {
@@ -132,5 +149,11 @@ class StatsRepository @Inject constructor(
 data class ReadingStatsSummary(
 	val streakDays: Int,
 	val totalPages: Int,
+	val totalChapters: Int,
 	val totalDuration: Long,
+)
+
+data class GenreStatsRecord(
+	val title: String,
+	val chapters: Int,
 )

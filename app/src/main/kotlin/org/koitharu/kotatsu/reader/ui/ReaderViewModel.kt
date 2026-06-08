@@ -66,6 +66,7 @@ import org.koitharu.kotatsu.reader.domain.ChaptersLoader
 import org.koitharu.kotatsu.reader.domain.DetectReaderModeUseCase
 import org.koitharu.kotatsu.reader.domain.PageLoader
 import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
+import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import org.koitharu.kotatsu.reader.ui.pager.ReaderUiState
 import org.koitharu.kotatsu.scrobbling.discord.ui.DiscordRpc
 import org.koitharu.kotatsu.stats.domain.StatsCollector
@@ -110,6 +111,7 @@ class ReaderViewModel @Inject constructor(
     private var pageSaveJob: Job? = null
     private var bookmarkJob: Job? = null
     private var stateChangeJob: Job? = null
+    private var visibleReadingStates: List<ReaderState> = emptyList()
 
     init {
         mangaDetails.value = intent.manga?.let { MangaDetails(it) }
@@ -347,6 +349,10 @@ class ReaderViewModel @Inject constructor(
             if (pages.size != content.value.pages.size) {
                 return@launchJob // TODO
             }
+            val visibleStates = pages.visibleReaderStates(lowerPos, upperPos, selectedPos, scroll)
+            if (visibleStates.isNotEmpty()) {
+                visibleReadingStates = visibleStates
+            }
             pages.getOrNull(selectedPos.coerceIn(lowerPos, upperPos))?.let { page ->
                 readingState.update { cs ->
                     cs?.copy(chapterId = page.chapterId, page = page.index, scroll = scroll)
@@ -530,9 +536,38 @@ class ReaderViewModel @Inject constructor(
         )
         uiState.value = newState
         if (isIncognitoMode.value == false) {
-            statsCollector.onStateChanged(m.id, state)
+            statsCollector.onStateChanged(
+                mangaId = m.id,
+                state = state,
+                visibleStates = visibleReadingStates.ifEmpty { listOf(state) },
+            )
             discordRpc.updateRpc(m.toManga(), newState)
         }
+    }
+
+    private fun List<ReaderPage>.visibleReaderStates(
+        lowerPos: Int,
+        upperPos: Int,
+        selectedPos: Int,
+        scroll: Int,
+    ): List<ReaderState> {
+        if (isEmpty()) {
+            return emptyList()
+        }
+        val lower = lowerPos.coerceIn(indices)
+        val upper = upperPos.coerceIn(lower, lastIndex)
+        return subList(lower, upper + 1)
+            .asSequence()
+            .filter { it.index >= 0 }
+            .distinctBy { it.chapterId to it.index }
+            .map { page ->
+                ReaderState(
+                    chapterId = page.chapterId,
+                    page = page.index,
+                    scroll = if (indexOf(page) == selectedPos) scroll else 0,
+                )
+            }
+            .toList()
     }
 
     private fun computePercent(chapterId: Long, pageIndex: Int, pagesCountOverride: Int? = null): Float {

@@ -57,6 +57,7 @@ import org.koitharu.kotatsu.core.image.CoilMemoryCacheKey
 import org.koitharu.kotatsu.core.model.FavouriteCategory
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
+import org.koitharu.kotatsu.core.model.getLocalizedTitle
 import org.koitharu.kotatsu.core.model.getSummary
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.titleResId
@@ -122,6 +123,7 @@ import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.toTitleCase
+import org.koitharu.kotatsu.reader.ui.ReaderState
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
 import org.jsoup.Jsoup
 import java.text.NumberFormat
@@ -662,14 +664,12 @@ class DetailsActivity :
 	}
 
 	private fun onHistoryChanged(info: HistoryInfo, isLoading: Boolean) = with(infoBinding) {
-		viewBinding.buttonStartReading?.setText(
-			when {
-				isLoading -> R.string.loading_
-				info.canContinue -> R.string._continue
-				else -> R.string.start_reading
-			},
-		)
-		viewBinding.buttonStartReading?.isEnabled = !isLoading && info.isValid
+		viewBinding.buttonStartReading?.text = when {
+			isLoading -> getString(R.string.loading_)
+			info.canContinue -> getString(R.string.continue_reading_chapter_pattern, info.getCurrentChapterLabel())
+			else -> getString(R.string.start_reading)
+		}
+		viewBinding.buttonStartReading?.isEnabled = !isLoading && info.isValid && info.totalChapters != 0
 		textViewChapters.text = when {
 			isLoading -> getString(R.string.loading_)
 			info.currentChapter >= 0 -> getString(
@@ -700,6 +700,14 @@ class DetailsActivity :
 		hideLegacyDetailsTable()
 	}
 
+	private fun HistoryInfo.getCurrentChapterLabel(): String {
+		val chapterId = history?.chapterId ?: return getString(R.string.unknown)
+		val chapters = viewModel.mangaDetails.value?.allChapters.orEmpty()
+		val chapter = chapters.firstOrNull { it.id == chapterId } ?: return getString(R.string.unknown)
+		val chapterIndex = chapters.indexOfFirst { it.id == chapterId }.takeIf { it >= 0 } ?: currentChapter
+		return chapter.getLocalizedTitle(resources, chapterIndex + 1)
+	}
+
 	private fun onTagsChanged(tags: Collection<ChipsView.ChipModel>) {
 		viewBinding.chipsTags.isGone = true
 		val summary = tags
@@ -721,14 +729,22 @@ class DetailsActivity :
 
 	private fun openReader() {
 		val manga = viewModel.getMangaOrNull() ?: return
-		if (viewModel.historyInfo.value.isChapterMissing) {
+		val historyInfo = viewModel.historyInfo.value
+		if (historyInfo.isChapterMissing) {
 			Toast.makeText(this, R.string.chapter_is_missing, Toast.LENGTH_SHORT).show()
 			return
 		}
+		if (historyInfo.history == null && manga.chapters.isNullOrEmpty()) {
+			Toast.makeText(this, R.string.no_chapters, Toast.LENGTH_SHORT).show()
+			return
+		}
+		val readerState = historyInfo.history?.let(::ReaderState)
+			?: ReaderState(manga, viewModel.selectedBranchValue)
 		router.openReader(
 			ReaderIntent.Builder(this)
 				.manga(manga)
 				.branch(viewModel.selectedBranchValue)
+				.state(readerState)
 				.build(),
 		)
 	}

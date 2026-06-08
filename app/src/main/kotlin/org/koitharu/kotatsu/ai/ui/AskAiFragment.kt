@@ -483,7 +483,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			authors = authors.toSet(),
 			largeCoverUrl = largeCoverUrl,
 			description = description,
-			chapters = emptyList(),
+			chapters = null,
 			source = parserSource,
 		)
 	}

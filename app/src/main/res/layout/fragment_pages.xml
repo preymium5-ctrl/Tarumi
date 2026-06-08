@@ -10,7 +10,6 @@
 		android:id="@+id/recyclerView"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:layout_marginBottom="220dp"
 		android:clipToPadding="false"
 		android:orientation="vertical"
 		android:scrollIndicators="top"
@@ -18,13 +17,6 @@
 		app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
 		tools:listitem="@layout/item_page_thumb"
 		tools:spanCount="3" />
-
-	<include
-		android:id="@+id/comments_preview"
-		layout="@layout/layout_comments_preview"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:layout_gravity="bottom" />
 
 	<com.google.android.material.progressindicator.CircularProgressIndicator
 		android:id="@+id/progressBar"

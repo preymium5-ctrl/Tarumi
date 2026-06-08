@@ -185,7 +185,13 @@ class ReaderActionsView @JvmOverloads constructor(
 		binding.slider.isRtl = reversed != isRtl
 	}
 
-	fun setReaderInfo(chapterTitle: String, chapterNumber: Int, chaptersTotal: Int, pagesLoaded: Int) {
+	fun setReaderInfo(
+		chapterTitle: String,
+		chapterNumber: Int,
+		chaptersTotal: Int,
+		currentPage: Int,
+		totalPages: Int,
+	) {
 		binding.textViewReaderChapter.text = chapterTitle
 		binding.textViewReaderProgress.text = context.getString(
 			R.string.reader_chapter_progress_pattern,
@@ -193,8 +199,11 @@ class ReaderActionsView @JvmOverloads constructor(
 			chaptersTotal,
 		)
 		binding.textViewReaderMeta.text = context.getString(
-			R.string.reader_meta_pattern,
-			pagesLoaded,
+			R.string.reader_info_pattern,
+			chapterNumber.coerceAtLeast(0),
+			chaptersTotal.coerceAtLeast(chapterNumber),
+			currentPage.coerceAtLeast(0),
+			totalPages.coerceAtLeast(currentPage),
 		)
 	}
 

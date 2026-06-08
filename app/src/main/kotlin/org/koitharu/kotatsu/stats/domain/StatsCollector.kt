@@ -26,11 +26,18 @@ class StatsCollector @Inject constructor(
 	private val stats = LongSparseArray<Entry>(1)
 
 	@Synchronized
-	fun onStateChanged(mangaId: Long, state: ReaderState) {
+	fun onStateChanged(
+		mangaId: Long,
+		state: ReaderState,
+		visibleStates: Collection<ReaderState> = listOf(state),
+	) {
 		if (!settings.isStatsEnabled) {
 			return
 		}
 		val now = System.currentTimeMillis()
+		val visiblePages = visibleStates.ifEmpty { listOf(state) }
+			.mapTo(HashSet(visibleStates.size.coerceAtLeast(1))) { PageKey(it.chapterId, it.page) }
+		val visibleChapters = visiblePages.mapTo(HashSet(visiblePages.size)) { it.chapterId }
 		val entry = stats[mangaId]
 		if (entry == null) {
 			stats[mangaId] = Entry(
@@ -39,18 +46,24 @@ class StatsCollector @Inject constructor(
 					mangaId = mangaId,
 					startedAt = now,
 					duration = 0,
-					pages = 0,
+					pages = visiblePages.size,
+					chapters = visibleChapters.size.coerceAtLeast(1),
 				),
+				pages = visiblePages,
+				chapters = visibleChapters,
 			)
 			return
 		}
-		val pagesDelta = if (entry.state.page != state.page || entry.state.chapterId != state.chapterId) 1 else 0
+		val pagesDelta = visiblePages.count { entry.pages.add(it) }
+		val chaptersDelta = visibleChapters.count { entry.chapters.add(it) }
 		val newEntry = entry.copy(
+			state = state,
 			stats = StatsEntity(
 				mangaId = mangaId,
 				startedAt = entry.stats.startedAt,
 				duration = now - entry.stats.startedAt,
 				pages = entry.stats.pages + pagesDelta,
+				chapters = entry.stats.chapters + chaptersDelta,
 			),
 		)
 		stats[mangaId] = newEntry
@@ -59,6 +72,15 @@ class StatsCollector @Inject constructor(
 
 	@Synchronized
 	fun onPause(mangaId: Long) {
+		val entry = stats[mangaId]
+		if (entry != null) {
+			val now = System.currentTimeMillis()
+			commit(
+				entry.stats.copy(
+					duration = now - entry.stats.startedAt,
+				),
+			)
+		}
 		stats.remove(mangaId)
 	}
 
@@ -75,5 +97,12 @@ class StatsCollector @Inject constructor(
 	private data class Entry(
 		val state: ReaderState,
 		val stats: StatsEntity,
+		val pages: MutableSet<PageKey>,
+		val chapters: MutableSet<Long>,
+	)
+
+	private data class PageKey(
+		val chapterId: Long,
+		val page: Int,
 	)
 }

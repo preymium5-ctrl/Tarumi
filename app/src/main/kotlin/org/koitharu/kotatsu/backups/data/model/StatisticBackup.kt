@@ -10,6 +10,7 @@ class StatisticBackup(
 	@SerialName("started_at") val startedAt: Long,
 	@SerialName("duration") val duration: Long,
 	@SerialName("pages") val pages: Int,
+	@SerialName("chapters") val chapters: Int = 0,
 ) {
 
 	constructor(entity: StatsEntity) : this(
@@ -17,6 +18,7 @@ class StatisticBackup(
 		startedAt = entity.startedAt,
 		duration = entity.duration,
 		pages = entity.pages,
+		chapters = entity.chapters,
 	)
 
 	fun toEntity() = StatsEntity(
@@ -24,5 +26,6 @@ class StatisticBackup(
 		startedAt = startedAt,
 		duration = duration,
 		pages = pages,
+		chapters = chapters,
 	)
 }

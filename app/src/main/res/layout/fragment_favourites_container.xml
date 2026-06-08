@@ -15,6 +15,8 @@
 		android:layout_marginHorizontal="14dp"
 		android:layout_marginTop="6dp"
 		android:background="@drawable/bg_taru_home_feature"
+		android:clipToOutline="true"
+		android:elevation="2dp"
 		android:orientation="vertical"
 		android:paddingHorizontal="20dp"
 		android:paddingTop="22dp"
@@ -24,11 +26,10 @@
 			android:id="@+id/textView_library_title"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:fontFamily="sans-serif-medium"
-			android:letterSpacing="0.02"
+			android:fontFamily="sans-serif"
 			android:text="@string/library_title"
 			android:textColor="@color/taru_text_primary"
-			android:textSize="26sp" />
+			android:textSize="30sp" />
 
 		<TextView
 			android:id="@+id/textView_library_subtitle"
@@ -38,8 +39,8 @@
 			android:fontFamily="sans-serif"
 			android:lineSpacingExtra="2dp"
 			android:text="@string/library_subtitle"
-			android:textColor="@color/taru_text_secondary"
-			android:textSize="13sp" />
+			android:textColor="@color/taru_text_muted"
+			android:textSize="15sp" />
 
 		<LinearLayout
 			android:layout_width="match_parent"
