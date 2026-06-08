@@ -82,6 +82,7 @@ class StatsRepository @Inject constructor(
 			totalPages = dao.getTotalReadPagesCount(),
 			totalChapters = dao.getTotalReadChaptersCount(),
 			totalDuration = dao.getTotalDuration(),
+			appDuration = settings.appUsageDuration,
 		)
 	}
 
@@ -106,6 +107,7 @@ class StatsRepository @Inject constructor(
 
 	suspend fun clearStats() {
 		db.getStatsDao().clear()
+		settings.clearAppUsageStats()
 	}
 
 	fun observeHasStats(mangaId: Long): Flow<Boolean> = settings.observeAsFlow(AppSettings.KEY_STATS_ENABLED) {
@@ -151,6 +153,7 @@ data class ReadingStatsSummary(
 	val totalPages: Int,
 	val totalChapters: Int,
 	val totalDuration: Long,
+	val appDuration: Long = 0L,
 )
 
 data class GenreStatsRecord(

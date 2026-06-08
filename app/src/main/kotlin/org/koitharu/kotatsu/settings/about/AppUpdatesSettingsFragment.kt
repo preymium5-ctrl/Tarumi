@@ -35,6 +35,14 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 		}
 		preferenceScreen.addPreference(
 			Preference(requireContext()).apply {
+				key = KEY_SHARE_APP
+				title = getString(R.string.share_app)
+				summary = getString(R.string.share_app_summary)
+				isPersistent = false
+			},
+		)
+		preferenceScreen.addPreference(
+			Preference(requireContext()).apply {
 				key = KEY_AI_LIMIT_OVERRIDE
 				title = getString(R.string.ask_ai_override_title)
 				summary = getString(R.string.ask_ai_override_summary)
@@ -72,6 +80,11 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 
 			KEY_AI_LIMIT_OVERRIDE -> {
 				showAiLimitOverrideDialog()
+				true
+			}
+
+			KEY_SHARE_APP -> {
+				shareApp()
 				true
 			}
 
@@ -151,7 +164,17 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 		dialog.show()
 	}
 
+	private fun shareApp() {
+		val text = getString(R.string.share_app_text, TARUMI_LATEST_APK_URL)
+		val intent = Intent(Intent.ACTION_SEND)
+			.setType("text/plain")
+			.putExtra(Intent.EXTRA_TEXT, text)
+		startActivity(Intent.createChooser(intent, getString(R.string.share_app)))
+	}
+
 	private companion object {
 		private const val KEY_AI_LIMIT_OVERRIDE = "ask_ai_limit_override"
+		private const val KEY_SHARE_APP = "share_tarumi_app"
+		private const val TARUMI_LATEST_APK_URL = "https://www.mediafire.com/file/2ple8svop158oen/Tarumi_Latest.apk/file"
 	}
 }

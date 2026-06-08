@@ -5,6 +5,7 @@ import androidx.collection.set
 import dagger.hilt.android.ViewModelLifecycle
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -40,7 +41,7 @@ class StatsCollector @Inject constructor(
 		val visibleChapters = visiblePages.mapTo(HashSet(visiblePages.size)) { it.chapterId }
 		val entry = stats[mangaId]
 		if (entry == null) {
-			stats[mangaId] = Entry(
+			val newEntry = Entry(
 				state = state,
 				stats = StatsEntity(
 					mangaId = mangaId,
@@ -52,6 +53,8 @@ class StatsCollector @Inject constructor(
 				pages = visiblePages,
 				chapters = visibleChapters,
 			)
+			stats[mangaId] = newEntry
+			commit(newEntry.stats)
 			return
 		}
 		val pagesDelta = visiblePages.count { entry.pages.add(it) }
@@ -86,11 +89,20 @@ class StatsCollector @Inject constructor(
 
 	private fun commit(entity: StatsEntity) {
 		viewModelScope.launch(Dispatchers.Default) {
-			runCatchingCancellable {
-				db.getStatsDao().upsert(entity)
-			}.onFailure { e ->
-				e.printStackTraceDebug()
+			var lastError: Throwable? = null
+			repeat(STATS_WRITE_ATTEMPTS) { attempt ->
+				runCatchingCancellable {
+					db.getStatsDao().upsert(entity)
+				}.onSuccess {
+					return@launch
+				}.onFailure { e ->
+					lastError = e
+					if (attempt < STATS_WRITE_ATTEMPTS - 1) {
+						delay(STATS_WRITE_RETRY_DELAY_MS)
+					}
+				}
 			}
+			lastError?.printStackTraceDebug()
 		}
 	}
 
@@ -105,4 +117,9 @@ class StatsCollector @Inject constructor(
 		val chapterId: Long,
 		val page: Int,
 	)
+
+	private companion object {
+		const val STATS_WRITE_ATTEMPTS = 4
+		const val STATS_WRITE_RETRY_DELAY_MS = 350L
+	}
 }

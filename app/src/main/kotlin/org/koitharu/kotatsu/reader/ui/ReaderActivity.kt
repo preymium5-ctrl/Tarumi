@@ -466,6 +466,7 @@ class ReaderActivity :
             viewBinding.infoBar.isGone = isUiVisible || (!viewModel.isInfoBarEnabled.value)
             viewBinding.infoBar.isTimeVisible = isFullscreen
             updateScrollTimerButton()
+            updateEndChapterActions(viewModel.uiState.value)
             systemUiController.setSystemUiVisible(isUiVisible || !isFullscreen)
             hideReaderNavigationBar()
             viewBinding.root.requestApplyInsets()
@@ -656,7 +657,9 @@ class ReaderActivity :
         val isAtChapterEnd = uiState != null &&
             uiState.totalPages > 0 &&
             uiState.currentPage >= uiState.totalPages - 1 &&
-            (uiState.hasPreviousChapter() || uiState.hasNextChapter())
+            (uiState.hasPreviousChapter() || uiState.hasNextChapter()) &&
+            !viewBinding.appbarTop.isVisible &&
+            viewBinding.toolbarDocked?.isVisible != true
         if (actions.isVisible != isAtChapterEnd) {
             TransitionManager.beginDelayedTransition(viewBinding.root, Fade().addTarget(actions))
             actions.isVisible = isAtChapterEnd

@@ -629,7 +629,54 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_PAGES_SAVE_ASK, true)
 
 	val isStatsEnabled: Boolean
-		get() = prefs.getBoolean(KEY_STATS_ENABLED, false)
+		get() = prefs.getBoolean(KEY_STATS_ENABLED, true)
+
+	fun autoEnableStats() {
+		if (prefs.getBoolean(KEY_STATS_AUTO_ENABLED_V1, false)) {
+			return
+		}
+		prefs.edit {
+			putBoolean(KEY_STATS_ENABLED, true)
+			putBoolean(KEY_STATS_AUTO_ENABLED_V1, true)
+		}
+	}
+
+	val appUsageDuration: Long
+		get() {
+			val savedDuration = prefs.getLong(KEY_APP_USAGE_DURATION, 0L)
+			val startedAt = prefs.getLong(KEY_APP_USAGE_STARTED_AT, 0L)
+			return if (startedAt > 0L) {
+				savedDuration + (System.currentTimeMillis() - startedAt).coerceAtLeast(0L)
+			} else {
+				savedDuration
+			}
+		}
+
+	fun startAppUsageSession(now: Long = System.currentTimeMillis()) {
+		if (!isStatsEnabled || prefs.getLong(KEY_APP_USAGE_STARTED_AT, 0L) > 0L) {
+			return
+		}
+		prefs.edit { putLong(KEY_APP_USAGE_STARTED_AT, now) }
+	}
+
+	fun stopAppUsageSession(now: Long = System.currentTimeMillis()) {
+		val startedAt = prefs.getLong(KEY_APP_USAGE_STARTED_AT, 0L)
+		if (startedAt <= 0L) {
+			return
+		}
+		val duration = (now - startedAt).coerceAtLeast(0L)
+		prefs.edit {
+			putLong(KEY_APP_USAGE_DURATION, prefs.getLong(KEY_APP_USAGE_DURATION, 0L) + duration)
+			putLong(KEY_APP_USAGE_STARTED_AT, 0L)
+		}
+	}
+
+	fun clearAppUsageStats() {
+		prefs.edit {
+			putLong(KEY_APP_USAGE_DURATION, 0L)
+			putLong(KEY_APP_USAGE_STARTED_AT, if (isStatsEnabled) System.currentTimeMillis() else 0L)
+		}
+	}
 
 	val isAutoLocalChaptersCleanupEnabled: Boolean
 		get() = prefs.getBoolean(KEY_CHAPTERS_CLEAR_AUTO, false)
@@ -891,6 +938,9 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_PAGES_SAVE_DIR = "pages_dir"
 		const val KEY_PAGES_SAVE_ASK = "pages_dir_ask"
 		const val KEY_STATS_ENABLED = "stats_on"
+		const val KEY_STATS_AUTO_ENABLED_V1 = "stats_auto_enabled_v1"
+		const val KEY_APP_USAGE_DURATION = "app_usage_duration"
+		const val KEY_APP_USAGE_STARTED_AT = "app_usage_started_at"
 		const val KEY_FEED_HEADER = "feed_header"
 		const val KEY_SEARCH_SUGGESTION_TYPES = "search_suggest_types"
 		const val KEY_SOURCES_VERSION = "sources_version"

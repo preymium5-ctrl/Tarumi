@@ -5,6 +5,9 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.room.InvalidationTracker
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
@@ -81,12 +84,14 @@ open class BaseApp : Application(), Configuration.Provider {
 			return
 		}
 		val resetReaderModes = settings.applyTarumiReaderDefaults()
+		settings.autoEnableStats()
 		AppCompatDelegate.setDefaultNightMode(settings.theme)
 		// TLS 1.3 support for Android < 10
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
 			Security.insertProviderAt(Conscrypt.newProvider(), 1)
 		}
 		setupActivityLifecycleCallbacks()
+		ProcessLifecycleOwner.get().lifecycle.addObserver(AppUsageObserver())
 		processLifecycleScope.launch {
 			ACRA.errorReporter.putCustomData("isOriginalApp", appValidator.isOriginalApp.getOrNull().toString())
 			ACRA.errorReporter.putCustomData("isMiui", RomCompat.isMiui.getOrNull().toString())
@@ -99,6 +104,17 @@ open class BaseApp : Application(), Configuration.Provider {
 			localStorageChanges.collect(localMangaIndexProvider.get())
 		}
 		workScheduleManager.init()
+	}
+
+	private inner class AppUsageObserver : DefaultLifecycleObserver {
+
+		override fun onStart(owner: LifecycleOwner) {
+			settings.startAppUsageSession()
+		}
+
+		override fun onStop(owner: LifecycleOwner) {
+			settings.stopAppUsageSession()
+		}
 	}
 
 	override fun attachBaseContext(base: Context) {

@@ -9,11 +9,13 @@ import android.view.ViewGroup
 import android.view.ViewStub
 import android.widget.CompoundButton
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -33,6 +35,7 @@ import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.KotatsuColors
 import org.koitharu.kotatsu.core.util.ext.end
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
@@ -81,11 +84,10 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		}
 		viewModel.summary.observe(this) { summary ->
 			viewBinding.textStreak.text = getString(R.string.stats_days_pattern, summary.streakDays)
-			viewBinding.textPagesRead.text = NumberFormat.getIntegerInstance(Locale.US).format(summary.totalPages)
+			viewBinding.textPagesRead.text = summary.appDuration.formatHoursPlayed()
 			viewBinding.textChaptersRead?.text = NumberFormat.getIntegerInstance(Locale.US).format(summary.totalChapters)
 			viewBinding.textReadingTime.text = summary.totalDuration.formatCompactDuration()
 		}
-		viewModel.favoriteCategories.observe(this, ::createCategoriesChips)
 		viewModel.genreStats.observe(this, ::renderGenreStats)
 		viewModel.onActionDone.observeEvent(this, ReversibleActionObserver(viewBinding.recyclerView))
 		viewModel.readingStats.observe(this) {
@@ -132,24 +134,51 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 	private fun createGenreLegendRow(record: GenreStatsRecord, color: Int, total: Int): View {
 		val percent = (record.chapters * 100f / total).toInt().coerceAtLeast(1)
 		return LinearLayout(this).apply {
-			gravity = Gravity.CENTER_VERTICAL
-			orientation = LinearLayout.HORIZONTAL
-			setPadding(0, 4.dp(), 0, 0)
+			orientation = LinearLayout.VERTICAL
+			setPadding(0, 12.dp(), 0, 0)
 			addView(
-				View(context).apply { setBackgroundColor(color) },
-				LinearLayout.LayoutParams(12.dp(), 12.dp()).apply {
-					marginEnd = 8.dp()
+				LinearLayout(context).apply {
+					gravity = Gravity.CENTER_VERTICAL
+					orientation = LinearLayout.HORIZONTAL
+					addView(
+						View(context).apply { setBackgroundColor(color) },
+						LinearLayout.LayoutParams(12.dp(), 12.dp()).apply {
+							marginEnd = 8.dp()
+						},
+					)
+					addView(
+						TextView(context).apply {
+							text = getString(R.string.genre_stats_pattern, record.title, record.chapters, percent)
+							setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
+							textSize = 13f
+							maxLines = 1
+							ellipsize = android.text.TextUtils.TruncateAt.END
+						},
+						LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+					)
+					addView(
+						TextView(context).apply {
+							text = getString(R.string.genre_percent_pattern, percent)
+							setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+							textSize = 12f
+						},
+					)
 				},
+				LinearLayout.LayoutParams.MATCH_PARENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT,
 			)
 			addView(
-				TextView(context).apply {
-					text = getString(R.string.genre_stats_pattern, record.title, record.chapters, percent)
-					setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
-					textSize = 12f
-					maxLines = 1
-					ellipsize = android.text.TextUtils.TruncateAt.END
+				ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+					max = 100
+					progress = percent
+					progressTintList = android.content.res.ColorStateList.valueOf(color)
+					progressBackgroundTintList = android.content.res.ColorStateList.valueOf(
+						ColorUtils.setAlphaComponent(getThemeColor(com.google.android.material.R.attr.colorOnSurface), 28),
+					)
 				},
-				LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+				LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 8.dp()).apply {
+					topMargin = 6.dp()
+				},
 			)
 		}
 	}
@@ -306,6 +335,17 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 			hours > 0L -> "${hours}h"
 			minutes > 0L -> "${minutes}m"
 			else -> getString(R.string.less_than_minute)
+		}
+	}
+
+	private fun Long.formatHoursPlayed(): String {
+		val hours = this / TimeUnit.HOURS.toMillis(1)
+		val tenths = ((this % TimeUnit.HOURS.toMillis(1)) * 10 / TimeUnit.HOURS.toMillis(1)).toInt()
+		return if (hours > 0L) {
+			"$hours.${tenths}h"
+		} else {
+			val minutes = TimeUnit.MILLISECONDS.toMinutes(this)
+			if (minutes > 0L) "${minutes}m" else getString(R.string.less_than_minute)
 		}
 	}
 

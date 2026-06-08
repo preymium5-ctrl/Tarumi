@@ -196,6 +196,9 @@
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="check_app_updates">Check app updates</string>
+    <string name="share_app">Share this app to your friend</string>
+    <string name="share_app_summary">Share the latest Tarumi APK link through social media or messaging apps.</string>
+    <string name="share_app_text">Download the latest Tarumi app: %1$s</string>
     <string name="update_tutorial_title">New Tarumi update available</string>
     <string name="update_tutorial_message">Tarumi %1$s is available now. Open Check app updates to download the latest version, read what changed, and keep your app up to date.</string>
     <string name="open_settings">Open Settings</string>
@@ -1060,11 +1063,12 @@
     <string name="smart_recommendation">Smart Recommendation</string>
     <string name="stats">Stats</string>
     <string name="reading_streak">Reading streak</string>
-    <string name="total_pages_read">Pages read</string>
+    <string name="total_pages_read">Hours played</string>
     <string name="total_chapters_read">Chapters read</string>
     <string name="total_reading_time">Reading time</string>
     <string name="stats_days_pattern">%1$d days</string>
     <string name="stats_manga_summary_pattern">%1$s - %2$d chapters</string>
     <string name="genre_breakdown">Genre breakdown</string>
     <string name="genre_stats_pattern">%1$s - %2$d chapters - %3$d%%</string>
+    <string name="genre_percent_pattern">%1$d%%</string>
 </resources>
