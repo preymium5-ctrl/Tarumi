@@ -112,9 +112,16 @@ private class ContinueReadingAdapter : RecyclerView.Adapter<ContinueReadingAdapt
 			val total = history.chaptersCount.takeIf { it > 0 } ?: manga.chapters.orEmpty().size
 			val chapters = manga.chapters.orEmpty()
 			val current = chapters.findById(history.chapterId)?.let { chapter ->
-				chapters.indexOfFirst { it.id == chapter.id }.takeIf { it >= 0 }?.plus(1)
-			} ?: 0
-			return if (total > 0 && current > 0) {
+				chapter.numberString()
+					?.takeIf { it.isNotBlank() }
+					?: chapters.asSequence()
+						.sortedWith(compareBy({ it.number }, { it.uploadDate }))
+						.indexOfFirst { it.id == chapter.id }
+						.takeIf { it >= 0 }
+						?.plus(1)
+						?.toString()
+			}
+			return if (total > 0 && current != null) {
 				"$current / $total"
 			} else if (total > 0) {
 				"- / $total"
