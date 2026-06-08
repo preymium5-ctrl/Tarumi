@@ -137,6 +137,11 @@
 			android:label="@string/trending_title"
 			android:parentActivityName="org.koitharu.kotatsu.main.ui.MainActivity" />
 		<activity
+			android:name="org.koitharu.kotatsu.home.ui.ContinueReadingActivity"
+			android:exported="false"
+			android:label="@string/continue_reading"
+			android:parentActivityName="org.koitharu.kotatsu.main.ui.MainActivity" />
+		<activity
 			android:name="org.koitharu.kotatsu.tracker.ui.updates.UpdatesActivity"
 			android:label="@string/updates" />
 		<activity

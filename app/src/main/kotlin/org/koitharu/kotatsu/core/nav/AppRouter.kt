@@ -252,6 +252,8 @@ class AppRouter private constructor(
 
     fun openHistory() = startActivity(HistoryActivity::class.java)
 
+    fun openContinueReading() = startActivity(org.koitharu.kotatsu.home.ui.ContinueReadingActivity::class.java)
+
     fun openTrending() = startActivity(org.koitharu.kotatsu.home.ui.TrendingActivity::class.java)
 
     fun openFavorites() = startActivity(FavouritesActivity::class.java)

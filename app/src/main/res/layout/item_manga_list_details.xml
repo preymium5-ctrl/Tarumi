@@ -6,7 +6,7 @@
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
 	android:layout_marginHorizontal="10dp"
-	android:layout_marginVertical="8dp"
+	android:layout_marginVertical="0dp"
 	android:background="@drawable/bg_taru_library_card"
 	android:clipChildren="false"
 	android:minHeight="158dp"

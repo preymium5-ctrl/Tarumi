@@ -47,8 +47,8 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 	override fun onViewBindingCreated(binding: FragmentHomeBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
 		binding.buttonSeeMore.setOnClickListener { router.openTrending() }
-		binding.buttonContinueReadingAll.setOnClickListener { router.openHistory() }
-		binding.buttonContinueReadingSeeAll.setOnClickListener { router.openHistory() }
+		binding.buttonContinueReadingAll.setOnClickListener { router.openContinueReading() }
+		binding.buttonContinueReadingSeeAll.setOnClickListener { router.openContinueReading() }
 		viewModel.continueReadingComics.observe(viewLifecycleOwner, ::renderContinueReading)
 		viewModel.featuredComics.observe(viewLifecycleOwner, ::renderFeaturedComics)
 		viewModel.trendingComics.observe(viewLifecycleOwner, ::renderTrendingComics)
