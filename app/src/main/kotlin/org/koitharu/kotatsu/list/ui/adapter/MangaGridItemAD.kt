@@ -28,6 +28,7 @@ fun mangaGridItemAD(
 		binding.progressView.isVisible = false
 		with(binding.iconsView) {
 			clearIcons()
+			if (item.counter > 0) addIcon(R.drawable.ic_updated)
 			if (item.isPinned) addIcon(R.drawable.ic_pin_small)
 			if (item.isSaved) addIcon(R.drawable.ic_storage)
 			if (item.isFavorite) addIcon(R.drawable.ic_heart_outline)

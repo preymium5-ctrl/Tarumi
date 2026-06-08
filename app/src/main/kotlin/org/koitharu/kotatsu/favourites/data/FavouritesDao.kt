@@ -249,13 +249,14 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT DISTINCT manga_id FROM favourites WHERE pinned = 1 AND deleted_at = 0")
 	abstract suspend fun findAllPinnedIds(): List<Long>
 
-	private fun getOrderBy(sortOrder: ListSortOrder) = "favourites.pinned DESC, " + when (sortOrder) {
+	private fun getOrderBy(sortOrder: ListSortOrder) = "favourites.pinned DESC, " +
+		"IFNULL((SELECT chapters_new FROM tracks WHERE tracks.manga_id = manga.manga_id), 0) DESC, " + when (sortOrder) {
 		ListSortOrder.RATING -> "manga.rating DESC"
 		ListSortOrder.NEWEST -> "favourites.created_at DESC"
 		ListSortOrder.OLDEST -> "favourites.created_at ASC"
 		ListSortOrder.ALPHABETIC -> "manga.title ASC"
 		ListSortOrder.ALPHABETIC_REVERSE -> "manga.title DESC"
-		ListSortOrder.NEW_CHAPTERS -> "IFNULL((SELECT chapters_new FROM tracks WHERE tracks.manga_id = manga.manga_id), 0) DESC"
+		ListSortOrder.NEW_CHAPTERS -> "IFNULL((SELECT last_chapter_date FROM tracks WHERE tracks.manga_id = manga.manga_id), 0) DESC"
 		ListSortOrder.PROGRESS -> "IFNULL((SELECT percent FROM history WHERE history.manga_id = manga.manga_id), 0) DESC"
 		ListSortOrder.UNREAD -> "IFNULL((SELECT percent FROM history WHERE history.manga_id = manga.manga_id), 0) ASC"
 		ListSortOrder.LAST_READ -> "IFNULL((SELECT updated_at FROM history WHERE history.manga_id = manga.manga_id), 0) DESC"

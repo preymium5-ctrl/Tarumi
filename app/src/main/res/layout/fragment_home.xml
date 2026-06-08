@@ -19,6 +19,57 @@
 		android:layout_height="wrap_content"
 		android:orientation="vertical">
 
+		<LinearLayout
+			android:id="@+id/continueReadingSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="0dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp"
+			android:visibility="gone"
+			tools:visibility="visible">
+
+			<TextView
+				android:id="@+id/buttonContinueReadingAll"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:background="?attr/selectableItemBackground"
+				android:drawablePadding="4dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center_vertical"
+				android:paddingVertical="4dp"
+				android:text="@string/continue_reading"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="20sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+
+			<LinearLayout
+				android:id="@+id/continueReadingList"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:orientation="vertical" />
+
+			<TextView
+				android:id="@+id/buttonContinueReadingSeeAll"
+				android:layout_width="wrap_content"
+				android:layout_height="38dp"
+				android:layout_gravity="end"
+				android:layout_marginTop="12dp"
+				android:background="@drawable/bg_taru_page_button"
+				android:drawablePadding="6dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center"
+				android:minWidth="98dp"
+				android:paddingHorizontal="14dp"
+				android:text="@string/see_all"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="14sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+		</LinearLayout>
+
 		<!-- Featured comics card -->
 		<LinearLayout
 			android:layout_width="match_parent"

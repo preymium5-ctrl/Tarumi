@@ -40,6 +40,8 @@
     <string name="recent_updates_summary">Fresh chapter drops, grouped by title so it is quicker to scan and jump back in.</string>
     <string name="recent_back">Back</string>
     <string name="recent_next">Next</string>
+    <string name="continue_reading">Continue Reading</string>
+    <string name="continue_reading_meta_pattern">%1$s / %2$s - %3$d%% &#8226; %4$s</string>
     <string name="start_reading">Start reading</string>
     <string name="continue_reading_chapter_pattern">Continue reading %s</string>
     <string name="chapter_feed">Chapter feed</string>
@@ -52,6 +54,8 @@
     <string name="error_occurred">An error occurred</string>
     <string name="network_error">Network error</string>
     <string name="details">Details</string>
+    <string name="chapter">Chapter</string>
+    <string name="chapter_number_pattern">Chapter %1$d</string>
     <string name="chapters">Chapters</string>
     <string name="list">Liste</string>
     <string name="detailed_list">Detailed list</string>
@@ -395,7 +399,7 @@
     <string name="incognito_mode">Incognito mode</string>
     <string name="no_chapters">No chapters</string>
     <string name="automatic_scroll">Automatic scroll</string>
-    <string name="reader_info_pattern">Ch. %1$d/%2$d Pg. %3$d/%4$d</string>
+    <string name="reader_info_pattern">Ch. %1$d/%2$d - %3$d%%</string>
     <string name="reader_chapters_list">Chapter list</string>
     <string name="reader_info_bar">Show information bar in reader</string>
     <string name="comics_archive">Comics archive</string>
@@ -1058,6 +1062,7 @@
 	<string name="default_sources">Default</string>
     <string name="trending_title">Trending</string>
     <string name="see_more">See more</string>
+    <string name="see_all">See all</string>
     <string name="manhua_recommendation">Manhua Recommendation</string>
     <string name="manga_recommendation">Manga Recommendation</string>
     <string name="smart_recommendation">Smart Recommendation</string>

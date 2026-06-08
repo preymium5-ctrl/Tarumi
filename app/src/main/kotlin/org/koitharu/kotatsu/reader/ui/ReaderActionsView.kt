@@ -29,6 +29,7 @@ import org.koitharu.kotatsu.databinding.LayoutReaderActionsBinding
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_PAGES
 import org.koitharu.kotatsu.reader.ui.ReaderControlDelegate.OnInteractionListener
+import kotlin.math.roundToInt
 import javax.inject.Inject
 import com.google.android.material.R as materialR
 
@@ -198,12 +199,17 @@ class ReaderActionsView @JvmOverloads constructor(
 			chapterNumber,
 			chaptersTotal,
 		)
+		val chapterPercent = if (totalPages <= 1) {
+			100
+		} else {
+			val currentPageZeroBased = (currentPage - 1).coerceAtLeast(0)
+			(currentPageZeroBased * 100f / (totalPages - 1)).roundToInt().coerceIn(0, 100)
+		}
 		binding.textViewReaderMeta.text = context.getString(
 			R.string.reader_info_pattern,
 			chapterNumber.coerceAtLeast(0),
 			chaptersTotal.coerceAtLeast(chapterNumber),
-			currentPage.coerceAtLeast(0),
-			totalPages.coerceAtLeast(currentPage),
+			chapterPercent,
 		)
 	}
 

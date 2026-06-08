@@ -1,12 +1,15 @@
 package org.koitharu.kotatsu.home.ui
 
 import android.content.Context
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +22,7 @@ import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.history.data.HistoryRepository
+import org.koitharu.kotatsu.history.domain.model.MangaWithHistory
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
@@ -30,6 +34,7 @@ import org.koitharu.kotatsu.parsers.util.await
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.plus
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -43,6 +48,14 @@ class HomeViewModel @Inject constructor(
 
 	private val _featuredComics = MutableStateFlow<List<Manga>>(emptyList())
 	val featuredComics: StateFlow<List<Manga>> = _featuredComics
+
+	val continueReadingComics: StateFlow<List<MangaWithHistory>> = historyRepository
+		.observeAllWithHistory(
+			order = org.koitharu.kotatsu.list.domain.ListSortOrder.LAST_READ,
+			filterOptions = emptySet(),
+			limit = CONTINUE_READING_LIMIT,
+		)
+		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
 
 	private val _trendingComics = MutableStateFlow<List<Manga>>(emptyList())
 	val trendingComics: StateFlow<List<Manga>> = _trendingComics
@@ -772,6 +785,7 @@ class HomeViewModel @Inject constructor(
 		var isSmartRecommendationsLoading = false
 
 		const val FEATURED_LIMIT = 15
+		const val CONTINUE_READING_LIMIT = 6
 		const val FEATURED_POOL_LIMIT = 60
 		const val TRENDING_LIMIT = 10
 		const val RECOMMENDATION_LIMIT = 20

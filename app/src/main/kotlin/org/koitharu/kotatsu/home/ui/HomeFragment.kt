@@ -16,6 +16,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.getLocalizedTitle
+import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseFragment
 import org.koitharu.kotatsu.core.util.ext.consumeAllSystemBarsInsets
@@ -23,9 +24,12 @@ import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
 import org.koitharu.kotatsu.databinding.FragmentHomeBinding
+import org.koitharu.kotatsu.history.domain.model.MangaWithHistory
 import org.koitharu.kotatsu.image.ui.CoverImageView
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
+import org.koitharu.kotatsu.parsers.util.findById
+import org.koitharu.kotatsu.reader.ui.ReaderState
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -43,6 +47,9 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 	override fun onViewBindingCreated(binding: FragmentHomeBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
 		binding.buttonSeeMore.setOnClickListener { router.openTrending() }
+		binding.buttonContinueReadingAll.setOnClickListener { router.openHistory() }
+		binding.buttonContinueReadingSeeAll.setOnClickListener { router.openHistory() }
+		viewModel.continueReadingComics.observe(viewLifecycleOwner, ::renderContinueReading)
 		viewModel.featuredComics.observe(viewLifecycleOwner, ::renderFeaturedComics)
 		viewModel.trendingComics.observe(viewLifecycleOwner, ::renderTrendingComics)
 		viewModel.smartRecommendationsLoading.observe(viewLifecycleOwner) { isLoading ->
@@ -83,6 +90,44 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			bottom = barsInsets.bottom + HOME_BOTTOM_CONTENT_SPACE_DP.dp(v),
 		)
 		return insets.consumeAllSystemBarsInsets()
+	}
+
+	private fun renderContinueReading(items: List<MangaWithHistory>) {
+		val binding = viewBinding ?: return
+		binding.continueReadingSection.isVisible = items.isNotEmpty()
+		binding.buttonContinueReadingSeeAll.isVisible = items.size >= CONTINUE_READING_LIMIT
+		if (items.isEmpty()) {
+			binding.continueReadingList.removeAllViews()
+			return
+		}
+		val context = binding.continueReadingList.context
+		val inflater = LayoutInflater.from(context)
+		val rowSpacingPx = 6.dp(binding.root)
+		binding.continueReadingList.removeAllViews()
+		for ((index, item) in items.take(CONTINUE_READING_LIMIT).withIndex()) {
+			val manga = item.manga
+			val itemView = inflater.inflate(R.layout.item_home_continue_reading, binding.continueReadingList, false)
+			itemView.layoutParams = LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.MATCH_PARENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT,
+			).apply {
+				if (index > 0) topMargin = rowSpacingPx
+			}
+			itemView.findViewById<CoverImageView>(R.id.imageView_cover)
+				.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
+			itemView.findViewById<TextView>(R.id.textView_title).text = manga.title
+			itemView.findViewById<TextView>(R.id.textView_subtitle).text = item.continueReadingSubtitle()
+			itemView.contentDescription = manga.title
+			itemView.setOnClickListener {
+				router.openReader(
+					ReaderIntent.Builder(context)
+						.manga(manga)
+						.state(ReaderState(item.history))
+						.build(),
+				)
+			}
+			binding.continueReadingList.addView(itemView)
+		}
 	}
 
 	private fun renderFeaturedComics(comics: List<Manga>) {
@@ -424,11 +469,38 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		}
 	}
 
+	private fun MangaWithHistory.continueReadingSubtitle(): String {
+		val totalChapters = history.chaptersCount
+			.takeIf { it > 0 }
+			?: manga.chapters?.size?.takeIf { it > 0 }
+			?: 0
+		val chapter = manga.chapters?.findById(history.chapterId)
+		val chapterTitle = chapter?.getLocalizedTitle(resources) ?: run {
+			val chapterNumber = (history.percent * totalChapters)
+				.toInt()
+				.coerceIn(1, totalChapters.coerceAtLeast(1))
+			getString(R.string.chapter_number_pattern, chapterNumber)
+		}
+		val totalTitle = totalChapters.takeIf { it > 0 }?.toString() ?: getString(R.string.unknown)
+		val progress = (history.percent * 100f).toInt().coerceIn(0, 100)
+		return getString(
+			R.string.continue_reading_meta_pattern,
+			chapterTitle,
+			totalTitle,
+			progress,
+			history.updatedAt.formatRelativeTime(),
+		)
+	}
+
 	private fun MangaChapter.formatRelativeTime(): String {
 		if (uploadDate <= 0L) {
 			return getString(R.string.updated)
 		}
-		val minutes = Instant.ofEpochMilli(uploadDate).until(Instant.now(), ChronoUnit.MINUTES)
+		return Instant.ofEpochMilli(uploadDate).formatRelativeTime()
+	}
+
+	private fun Instant.formatRelativeTime(): String {
+		val minutes = until(Instant.now(), ChronoUnit.MINUTES)
 		return when {
 			minutes < 3 -> getString(R.string.just_now)
 			minutes < 60 -> resources.getQuantityStringSafe(R.plurals.minutes_ago, minutes.toInt(), minutes.toInt())
@@ -451,6 +523,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 	private companion object {
 		const val COLUMNS = 2
 		const val FEATURED_LIMIT = 15
+		const val CONTINUE_READING_LIMIT = 6
 		const val HOME_BOTTOM_CONTENT_SPACE_DP = 178
 		const val RECENT_PAGE_SIZE = 10
 		const val RECENT_PAGE_COUNT = 6
