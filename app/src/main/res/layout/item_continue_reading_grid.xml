@@ -31,8 +31,8 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_gravity="top|start"
-			android:layout_marginStart="2dp"
-			android:layout_marginTop="-14dp"
+			android:layout_marginStart="4dp"
+			android:layout_marginTop="3dp"
 			android:ellipsize="end"
 			android:fontFamily="sans-serif-medium"
 			android:maxLines="1"
@@ -40,7 +40,7 @@
 			android:shadowDx="0"
 			android:shadowDy="1"
 			android:shadowRadius="2"
-			android:textColor="@color/taru_text_primary"
+			android:textColor="#FFFFFF"
 			android:textSize="11sp"
 			tools:text="124 / 125" />
 
