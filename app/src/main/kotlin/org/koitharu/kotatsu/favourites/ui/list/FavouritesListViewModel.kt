@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
+import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
@@ -38,6 +40,8 @@ import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.list.ui.model.toErrorState
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import org.koitharu.kotatsu.local.data.LocalStorageChanges
@@ -45,6 +49,7 @@ import org.koitharu.kotatsu.local.domain.model.LocalManga
 import kotlinx.coroutines.flow.SharedFlow
 
 private const val PAGE_SIZE = 16
+private const val CHAPTER_BACKFILL_BATCH_SIZE = 4
 
 @HiltViewModel
 class FavouritesListViewModel @Inject constructor(
@@ -54,7 +59,8 @@ class FavouritesListViewModel @Inject constructor(
 	private val markAsReadUseCase: MarkAsReadUseCase,
 	quickFilterFactory: FavoritesListQuickFilter.Factory,
 	settings: AppSettings,
-	mangaDataRepository: MangaDataRepository,
+	private val mangaDataRepository: MangaDataRepository,
+	private val mangaRepositoryFactory: MangaRepository.Factory,
 	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>,
 ) : MangaListViewModel(settings, mangaDataRepository, localStorageChanges), QuickFilterListener {
 
@@ -63,6 +69,7 @@ class FavouritesListViewModel @Inject constructor(
 	private val refreshTrigger = MutableStateFlow(Any())
 	private val limit = MutableStateFlow(PAGE_SIZE)
 	private val isPaginationReady = AtomicBoolean(false)
+	private val chapterBackfillIds = Collections.synchronizedSet(HashSet<Long>())
 
 	override val listMode = MutableStateFlow(ListMode.DETAILED_LIST)
 
@@ -148,10 +155,41 @@ class FavouritesListViewModel @Inject constructor(
 		if (isEmpty()) {
 			return listOf(getEmptyState(hasFilters = false))
 		}
+		scheduleChapterBackfill(this)
 		val pinnedIds = repository.getPinnedIds(categoryId)
 		val result = ArrayList<ListModel>(size + 1)
 		mangaListMapper.toListModelList(result, this, mode, MangaListMapper.NO_FAVORITE, pinnedIds)
 		return result
+	}
+
+	private fun scheduleChapterBackfill(items: List<Manga>) {
+		val candidates = items.asSequence()
+			.filterNot { it.isLocal }
+			.filter { chapterBackfillIds.add(it.id) }
+			.take(CHAPTER_BACKFILL_BATCH_SIZE)
+			.toList()
+		if (candidates.isEmpty()) {
+			return
+		}
+		launchJob(Dispatchers.IO) {
+			var changed = false
+			for (manga in candidates) {
+				val cached = mangaDataRepository.findMangaById(manga.id, withChapters = true)
+				if (!cached?.chapters.isNullOrEmpty()) {
+					continue
+				}
+				val details = runCatchingCancellable {
+					mangaRepositoryFactory.create(manga.source).getDetails(manga)
+				}.getOrNull() ?: continue
+				if (!details.chapters.isNullOrEmpty()) {
+					mangaDataRepository.updateChapters(details)
+					changed = true
+				}
+			}
+			if (changed) {
+				refreshTrigger.value = Any()
+			}
+		}
 	}
 
 	private fun observeFavorites() = if (categoryId == NO_ID) {

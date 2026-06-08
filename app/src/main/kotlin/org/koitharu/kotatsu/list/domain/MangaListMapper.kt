@@ -9,9 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.chaptersCount
 import org.koitharu.kotatsu.core.model.getLocalizedTitle
-import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
-import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
 import org.koitharu.kotatsu.core.ui.model.MangaOverride
@@ -28,7 +26,6 @@ import org.koitharu.kotatsu.local.data.index.LocalMangaIndex
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.findById
-import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.tracker.domain.TrackingRepository
 import org.koitharu.kotatsu.tracker.domain.model.TrackingLogItem
 import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
@@ -43,7 +40,6 @@ class MangaListMapper @Inject constructor(
 	private val favouritesRepository: FavouritesRepository,
 	private val localMangaIndex: LocalMangaIndex,
 	private val dataRepository: MangaDataRepository,
-	private val mangaRepositoryFactory: MangaRepository.Factory,
 ) {
 
 
@@ -124,10 +120,7 @@ class MangaListMapper @Inject constructor(
 		val progress = getProgress(manga.id, options)
 		val history = historyRepository.getOne(manga)
 		val mangaWithChapters = if (manga.chapters.isNullOrEmpty()) {
-			dataRepository.findMangaById(manga.id, withChapters = true)
-				?.takeIf { !it.chapters.isNullOrEmpty() }
-				?: fetchMangaDetails(manga)
-				?: manga
+			dataRepository.findMangaById(manga.id, withChapters = true) ?: manga
 		} else {
 			manga
 		}
@@ -162,17 +155,6 @@ class MangaListMapper @Inject constructor(
 			canContinue = history != null && (!ReadingProgress.isCompleted(history.percent) || counter > 0),
 			statusTitle = favouritesRepository.getStatusTitle(manga.id),
 		)
-	}
-
-	private suspend fun fetchMangaDetails(manga: Manga): Manga? {
-		if (manga.isLocal) {
-			return null
-		}
-		return runCatchingCancellable {
-			mangaRepositoryFactory.create(manga.source).getDetails(manga)
-		}.getOrNull()?.also {
-			dataRepository.updateChapters(it)
-		}
 	}
 
 	private suspend fun toGridModel(
