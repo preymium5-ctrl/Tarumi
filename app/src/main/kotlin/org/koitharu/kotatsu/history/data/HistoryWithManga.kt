@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.history.data
 import androidx.room.Embedded
 import androidx.room.Junction
 import androidx.room.Relation
+import org.koitharu.kotatsu.core.db.entity.ChapterEntity
 import org.koitharu.kotatsu.core.db.entity.MangaEntity
 import org.koitharu.kotatsu.core.db.entity.MangaTagsEntity
 import org.koitharu.kotatsu.core.db.entity.TagEntity
@@ -20,4 +21,9 @@ class HistoryWithManga(
 		associateBy = Junction(MangaTagsEntity::class)
 	)
 	val tags: List<TagEntity>,
+	@Relation(
+		parentColumn = "manga_id",
+		entityColumn = "manga_id"
+	)
+	val chapters: List<ChapterEntity>,
 )

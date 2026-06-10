@@ -151,6 +151,7 @@
 		app:layout_constraintTop_toBottomOf="@id/textView_current_chapter"
 		tools:text="17 / 50" />
 
+
 	<TextView
 		android:id="@+id/textView_tags"
 		android:layout_width="1dp"
@@ -171,9 +172,12 @@
 
 	<org.koitharu.kotatsu.core.ui.widgets.BadgeView
 		android:id="@+id/badge"
-		android:layout_width="1dp"
-		android:layout_height="1dp"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_margin="4dp"
 		android:visibility="gone"
+		app:layout_constraintStart_toStartOf="@id/imageView_cover"
+		app:layout_constraintTop_toTopOf="@id/imageView_cover"
 		app:maxCharacterCount="@integer/manga_badge_max_character_count" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

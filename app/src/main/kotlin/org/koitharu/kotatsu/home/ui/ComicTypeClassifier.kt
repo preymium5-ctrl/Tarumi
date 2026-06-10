@@ -29,14 +29,15 @@ fun Manga.detectComicType(): ComicType {
 	}.map { it.lowercase() }
 
 	val hasManhuaLabel = labels.any {
-		it.contains("manhua") || it.contains("manhuaga") || it.contains("manhuaus") || it.contains("manhuafast")
+		(it.contains("manhua") && !it.contains("manhuafast")) || it.contains("manhuaga") || it.contains("manhuaus")
 	}
 	val hasManhwaLabel = labels.any {
 		it.contains("manhwa") ||
 			it.contains("webtoon") ||
 			it.contains("asura") ||
 			it.contains("demonicscans") ||
-			it.contains("stonescape")
+			it.contains("stonescape") ||
+			it.contains("manhuafast")
 	}
 	val hasMangaLabel = labels.any {
 		it.contains("manga") ||

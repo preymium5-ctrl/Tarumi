@@ -54,7 +54,6 @@ class WelcomeSheet : BaseAdaptiveSheet<SheetWelcomeBinding>(), ChipsView.OnChipC
 		binding.chipsLocales.onChipClickListener = this
 		binding.chipsType.onChipClickListener = this
 		binding.chipBackup.setOnClickListener(this)
-		binding.chipSync.setOnClickListener(this)
 		binding.chipDirectories.setOnClickListener(this)
 
 		viewModel.locales.observe(viewLifecycleOwner, ::onLocalesChanged)
@@ -84,10 +83,6 @@ class WelcomeSheet : BaseAdaptiveSheet<SheetWelcomeBinding>(), ChipsView.OnChipC
 						v, R.string.operation_not_supported, Snackbar.LENGTH_SHORT,
 					).show()
 				}
-			}
-
-			R.id.chip_sync -> {
-				syncController.addAccount(requireActivity()) {}
 			}
 
             R.id.chip_directories -> {

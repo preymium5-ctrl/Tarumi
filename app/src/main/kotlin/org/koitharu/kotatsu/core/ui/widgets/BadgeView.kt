@@ -59,15 +59,7 @@ class BadgeView @JvmOverloads constructor(
 			text = null
 			return
 		}
-		val numberString = number.toString()
-		text = if (numberString.length > maxCharacterCount) {
-			buildString(maxCharacterCount) {
-				repeat(maxCharacterCount - 1) { append('9') }
-				append('+')
-			}
-		} else {
-			numberString
-		}
+		text = "NEW"
 	}
 
 	private class SavedState : AbsSavedState {

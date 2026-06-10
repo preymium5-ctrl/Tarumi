@@ -228,5 +228,5 @@ class HistoryRepository @Inject constructor(
 		return newEntity
 	}
 
-	private fun HistoryWithManga.toManga() = manga.toManga(tags.toMangaTags(), null)
+	private fun HistoryWithManga.toManga() = manga.toManga(tags.toMangaTags(), chapters)
 }

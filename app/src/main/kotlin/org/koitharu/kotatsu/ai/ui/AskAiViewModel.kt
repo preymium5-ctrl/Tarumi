@@ -1280,7 +1280,7 @@ class AskAiViewModel @Inject constructor(
 		}
 		return when (source as? MangaParserSource) {
 			MangaParserSource.FLAMECOMICS -> ComicType.MANHWA
-			MangaParserSource.MANHUAFAST -> ComicType.MANHUA
+			MangaParserSource.MANHUAFAST -> ComicType.MANHWA
 			MangaParserSource.MANGAPLUSPARSER_EN -> ComicType.MANGA
 			else -> ComicType.COMIC
 		}
