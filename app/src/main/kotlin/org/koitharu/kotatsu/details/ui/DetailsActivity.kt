@@ -174,6 +174,7 @@ class DetailsActivity :
 		supportActionBar?.setDisplayShowTitleEnabled(false)
 		viewBinding.chipFavorite.setOnClickListener(this)
 		viewBinding.buttonStartReading?.setOnClickListener(this)
+		viewBinding.buttonDownloadOffline?.setOnClickListener(this)
 		infoBinding.textViewLocal.setOnClickListener(this)
 		infoBinding.textViewSource.setOnClickListener(this)
 		viewBinding.imageViewCover.setOnClickListener(this)
@@ -251,6 +252,11 @@ class DetailsActivity :
 
 			R.id.buttonStartReading -> {
 				openReader()
+			}
+
+			R.id.buttonDownloadOffline -> {
+				val manga = viewModel.getMangaOrNull() ?: return
+				router.showDownloadDialog(manga, viewBinding.scrollView)
 			}
 
 			R.id.imageView_cover -> {
@@ -458,10 +464,26 @@ class DetailsActivity :
 		val manga = details.toManga()
 		with(viewBinding) {
 			textViewTitle.text = manga.title
-			textViewSubtitle.text = getString(
-				R.string.by_author_pattern,
-				manga.authors.joinToString(", ").ifBlank { getString(R.string.unknown) },
-			)
+			if (cardChapters != null) {
+				// Landscape alt titles
+				textViewSubtitle.text = manga.altTitles.joinToString(" - ")
+				textAuthorValue?.text = manga.authors.firstOrNull() ?: getString(R.string.unknown)
+				textArtistValue?.text = manga.authors.drop(1).joinToString(", ").ifBlank { getString(R.string.unknown) }
+				
+				val rankTag = manga.tags.firstOrNull { it.title.startsWith("Rank", ignoreCase = true) }
+				if (rankTag != null) {
+					textViewRankBadge?.text = rankTag.title.uppercase()
+					textViewRankBadge?.isVisible = true
+				} else {
+					textViewRankBadge?.isVisible = false
+				}
+			} else {
+				// Portrait authors
+				textViewSubtitle.text = getString(
+					R.string.by_author_pattern,
+					manga.authors.joinToString(", ").ifBlank { getString(R.string.unknown) },
+				)
+			}
 			textViewNsfw16.isVisible = manga.contentRating == ContentRating.SUGGESTIVE
 			textViewNsfw18.isVisible = manga.contentRating == ContentRating.ADULT
 			textViewDescription.text = details.description.ifNullOrEmpty { getString(R.string.no_description) }
@@ -709,17 +731,27 @@ class DetailsActivity :
 	}
 
 	private fun onTagsChanged(tags: Collection<ChipsView.ChipModel>) {
-		viewBinding.chipsTags.isGone = true
-		val summary = tags
-			.asSequence()
-			.mapNotNull { tag ->
-				tag.title?.toString()?.takeIf { it.isNotBlank() }
-					?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
-			}
-			.take(4)
-			.joinToString(separator = " / ") { it.uppercase(Locale.getDefault()) }
-		viewBinding.textChipGenres?.text = summary
-		viewBinding.textChipGenres?.isVisible = summary.isNotEmpty()
+		val cleanTags = tags.filterNot { tag ->
+			val title = tag.title?.toString() ?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
+			title?.startsWith("Rank", ignoreCase = true) == true
+		}
+		if (viewBinding.cardChapters != null) {
+			viewBinding.chipsTags.isVisible = cleanTags.isNotEmpty()
+			viewBinding.chipsTags.setChips(cleanTags)
+			viewBinding.textChipGenres?.isGone = true
+		} else {
+			viewBinding.chipsTags.isGone = true
+			val summary = cleanTags
+				.asSequence()
+				.mapNotNull { tag ->
+					tag.title?.toString()?.takeIf { it.isNotBlank() }
+						?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
+				}
+				.take(4)
+				.joinToString(separator = " / ") { it.uppercase(Locale.getDefault()) }
+			viewBinding.textChipGenres?.text = summary
+			viewBinding.textChipGenres?.isVisible = summary.isNotEmpty()
+		}
 	}
 
 	private fun loadCover(imageUrl: String?) {

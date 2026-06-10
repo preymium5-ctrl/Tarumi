@@ -10,6 +10,7 @@ import androidx.core.view.isVisible
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
@@ -92,6 +93,35 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		addSheetCallback(this, viewLifecycleOwner)
 
 		viewModel.newChaptersCount.observe(viewLifecycleOwner, ::onNewChaptersChanged)
+
+		binding.searchChapters?.addTextChangedListener(object : android.text.TextWatcher {
+			override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+			override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+				viewModel.performChapterSearch(s?.toString())
+			}
+			override fun afterTextChanged(s: android.text.Editable?) = Unit
+		})
+
+		binding.buttonSortChapters?.setOnClickListener {
+			val reversed = viewModel.isChaptersReversed.value ?: false
+			viewModel.setChaptersReversed(!reversed)
+		}
+
+		viewModel.isChaptersReversed.observe(viewLifecycleOwner) { reversed ->
+			if (reversed) {
+				binding.buttonSortChapters?.text = "Oldest"
+				binding.buttonSortChapters?.setIconResource(R.drawable.ic_sort_asc)
+			} else {
+				binding.buttonSortChapters?.text = "Newest"
+				binding.buttonSortChapters?.setIconResource(R.drawable.ic_sort_desc)
+			}
+		}
+
+		viewModel.mangaDetails.observe(viewLifecycleOwner) { details ->
+			val count = details?.chapters?.values?.flatten()?.distinctBy { it.id }?.size ?: 0
+			binding.textViewChaptersTitle?.text = if (count == 1) "1 Chapter" else "$count Chapters"
+		}
+
 		if (dialog != null) {
 			viewModel.onError.observeEvent(viewLifecycleOwner, SnackbarErrorObserver(binding.pager, this))
 			viewModel.onActionDone.observeEvent(viewLifecycleOwner, ReversibleActionObserver(binding.pager))
