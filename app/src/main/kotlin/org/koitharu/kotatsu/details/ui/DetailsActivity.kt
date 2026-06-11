@@ -109,6 +109,7 @@ import org.koitharu.kotatsu.details.ui.scrobbling.ScrobblingItemDecoration
 import org.koitharu.kotatsu.details.ui.scrobbling.ScrollingInfoAdapter
 import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
 import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
+import org.koitharu.kotatsu.home.ui.ComicType
 import org.koitharu.kotatsu.home.ui.detectComicType
 import org.koitharu.kotatsu.list.domain.ReadingProgress
 import org.koitharu.kotatsu.list.ui.adapter.ListItemType
@@ -119,6 +120,7 @@ import org.koitharu.kotatsu.list.ui.size.StaticItemSizeResolver
 import org.koitharu.kotatsu.main.ui.owners.BottomSheetOwner
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaState
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
@@ -380,6 +382,17 @@ class DetailsActivity :
 		chip.setChipIconResource(if (status == null) R.drawable.ic_bookmark else R.drawable.ic_bookmark_added)
 		chip.text = status ?: getString(R.string.save)
 		applyFavoriteChipStyle(chip, status)
+
+		val statusText = status ?: getString(R.string.save)
+		val statusColor = when (status?.trim()?.lowercase()) {
+			"reading" -> 0xFF74A7FF.toInt()
+			"planned" -> 0xFF8D7BFF.toInt()
+			"completed" -> 0xFF62BE7B.toInt()
+			else -> getColor(R.color.blue_primary)
+		}
+		viewBinding.textViewFollows?.text = statusText
+		viewBinding.textViewFollows?.setTextColor(statusColor)
+		viewBinding.imageViewBookmarkStats?.imageTintList = ColorStateList.valueOf(statusColor)
 	}
 
 	private fun applyFavoriteChipStyle(chip: Chip, status: String?) {
@@ -462,13 +475,18 @@ class DetailsActivity :
 
 	private fun onMangaUpdated(details: MangaDetails) {
 		val manga = details.toManga()
+		val authorName = manga.authors.firstOrNull()?.takeIf { it.isNotBlank() }
+		val artistName = manga.authors.drop(1)
+			.firstOrNull { it.isNotBlank() && !it.equals(authorName, ignoreCase = true) }
+		val comicType = manga.detectComicType()
 		with(viewBinding) {
 			textViewTitle.text = manga.title
+			textAuthorValue?.text = authorName ?: getString(R.string.unknown)
+			textArtistValue?.text = artistName
+			layoutArtistRow?.isVisible = artistName != null
 			if (cardChapters != null) {
 				// Landscape alt titles
 				textViewSubtitle.text = manga.altTitles.joinToString(" - ")
-				textAuthorValue?.text = manga.authors.firstOrNull() ?: getString(R.string.unknown)
-				textArtistValue?.text = manga.authors.drop(1).joinToString(", ").ifBlank { getString(R.string.unknown) }
 				
 				val rankTag = manga.tags.firstOrNull { it.title.startsWith("Rank", ignoreCase = true) }
 				if (rankTag != null) {
@@ -481,18 +499,19 @@ class DetailsActivity :
 				// Portrait authors
 				textViewSubtitle.text = getString(
 					R.string.by_author_pattern,
-					manga.authors.joinToString(", ").ifBlank { getString(R.string.unknown) },
+					authorName ?: getString(R.string.unknown),
 				)
 			}
 			textViewNsfw16.isVisible = manga.contentRating == ContentRating.SUGGESTIVE
 			textViewNsfw18.isVisible = manga.contentRating == ContentRating.ADULT
 			textViewDescription.text = details.description.ifNullOrEmpty { getString(R.string.no_description) }
-			textChipType?.text = manga.detectComicType().label.uppercase()
+			textChipType?.text = comicType.label.uppercase()
 			textChipStatus?.text = manga.state?.let { resources.getString(it.titleResId).uppercase() } ?: getString(R.string.unknown).uppercase()
+			viewTypeDot?.backgroundTintList = ColorStateList.valueOf(comicType.dotColor())
+			viewStatusDot?.backgroundTintList = ColorStateList.valueOf(manga.state.statusDotColor())
 			textChipSource?.text = manga.source.getTitle(this@DetailsActivity).uppercase(Locale.getDefault())
 			textChipSource?.isVisible = true
 			textViewRating?.text = manga.formatSourceRating()
-			textViewFollows?.text = manga.formatSourceFollows()
 			textViewChaptersCount?.text = details.formatChapterCount()
 		}
 		updateSourceStatsFromPage(manga)
@@ -595,7 +614,6 @@ class DetailsActivity :
 				return@launch
 			}
 			stats.rating?.let { viewBinding.textViewRating?.text = it }
-			stats.follows?.let { viewBinding.textViewFollows?.text = it }
 		}
 	}
 
@@ -638,12 +656,23 @@ class DetailsActivity :
 		val value = match.groupValues.getOrNull(1)?.toFloatOrNull() ?: return null
 		val scale = match.groupValues.getOrNull(2)?.toFloatOrNull()
 		val normalized = when {
-			scale != null && scale > 0f -> value / scale * 5f
-			value > 5f && value <= 10f -> value / 10f * 5f
-			value > 10f && value <= 100f -> value / 100f * 5f
+			scale != null && scale > 0f && scale != 10f -> value / scale * 10f
+			value > 10f && value <= 100f -> value / 100f * 10f
 			else -> value
-		}.coerceIn(0f, 5f)
+		}.coerceIn(0f, 10f)
 		return String.format(Locale.US, "%.1f", normalized)
+	}
+
+	private fun ComicType.dotColor(): Int = when (this) {
+		ComicType.MANGA -> getColor(R.color.common_yellow)
+		ComicType.MANHWA -> getColor(R.color.blue_primary)
+		ComicType.MANHUA -> getColor(R.color.common_red)
+		ComicType.COMIC -> getColor(R.color.taru_accent)
+	}
+
+	private fun MangaState?.statusDotColor(): Int = when (this) {
+		MangaState.FINISHED -> getColor(R.color.common_green)
+		else -> getColor(R.color.taru_accent)
 	}
 
 	private fun extractFollowCount(raw: String?): String? {

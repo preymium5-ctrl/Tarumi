@@ -282,6 +282,7 @@
 								android:orientation="horizontal">
 
 								<View
+									android:id="@+id/viewStatusDot"
 									android:layout_width="8dp"
 									android:layout_height="8dp"
 									android:background="@drawable/bg_circle_button"
@@ -323,6 +324,7 @@
 								android:orientation="horizontal">
 
 								<View
+									android:id="@+id/viewTypeDot"
 									android:layout_width="8dp"
 									android:layout_height="8dp"
 									android:background="@drawable/bg_circle_button"
@@ -386,11 +388,14 @@
 					</LinearLayout>
 
 					<LinearLayout
+						android:id="@+id/layoutArtistRow"
 						android:layout_width="match_parent"
 						android:layout_height="wrap_content"
-						android:layout_marginTop="10dp"
+						android:layout_marginTop="12dp"
 						android:gravity="center_vertical"
-						android:orientation="horizontal">
+						android:orientation="horizontal"
+						android:visibility="gone"
+						tools:visibility="visible">
 
 						<ImageView
 							android:layout_width="18dp"
@@ -417,9 +422,11 @@
 							android:textColor="@color/taru_text_primary"
 							android:textSize="14sp"
 							android:textStyle="bold"
-							tools:text="Juno" />
+							tools:text="MStoryHub" />
 
 					</LinearLayout>
+
+
 
 				</LinearLayout>
 

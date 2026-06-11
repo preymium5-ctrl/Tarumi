@@ -84,7 +84,6 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		}
 		viewModel.summary.observe(this) { summary ->
 			viewBinding.textStreak.text = getString(R.string.stats_days_pattern, summary.streakDays)
-			viewBinding.textPagesRead.text = summary.appDuration.formatHoursPlayed()
 			viewBinding.textChaptersRead?.text = NumberFormat.getIntegerInstance(Locale.US).format(summary.totalChapters)
 			viewBinding.textReadingTime.text = summary.totalDuration.formatCompactDuration()
 		}
@@ -335,17 +334,6 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 			hours > 0L -> "${hours}h"
 			minutes > 0L -> "${minutes}m"
 			else -> getString(R.string.less_than_minute)
-		}
-	}
-
-	private fun Long.formatHoursPlayed(): String {
-		val hours = this / TimeUnit.HOURS.toMillis(1)
-		val tenths = ((this % TimeUnit.HOURS.toMillis(1)) * 10 / TimeUnit.HOURS.toMillis(1)).toInt()
-		return if (hours > 0L) {
-			"$hours.${tenths}h"
-		} else {
-			val minutes = TimeUnit.MILLISECONDS.toMinutes(this)
-			if (minutes > 0L) "${minutes}m" else getString(R.string.less_than_minute)
 		}
 	}
 

@@ -112,23 +112,6 @@
 
 				</FrameLayout>
 
-				<com.google.android.material.button.MaterialButton
-					android:id="@+id/button_rating_overlay"
-					style="?attr/materialButtonStyle"
-					android:layout_width="match_parent"
-					android:layout_height="52dp"
-					android:layout_marginTop="12dp"
-					android:text="Rating"
-					android:textColor="@color/taru_accent"
-					app:backgroundTint="@android:color/transparent"
-					app:cornerRadius="26dp"
-					app:icon="@drawable/ic_star_small"
-					app:iconGravity="textStart"
-					app:iconTint="@color/taru_accent"
-					app:strokeColor="@color/taru_accent"
-					app:strokeWidth="1.5dp"
-					tools:ignore="HardcodedText" />
-
 				<LinearLayout
 					android:id="@+id/card_stats"
 					android:layout_width="match_parent"
@@ -220,6 +203,7 @@
 							android:orientation="vertical">
 
 							<ImageView
+								android:id="@+id/imageViewBookmarkStats"
 								android:layout_width="20dp"
 								android:layout_height="20dp"
 								android:src="@drawable/ic_bookmark"
@@ -282,6 +266,7 @@
 								android:orientation="horizontal">
 
 								<View
+									android:id="@+id/viewStatusDot"
 									android:layout_width="8dp"
 									android:layout_height="8dp"
 									android:background="@drawable/bg_circle_button"
@@ -323,6 +308,7 @@
 								android:orientation="horizontal">
 
 								<View
+									android:id="@+id/viewTypeDot"
 									android:layout_width="8dp"
 									android:layout_height="8dp"
 									android:background="@drawable/bg_circle_button"
@@ -386,11 +372,14 @@
 					</LinearLayout>
 
 					<LinearLayout
+						android:id="@+id/layoutArtistRow"
 						android:layout_width="match_parent"
 						android:layout_height="wrap_content"
-						android:layout_marginTop="10dp"
+						android:layout_marginTop="12dp"
 						android:gravity="center_vertical"
-						android:orientation="horizontal">
+						android:orientation="horizontal"
+						android:visibility="gone"
+						tools:visibility="visible">
 
 						<ImageView
 							android:layout_width="18dp"
@@ -417,9 +406,11 @@
 							android:textColor="@color/taru_text_primary"
 							android:textSize="14sp"
 							android:textStyle="bold"
-							tools:text="Juno" />
+							tools:text="MStoryHub" />
 
 					</LinearLayout>
+
+
 
 				</LinearLayout>
 
@@ -565,7 +556,7 @@
 				style="?attr/materialButtonStyle"
 				android:layout_width="0dp"
 				android:layout_height="match_parent"
-				android:layout_weight="1"
+				android:layout_weight="1.5"
 				android:layout_marginStart="12dp"
 				android:text="First Chapter"
 				android:textColor="?attr/colorOnSurface"
@@ -575,43 +566,6 @@
 				app:icon="@drawable/ic_eye"
 				app:iconTint="?attr/colorOnSurface"
 				tools:ignore="HardcodedText" />
-
-			<FrameLayout
-				android:layout_width="0dp"
-				android:layout_height="match_parent"
-				android:layout_weight="1.2"
-				android:layout_marginStart="12dp">
-
-				<com.google.android.material.button.MaterialButton
-					android:id="@+id/buttonDownloadOffline"
-					style="?attr/materialButtonStyle"
-					android:layout_width="match_parent"
-					android:layout_height="match_parent"
-					android:text="Download Offline"
-					android:textColor="#000000"
-					android:textSize="13sp"
-					app:backgroundTint="#FFB300"
-					app:cornerRadius="28dp"
-					app:icon="@drawable/ic_download"
-					app:iconTint="#000000"
-					tools:ignore="HardcodedText" />
-
-				<TextView
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:layout_gravity="end|top"
-					android:layout_marginTop="8dp"
-					android:layout_marginEnd="10dp"
-					android:background="@drawable/bg_premium_badge"
-					android:paddingHorizontal="4dp"
-					android:paddingVertical="2dp"
-					android:text="PREMIUM"
-					android:textColor="#FFD54F"
-					android:textSize="8sp"
-					android:textStyle="bold"
-					tools:ignore="HardcodedText" />
-
-			</FrameLayout>
 
 		</LinearLayout>
 
@@ -695,6 +649,16 @@
 
 		<View
 			android:id="@+id/navbarDim"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_rating_overlay"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/buttonDownloadOffline"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content" />
 
