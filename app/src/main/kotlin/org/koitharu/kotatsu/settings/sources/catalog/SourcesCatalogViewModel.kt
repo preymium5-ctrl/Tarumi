@@ -77,7 +77,7 @@ class SourcesCatalogViewModel @Inject constructor(
 	init {
 		repository.clearNewSourcesBadge()
 		launchJob(Dispatchers.Default) {
-			contentTypes.value = getContentTypes(settings.isNsfwContentDisabled)
+			contentTypes.value = getContentTypes()
 			loadActivePreset()
 		}
 	}
@@ -135,13 +135,14 @@ class SourcesCatalogViewModel @Inject constructor(
 	): List<SourceCatalogItem> {
 		val isPreset = activePresetId != 0L
 		val sources = repository.queryParserSources(
-			isDisabledOnly = !isPreset,
+			isDisabledOnly = false,
 			isNewOnly = filter.isNewOnly,
 			excludeBroken = isPreset,
 			types = filter.types,
 			query = query,
 			locale = filter.locale,
 			sortOrder = SourcesSortOrder.ALPHABETIC,
+			skipNsfwSources = false,
 		)
 		return if (sources.isEmpty()) {
 			listOf(
@@ -170,13 +171,8 @@ class SourcesCatalogViewModel @Inject constructor(
 	}
 
 	@WorkerThread
-	private fun getContentTypes(isNsfwDisabled: Boolean): List<ContentType> {
-		val result = repository.allMangaSources.mapSortedByCount { it.contentType }
-		return if (isNsfwDisabled) {
-			result.filterNot { it == ContentType.HENTAI }
-		} else {
-			result
-		}
+	private fun getContentTypes(): List<ContentType> {
+		return repository.allMangaSources.mapSortedByCount { it.contentType }
 	}
 
 	private suspend fun loadActivePreset() {

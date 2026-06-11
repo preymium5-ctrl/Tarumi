@@ -110,6 +110,7 @@ class MangaSourcesRepository @Inject constructor(
 		query: String?,
 		locale: String?,
 		sortOrder: SourcesSortOrder?,
+		skipNsfwSources: Boolean = settings.isNsfwContentDisabled,
 	): List<MangaParserSource> {
 		assimilateNewSources()
 		val entities = dao.findAll().toMutableList()
@@ -120,7 +121,7 @@ class MangaSourcesRepository @Inject constructor(
 			entities.retainAll { it.addedIn == BuildConfig.VERSION_CODE }
 		}
 		val sources = entities.toSources(
-			skipNsfwSources = settings.isNsfwContentDisabled,
+			skipNsfwSources = skipNsfwSources,
 			sortOrder = sortOrder,
 		).run {
 			mapNotNullTo(ArrayList(size)) { it.mangaSource as? MangaParserSource }
