@@ -170,8 +170,7 @@ class ChaptersFragment :
 		val adapter = chaptersAdapter ?: return
 		if (shouldScrollChaptersToTop) {
 			shouldScrollChaptersToTop = false
-			adapter.items = list
-			requireViewBinding().recyclerViewChapters.post {
+			adapter.setItems(list) {
 				viewBinding?.recyclerViewChapters?.scrollToPosition(0)
 			}
 			return

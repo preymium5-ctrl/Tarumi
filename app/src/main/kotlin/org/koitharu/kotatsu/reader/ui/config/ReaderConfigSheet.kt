@@ -99,6 +99,7 @@ class ReaderConfigSheet :
         binding.sliderDoubleSensitivity.setLabelFormatter(IntPercentLabelFormatter(binding.root.context))
         binding.adjustSensitivitySlider(withAnimation = false)
 
+        binding.buttonClose.setOnClickListener { dismissAllowingStateLoss() }
         binding.checkableGroup.addOnButtonCheckedListener(this)
         binding.buttonSavePage.setOnClickListener(this)
         binding.buttonScreenRotate.setOnClickListener(this)
@@ -115,7 +116,7 @@ class ReaderConfigSheet :
         viewModel.isBookmarkAdded.observe(viewLifecycleOwner) {
             binding.buttonBookmark.setText(if (it) R.string.bookmark_remove else R.string.bookmark_add)
             binding.buttonBookmark.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                if (it) R.drawable.ic_bookmark_checked else R.drawable.ic_bookmark, 0, 0, 0,
+                0, 0, if (it) R.drawable.ic_bookmark_checked else R.drawable.ic_bookmark, 0,
             )
         }
 
@@ -238,7 +239,7 @@ class ReaderConfigSheet :
             .onEach {
                 with(requireViewBinding()) {
                     buttonScreenRotate.isGone = it
-                    switchScreenLockRotation.isVisible = it
+                    cardScreenLockRotation.isVisible = it
                     updateOrientationLockSwitch()
                 }
             }.launchIn(viewLifecycleScope)
@@ -264,16 +265,16 @@ class ReaderConfigSheet :
         val needTransition = withAnimation && (
             (isSubOptionsVisible != sliderDoubleSensitivity.isVisible) ||
                 (isSubOptionsVisible != textDoubleSensitivity.isVisible) ||
-                (isSubOptionsVisible != switchDoubleFoldable.isVisible) ||
-                (isSubOptionsVisible != switchDoubleCoverPage.isVisible)
+                (isSubOptionsVisible != cardDoubleFoldable.isVisible) ||
+                (isSubOptionsVisible != cardDoubleCoverPage.isVisible)
             )
         if (needTransition) {
             TransitionManager.beginDelayedTransition(layoutMain)
         }
         sliderDoubleSensitivity.isVisible = isSubOptionsVisible
         textDoubleSensitivity.isVisible = isSubOptionsVisible
-        switchDoubleFoldable.isVisible = isSubOptionsVisible
-        switchDoubleCoverPage.isVisible = isSubOptionsVisible
+        cardDoubleFoldable.isVisible = isSubOptionsVisible
+        cardDoubleCoverPage.isVisible = isSubOptionsVisible
     }
 
     interface Callback {

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:background="?colorSurface"
+	android:paddingBottom="24dp">
+
+	<!-- Top Drag Handle View -->
+	<com.google.android.material.bottomsheet.BottomSheetDragHandleView
+		android:id="@+id/dragHandle"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content" />
+
+	<!-- Header Layout -->
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="horizontal"
+		android:paddingHorizontal="20dp"
+		android:paddingBottom="16dp">
+
+		<TextView
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/download"
+			android:textColor="?android:attr/textColorPrimary"
+			android:textSize="22sp"
+			android:textStyle="bold"
+			android:fontFamily="@font/outfit" />
+
+		<!-- Circular Close Button -->
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/buttonClose"
+			style="?materialIconButtonOutlinedStyle"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
+			android:insetLeft="0dp"
+			android:insetRight="0dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:padding="8dp"
+			app:backgroundTint="@color/taru_surface_button"
+			app:strokeWidth="0dp"
+			app:cornerRadius="18dp"
+			app:icon="?actionModeCloseDrawable"
+			app:iconTint="?android:attr/textColorPrimary"
+			app:iconSize="20dp" />
+	</LinearLayout>
+
+	<!-- Download Options container -->
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:paddingHorizontal="20dp">
+
+		<!-- Option 1: Current Chapter -->
+		<com.google.android.material.card.MaterialCardView
+			android:id="@+id/optionCurrentChapter"
+			style="?materialCardViewFilledStyle"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:clickable="true"
+			android:focusable="true"
+			app:cardBackgroundColor="@color/taru_surface_button"
+			app:cardCornerRadius="12dp"
+			app:strokeWidth="0dp">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical"
+				android:padding="16dp">
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/download_option_current_chapter"
+					android:textColor="?android:attr/textColorPrimary"
+					android:textSize="16sp"
+					android:textStyle="bold"
+					android:fontFamily="@font/outfit" />
+
+				<TextView
+					android:id="@+id/textCurrentChapterName"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="4dp"
+					android:textColor="?android:attr/textColorSecondary"
+					android:textSize="13sp"
+					android:fontFamily="@font/outfit"
+					tools:text="Episode 198" />
+			</LinearLayout>
+		</com.google.android.material.card.MaterialCardView>
+
+		<!-- Option 2: Whole Manga -->
+		<com.google.android.material.card.MaterialCardView
+			android:id="@+id/optionWholeManga"
+			style="?materialCardViewFilledStyle"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="12dp"
+			android:clickable="true"
+			android:focusable="true"
+			app:cardBackgroundColor="@color/taru_surface_button"
+			app:cardCornerRadius="12dp"
+			app:strokeWidth="0dp">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical"
+				android:padding="16dp">
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/download_option_whole_manga"
+					android:textColor="?android:attr/textColorPrimary"
+					android:textSize="16sp"
+					android:textStyle="bold"
+					android:fontFamily="@font/outfit" />
+
+				<TextView
+					android:id="@+id/textTotalChapters"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="4dp"
+					android:textColor="?android:attr/textColorSecondary"
+					android:textSize="13sp"
+					android:fontFamily="@font/outfit"
+					tools:text="199 chapters" />
+			</LinearLayout>
+		</com.google.android.material.card.MaterialCardView>
+
+	</LinearLayout>
+</LinearLayout>

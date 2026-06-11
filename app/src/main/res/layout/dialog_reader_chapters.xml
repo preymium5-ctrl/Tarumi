@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	android:background="?colorSurface"
+	android:paddingBottom="24dp">
+
+	<!-- Top Drag Handle View -->
+	<com.google.android.material.bottomsheet.BottomSheetDragHandleView
+		android:id="@+id/dragHandle"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content" />
+
+	<!-- Header Layout -->
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="horizontal"
+		android:paddingHorizontal="20dp"
+		android:paddingBottom="12dp">
+
+		<TextView
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/chapters"
+			android:textColor="?android:attr/textColorPrimary"
+			android:textSize="22sp"
+			android:textStyle="bold"
+			android:fontFamily="@font/outfit" />
+
+		<!-- Circular Close Button -->
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/buttonClose"
+			style="?materialIconButtonOutlinedStyle"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
+			android:insetLeft="0dp"
+			android:insetRight="0dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:padding="8dp"
+			app:backgroundTint="@color/taru_surface_button"
+			app:strokeWidth="0dp"
+			app:cornerRadius="18dp"
+			app:icon="?actionModeCloseDrawable"
+			app:iconTint="?android:attr/textColorPrimary"
+			app:iconSize="20dp" />
+	</LinearLayout>
+
+	<!-- RecyclerView for Chapters -->
+	<androidx.recyclerview.widget.RecyclerView
+		android:id="@+id/recyclerViewChapters"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:clipToPadding="false"
+		android:paddingHorizontal="20dp"
+		android:paddingBottom="16dp" />
+
+</LinearLayout>

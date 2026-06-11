@@ -28,7 +28,7 @@
 				style="?materialIconButtonOutlinedStyle"
 				android:layout_width="50dp"
 				android:layout_height="50dp"
-				android:alpha="0.55"
+				android:alpha="0.75"
 				android:contentDescription="@string/prev_chapter"
 				android:insetLeft="0dp"
 				android:insetRight="0dp"
@@ -37,13 +37,13 @@
 				android:minWidth="0dp"
 				android:minHeight="0dp"
 				android:padding="0dp"
-				app:backgroundTint="@color/taru_surface_button"
+				app:backgroundTint="@color/taru_surface_soft"
 				app:cornerRadius="25dp"
 				app:icon="@drawable/ic_prev"
 				app:iconGravity="textStart"
 				app:iconPadding="0dp"
 				app:iconSize="25dp"
-				app:iconTint="@color/taru_text_muted"
+				app:iconTint="@color/taru_text_secondary"
 				app:strokeColor="@color/taru_outline"
 				app:strokeWidth="1dp" />
 
@@ -60,7 +60,7 @@
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
 					android:ellipsize="end"
-					android:fontFamily="sans-serif-medium"
+					android:fontFamily="sans-serif"
 					android:gravity="center"
 					android:maxLines="1"
 					android:textColor="@color/taru_text_primary"
@@ -72,11 +72,11 @@
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
 					android:layout_marginTop="4dp"
-					android:fontFamily="sans-serif-medium"
+					android:fontFamily="sans-serif"
 					android:gravity="center"
 					android:letterSpacing="0.13"
-					android:textColor="@color/taru_text_soft"
-					android:textSize="10sp"
+					android:textColor="@color/taru_text_secondary"
+					android:textSize="11sp"
 					tools:text="1 OF 35 CHAPTERS" />
 			</LinearLayout>
 
@@ -93,14 +93,14 @@
 				android:minWidth="0dp"
 				android:minHeight="0dp"
 				android:padding="0dp"
-				app:backgroundTint="@color/taru_surface_button"
+				app:backgroundTint="@color/taru_purple"
 				app:cornerRadius="25dp"
 				app:icon="@drawable/ic_next"
 				app:iconGravity="textStart"
 				app:iconPadding="0dp"
 				app:iconSize="25dp"
-				app:iconTint="@color/taru_text_primary"
-				app:strokeColor="@color/taru_outline"
+				app:iconTint="#FFFFFF"
+				app:strokeColor="@color/taru_purple"
 				app:strokeWidth="1dp" />
 		</LinearLayout>
 
@@ -123,7 +123,7 @@
 				android:text="@string/download"
 				android:textColor="@color/taru_text_primary"
 				android:textSize="12sp"
-				app:backgroundTint="@color/taru_surface_button"
+				app:backgroundTint="@color/taru_surface_soft"
 				app:cornerRadius="23dp"
 				app:icon="@drawable/ic_download"
 				app:iconGravity="textStart"
@@ -146,7 +146,7 @@
 				android:text="@string/chapters"
 				android:textColor="@color/taru_text_primary"
 				android:textSize="12sp"
-				app:backgroundTint="@color/taru_surface_button"
+				app:backgroundTint="@color/taru_surface_soft"
 				app:cornerRadius="23dp"
 				app:icon="@drawable/ic_book_page"
 				app:iconGravity="textStart"
@@ -204,8 +204,8 @@
 			android:fontFamily="sans-serif-medium"
 			android:gravity="center"
 			android:letterSpacing="0.13"
-			android:textColor="@color/taru_text_soft"
-			android:textSize="9sp"
+			android:textColor="@color/taru_text_muted"
+			android:textSize="10sp"
 			tools:text="89 PAGES LOADED - PORTRAIT FIT - WEEBCENTRAL" />
 	</LinearLayout>
 

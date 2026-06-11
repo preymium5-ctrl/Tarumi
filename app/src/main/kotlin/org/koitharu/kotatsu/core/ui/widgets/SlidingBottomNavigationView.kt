@@ -186,17 +186,14 @@ class SlidingBottomNavigationView @JvmOverloads constructor(
 	}
 
 	private fun applyFloatingStyle(floating: Boolean) {
-		if (floating) {
-			val radius = 28f * resources.displayMetrics.density
-			(background as? MaterialShapeDrawable)?.shapeAppearanceModel =
-				ShapeAppearanceModel.builder()
-					.setAllCornerSizes(radius)
-					.build()
-		} else {
-			(background as? MaterialShapeDrawable)?.shapeAppearanceModel =
-				ShapeAppearanceModel.builder()
-					.setAllCornerSizes(0f)
-					.build()
+		val radius = if (floating) 28f * resources.displayMetrics.density else 0f
+		val bg = background
+		if (bg is MaterialShapeDrawable) {
+			bg.shapeAppearanceModel = ShapeAppearanceModel.builder()
+				.setAllCornerSizes(radius)
+				.build()
+		} else if (bg is android.graphics.drawable.GradientDrawable) {
+			bg.cornerRadius = radius
 		}
 	}
 

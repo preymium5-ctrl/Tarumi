@@ -38,6 +38,8 @@
 	<color name="taru_outline_soft">#DDE5F0</color>
 	<color name="taru_accent">#6A9DFF</color>
 	<color name="taru_on_accent">#07162B</color>
+	<color name="taru_nav_active_indicator">#1F6A9DFF</color>
+	<color name="taru_purple">#7E57C2</color>
 
 	<!-- Color schemes colors -->
 	<color name="background_miku">#F7FAF8</color>

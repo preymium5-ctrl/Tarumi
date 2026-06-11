@@ -132,6 +132,8 @@
 		android:background="@drawable/bg_taru_bottom_nav"
 		android:elevation="8dp"
 		app:itemIconTint="@color/taru_nav_item_color"
-		app:itemTextColor="@color/taru_nav_item_color" />
+		app:itemTextColor="@color/taru_nav_item_color"
+		app:itemActiveIndicatorStyle="@style/Widget.Tarumi.BottomNavigationView.ActiveIndicator"
+		app:labelVisibilityMode="labeled" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

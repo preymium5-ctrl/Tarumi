@@ -11,11 +11,44 @@
     android:paddingBottom="14dp"
     android:orientation="vertical">
 
-    <org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetHeaderBar
-        android:id="@+id/headerBar"
+    <!-- Custom Header Layout to match the premium design reference -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:title="@string/options" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/settings"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/outfit" />
+
+        <!-- Circular Close Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonClose"
+            style="?materialIconButtonOutlinedStyle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:padding="8dp"
+            app:backgroundTint="@color/taru_surface_button"
+            app:strokeWidth="0dp"
+            app:cornerRadius="18dp"
+            app:icon="?actionModeCloseDrawable"
+            app:iconTint="?android:attr/textColorPrimary"
+            app:iconSize="20dp" />
+    </LinearLayout>
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollView"
@@ -28,57 +61,88 @@
             android:id="@+id/layout_main"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_taru_home_feature"
+            android:background="@android:color/transparent"
             android:orientation="vertical"
-            android:paddingHorizontal="8dp"
-            android:paddingTop="12dp"
+            android:paddingHorizontal="4dp"
             android:paddingBottom="16dp">
 
+            <!-- Save Page Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_save_page"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/save_page"
-                app:drawableStartCompat="@drawable/ic_save" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_save"
+                android:fontFamily="@font/outfit" />
 
+            <!-- Bookmark Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_bookmark"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/bookmark_add"
-                app:drawableStartCompat="@drawable/ic_bookmark" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_bookmark"
+                android:fontFamily="@font/outfit" />
 
+            <!-- Image Server Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_image_server"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:drawableEnd="@drawable/ic_expand_more_22px"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/image_server"
                 android:visibility="gone"
-                app:drawableStartCompat="@drawable/ic_images"
-                tools:visibility="visible" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_expand_more_22px"
+                tools:visibility="visible"
+                android:fontFamily="@font/outfit" />
 
+            <!-- Header label for Read Mode (uppercase condensed premium font) -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/margin_normal"
-                android:layout_marginTop="@dimen/margin_normal"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="16dp"
                 android:text="@string/read_mode"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.15"
                 android:textColor="@color/taru_text_secondary"
-                android:textSize="12sp" />
+                android:textAllCaps="true"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:fontFamily="@font/outfit" />
 
+            <!-- Segmented Toggles for Read Mode -->
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/checkableGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/margin_normal"
-                android:layout_marginTop="@dimen/margin_small"
-                android:background="@drawable/bg_taru_home_surface"
+                android:layout_marginTop="8dp"
                 android:baselineAligned="false"
                 android:orientation="vertical"
-                android:padding="4dp"
                 app:selectionRequired="true"
                 app:singleSelection="true">
 
@@ -86,200 +150,309 @@
                     android:id="@+id/button_standard"
                     style="@style/Widget.Kotatsu.ToggleButton.Vertical"
                     android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical|start"
                     android:paddingStart="18dp"
                     android:paddingEnd="18dp"
                     android:text="@string/standard"
                     android:textAlignment="viewStart"
                     android:textSize="16sp"
-                    app:cornerRadius="18dp"
+                    app:backgroundTint="@color/taru_toggle_button_bg"
+                    android:textColor="@color/taru_toggle_button_text"
+                    app:iconTint="@color/taru_toggle_button_icon"
+                    app:strokeColor="@color/taru_toggle_button_stroke"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="12dp"
                     app:icon="@drawable/ic_reader_ltr"
                     app:iconGravity="textStart"
                     app:iconPadding="14dp"
-                    app:iconSize="23dp" />
+                    app:iconSize="22dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_reversed"
                     style="@style/Widget.Kotatsu.ToggleButton.Vertical"
                     android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical|start"
                     android:paddingStart="18dp"
                     android:paddingEnd="18dp"
                     android:text="@string/right_to_left"
                     android:textAlignment="viewStart"
                     android:textSize="16sp"
-                    app:cornerRadius="18dp"
+                    app:backgroundTint="@color/taru_toggle_button_bg"
+                    android:textColor="@color/taru_toggle_button_text"
+                    app:iconTint="@color/taru_toggle_button_icon"
+                    app:strokeColor="@color/taru_toggle_button_stroke"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="12dp"
                     app:icon="@drawable/ic_reader_rtl"
                     app:iconGravity="textStart"
                     app:iconPadding="14dp"
-                    app:iconSize="23dp" />
+                    app:iconSize="22dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_vertical"
                     style="@style/Widget.Kotatsu.ToggleButton.Vertical"
                     android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical|start"
                     android:paddingStart="18dp"
                     android:paddingEnd="18dp"
                     android:text="@string/vertical"
                     android:textAlignment="viewStart"
                     android:textSize="16sp"
-                    app:cornerRadius="18dp"
+                    app:backgroundTint="@color/taru_toggle_button_bg"
+                    android:textColor="@color/taru_toggle_button_text"
+                    app:iconTint="@color/taru_toggle_button_icon"
+                    app:strokeColor="@color/taru_toggle_button_stroke"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="12dp"
                     app:icon="@drawable/ic_reader_vertical"
                     app:iconGravity="textStart"
                     app:iconPadding="14dp"
-                    app:iconSize="23dp" />
+                    app:iconSize="22dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_webtoon"
                     style="@style/Widget.Kotatsu.ToggleButton.Vertical"
                     android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:fontFamily="sans-serif-medium"
+                    android:layout_height="52dp"
                     android:gravity="center_vertical|start"
                     android:paddingStart="18dp"
                     android:paddingEnd="18dp"
                     android:text="@string/webtoon"
                     android:textAlignment="viewStart"
                     android:textSize="16sp"
-                    app:cornerRadius="18dp"
+                    app:backgroundTint="@color/taru_toggle_button_bg"
+                    android:textColor="@color/taru_toggle_button_text"
+                    app:iconTint="@color/taru_toggle_button_icon"
+                    app:strokeColor="@color/taru_toggle_button_stroke"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="12dp"
                     app:icon="@drawable/ic_script"
                     app:iconGravity="textStart"
                     app:iconPadding="14dp"
-                    app:iconSize="23dp" />
+                    app:iconSize="22dp" />
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/margin_normal"
-                android:layout_marginTop="@dimen/margin_small"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/reader_mode_hint"
-                android:fontFamily="sans-serif"
                 android:lineSpacingExtra="2dp"
                 android:textColor="@color/taru_text_secondary"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:fontFamily="@font/outfit" />
 
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switch_double_reader"
+            <!-- Double Page Mode Switch Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_double_reader"
+                style="?materialCardViewFilledStyle"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/margin_normal"
-                android:drawablePadding="?android:listPreferredItemPaddingStart"
-                android:minHeight="?android:listPreferredItemHeightSmall"
-                android:paddingStart="?android:listPreferredItemPaddingStart"
-                android:paddingEnd="?android:listPreferredItemPaddingEnd"
-                android:text="@string/use_two_pages_landscape"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/taru_text_primary"
-                android:textSize="14sp"
-                app:drawableStartCompat="@drawable/ic_split_horizontal" />
+                android:layout_height="52dp"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/taru_surface_button"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp">
 
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switch_double_foldable"
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_double_reader"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingHorizontal="16dp"
+                    android:text="@string/use_two_pages_landscape"
+                    android:textColor="@color/taru_text_primary"
+                    android:textSize="16sp"
+                    android:drawableTint="@color/taru_text_secondary"
+                    app:drawableStartCompat="@drawable/ic_split_horizontal"
+                    android:drawablePadding="12dp"
+                    android:fontFamily="@font/outfit" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Auto double on Foldable Switch Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_double_foldable"
+                style="?materialCardViewFilledStyle"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/margin_small"
-                android:drawablePadding="?android:listPreferredItemPaddingStart"
-                android:minHeight="?android:listPreferredItemHeightSmall"
-                android:paddingStart="?android:listPreferredItemPaddingStart"
-                android:paddingEnd="?android:listPreferredItemPaddingEnd"
-                android:text="@string/auto_double_foldable"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/taru_text_primary"
-                android:textSize="14sp"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
                 android:visibility="gone"
-                tools:visibility="visible" />
+                app:cardBackgroundColor="@color/taru_surface_button"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                tools:visibility="visible">
 
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switch_double_cover_page"
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_double_foldable"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingHorizontal="16dp"
+                    android:text="@string/auto_double_foldable"
+                    android:textColor="@color/taru_text_primary"
+                    android:textSize="16sp"
+                    android:drawableTint="@color/taru_text_secondary"
+                    android:drawablePadding="12dp"
+                    android:fontFamily="@font/outfit" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Double Page Cover Page Switch Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_double_cover_page"
+                style="?materialCardViewFilledStyle"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/margin_small"
-                android:drawablePadding="?android:listPreferredItemPaddingStart"
-                android:minHeight="?android:listPreferredItemHeightSmall"
-                android:paddingStart="?android:listPreferredItemPaddingStart"
-                android:paddingEnd="?android:listPreferredItemPaddingEnd"
-                android:text="@string/double_page_cover_page"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/taru_text_primary"
-                android:textSize="14sp" />
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="@color/taru_surface_button"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp">
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_double_cover_page"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingHorizontal="16dp"
+                    android:text="@string/double_page_cover_page"
+                    android:textColor="@color/taru_text_primary"
+                    android:textSize="16sp"
+                    android:drawableTint="@color/taru_text_secondary"
+                    android:drawablePadding="12dp"
+                    android:fontFamily="@font/outfit" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Scroll Sensitivity Slider Header -->
             <TextView
                 android:id="@+id/text_double_sensitivity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/margin_normal"
-                android:layout_marginTop="@dimen/margin_small"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="16dp"
                 android:text="@string/two_page_scroll_sensitivity"
-                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.15"
                 android:textColor="@color/taru_text_secondary"
-                android:textSize="13sp" />
+                android:textAllCaps="true"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:fontFamily="@font/outfit" />
 
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_double_sensitivity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/margin_small"
-                android:layout_marginTop="@dimen/margin_small"
+                android:layout_marginHorizontal="4dp"
+                android:layout_marginTop="8dp"
                 android:valueFrom="0"
                 android:valueTo="100"
                 app:labelBehavior="floating"
+                app:thumbColor="@color/taru_accent"
+                app:trackColorActive="@color/taru_accent"
+                app:trackColorInactive="@color/taru_outline_soft"
                 tools:value="50" />
 
+            <!-- Screen Rotation Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_screen_rotate"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginTop="16dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/rotate_screen"
                 android:visibility="gone"
-                app:drawableStartCompat="@drawable/ic_screen_rotation"
-                tools:visibility="visible" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_screen_rotation"
+                tools:visibility="visible"
+                android:fontFamily="@font/outfit" />
 
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switch_screen_lock_rotation"
+            <!-- Lock Rotation Switch Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_screen_lock_rotation"
+                style="?materialCardViewFilledStyle"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:drawablePadding="?android:listPreferredItemPaddingStart"
-                android:ellipsize="end"
-                android:minHeight="?android:listPreferredItemHeightSmall"
-                android:paddingStart="?android:listPreferredItemPaddingStart"
-                android:paddingEnd="?android:listPreferredItemPaddingEnd"
-                android:singleLine="true"
-                android:text="@string/lock_screen_rotation"
-                android:textAppearance="?textAppearanceListItem"
-                android:textColor="?colorOnSurfaceVariant"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
                 android:visibility="gone"
-                app:drawableStartCompat="@drawable/ic_screen_rotation_lock"
-                tools:visibility="visible" />
+                app:cardBackgroundColor="@color/taru_surface_button"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                tools:visibility="visible">
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_screen_lock_rotation"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingHorizontal="16dp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:text="@string/lock_screen_rotation"
+                    android:textColor="@color/taru_text_primary"
+                    android:textSize="16sp"
+                    android:drawableTint="@color/taru_text_secondary"
+                    app:drawableStartCompat="@drawable/ic_screen_rotation_lock"
+                    android:drawablePadding="12dp"
+                    android:fontFamily="@font/outfit" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Automatic Scroll Timer Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_scroll_timer"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginTop="16dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/automatic_scroll"
-                app:drawableStartCompat="@drawable/ic_timer" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_timer"
+                android:fontFamily="@font/outfit" />
 
+            <!-- Color Correction Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_color_filter"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/color_correction"
-                app:drawableStartCompat="@drawable/ic_appearance" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_appearance"
+                android:fontFamily="@font/outfit" />
 
+            <!-- General Settings Button -->
             <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
                 android:id="@+id/button_settings"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/taru_text_primary"
+                android:textSize="16sp"
+                android:gravity="center_vertical|start"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                app:backgroundFillColor="@color/taru_surface_button"
+                app:shapeAppearance="?shapeAppearanceCornerMedium"
                 android:text="@string/settings"
-                app:drawableStartCompat="@drawable/ic_settings" />
+                android:drawableTint="@color/taru_text_secondary"
+                android:drawableEnd="@drawable/ic_settings"
+                android:fontFamily="@font/outfit" />
 
         </LinearLayout>
 

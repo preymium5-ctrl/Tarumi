@@ -28,7 +28,6 @@ import org.koitharu.kotatsu.history.domain.model.MangaWithHistory
 import org.koitharu.kotatsu.image.ui.CoverImageView
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
-import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.reader.ui.ReaderState
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -470,24 +469,16 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 	}
 
 	private fun MangaWithHistory.continueReadingSubtitle(): String {
-		val totalChapters = history.chaptersCount
-			.takeIf { it > 0 }
-			?: manga.chapters?.size?.takeIf { it > 0 }
-			?: 0
-		val chapter = manga.chapters?.findById(history.chapterId)
-		val chapterTitle = chapter?.getLocalizedTitle(resources) ?: run {
-			val chapterNumber = (history.percent * totalChapters)
-				.toInt()
-				.coerceIn(1, totalChapters.coerceAtLeast(1))
-			getString(R.string.chapter_number_pattern, chapterNumber)
-		}
-		val totalTitle = totalChapters.takeIf { it > 0 }?.toString() ?: getString(R.string.unknown)
-		val progress = (history.percent * 100f).toInt().coerceIn(0, 100)
+		val progress = continueReadingProgress()
+		val chapterTitle = progress.currentChapterLabel
+			?.let { getString(R.string.chapter_number, it) }
+			?: getString(R.string.unknown)
+		val totalTitle = progress.totalChapters.takeIf { it > 0 }?.toString() ?: getString(R.string.unknown)
 		return getString(
 			R.string.continue_reading_meta_pattern,
 			chapterTitle,
 			totalTitle,
-			progress,
+			progress.percent,
 			history.updatedAt.formatRelativeTime(),
 		)
 	}

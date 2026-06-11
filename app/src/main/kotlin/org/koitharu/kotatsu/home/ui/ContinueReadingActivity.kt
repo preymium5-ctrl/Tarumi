@@ -19,7 +19,6 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.databinding.ActivityContinueReadingBinding
 import org.koitharu.kotatsu.databinding.ItemContinueReadingGridBinding
 import org.koitharu.kotatsu.history.domain.model.MangaWithHistory
-import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.reader.ui.ReaderState
 
 @AndroidEntryPoint
@@ -109,22 +108,11 @@ private class ContinueReadingAdapter : RecyclerView.Adapter<ContinueReadingAdapt
 		}
 
 		private fun MangaWithHistory.progressText(): String {
-			val total = history.chaptersCount.takeIf { it > 0 } ?: manga.chapters.orEmpty().size
-			val chapters = manga.chapters.orEmpty()
-			val current = chapters.findById(history.chapterId)?.let { chapter ->
-				chapter.numberString()
-					?.takeIf { it.isNotBlank() }
-					?: chapters.asSequence()
-						.sortedWith(compareBy({ it.number }, { it.uploadDate }))
-						.indexOfFirst { it.id == chapter.id }
-						.takeIf { it >= 0 }
-						?.plus(1)
-						?.toString()
-			}
-			return if (total > 0 && current != null) {
-				"$current / $total"
-			} else if (total > 0) {
-				"- / $total"
+			val progress = continueReadingProgress()
+			return if (progress.totalChapters > 0 && progress.currentChapterLabel != null) {
+				"${progress.currentChapterLabel} / ${progress.totalChapters}"
+			} else if (progress.totalChapters > 0) {
+				"- / ${progress.totalChapters}"
 			} else {
 				"0 / 0"
 			}

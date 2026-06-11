@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">Tarumi</string>
     <string name="home">HOME</string>
@@ -522,6 +522,7 @@
     <string name="clear_source_cookies_summary">Clear cookies for specified domain only. In most cases will invalidate authorization</string>
     <string name="download_option_all_chapters">All chapters with translation %s</string>
     <string name="download_option_whole_manga">The whole manga</string>
+    <string name="download_option_current_chapter">Download current chapter</string>
     <string name="download_option_first_n_chapters">First %s</string>
     <string name="download_option_next_unread_n_chapters">Next unread %s</string>
     <string name="download_option_all_unread">All unread chapters</string>

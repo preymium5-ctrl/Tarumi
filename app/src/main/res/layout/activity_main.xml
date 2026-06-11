@@ -96,6 +96,8 @@
 		android:elevation="8dp"
 		android:fitsSystemWindows="false"
 		app:itemIconTint="@color/taru_nav_item_color"
-		app:itemTextColor="@color/taru_nav_item_color" />
+		app:itemTextColor="@color/taru_nav_item_color"
+		app:itemActiveIndicatorStyle="@style/Widget.Tarumi.BottomNavigationView.ActiveIndicator"
+		app:labelVisibilityMode="labeled" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

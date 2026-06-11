@@ -273,6 +273,10 @@ class ReaderViewModel @Inject constructor(
         download(setOf(chapterId), allowMeteredNetwork = true)
     }
 
+    fun downloadAllChapters() {
+        download(null, allowMeteredNetwork = true)
+    }
+
     fun saveCurrentPage(
         pageSaveHelper: PageSaveHelper
     ) {
@@ -576,6 +580,15 @@ class ReaderViewModel @Inject constructor(
             return PROGRESS_NONE
         }
         if (pagesCount == 1) {
+            return 1f
+        }
+        if (pagesCount >= 10 && pageIndex >= pagesCount - 3) {
+            return 1f
+        }
+        if (pagesCount >= 5 && pageIndex >= pagesCount - 2) {
+            return 1f
+        }
+        if (pageIndex >= pagesCount - 1) {
             return 1f
         }
         return (pageIndex / (pagesCount - 1).toFloat()).coerceIn(0f, 1f)

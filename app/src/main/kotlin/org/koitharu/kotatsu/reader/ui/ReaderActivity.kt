@@ -142,12 +142,28 @@ class ReaderActivity :
         viewBinding.buttonEndPrevChapter?.setOnClickListener(this)
         viewBinding.buttonEndChapters?.setOnClickListener(this)
         viewBinding.buttonEndNextChapter?.setOnClickListener(this)
+
+        viewBinding.customButtonBack?.setOnClickListener(this)
+        viewBinding.customButtonHome?.setOnClickListener(this)
+        viewBinding.customButtonDownload?.setOnClickListener(this)
+        viewBinding.customButtonPlay?.setOnClickListener(this)
+        viewBinding.customButtonPrevChapter?.setOnClickListener(this)
+        viewBinding.customButtonNextChapter?.setOnClickListener(this)
+        viewBinding.customButtonScrollToTop?.setOnClickListener(this)
+        viewBinding.customButtonSettings?.setOnClickListener(this)
+        viewBinding.customReaderBottomProgressCapsule?.setOnClickListener(this)
+
         idlingDetector.bindToLifecycle(this)
         screenOrientationHelper.applySettings()
         viewModel.isBookmarkAdded.observe(this) { viewBinding.actionsView.isBookmarkAdded = it }
-        scrollTimer.isActive.observe(this) {
+        scrollTimer.isActive.observe(this) { active ->
             updateScrollTimerButton()
-            viewBinding.actionsView.setTimerActive(it)
+            viewBinding.actionsView.setTimerActive(active)
+            if (active) {
+                viewBinding.customButtonPlay?.setIconResource(R.drawable.ic_action_pause)
+            } else {
+                viewBinding.customButtonPlay?.setIconResource(R.drawable.ic_play)
+            }
         }
         viewBinding.timerControl.onVisibilityChangeListener = this
         viewBinding.timerControl.attach(scrollTimer, this)
@@ -217,13 +233,23 @@ class ReaderActivity :
         viewModel.readerMode.observe(this, Lifecycle.State.STARTED, this::onInitReader)
         viewModel.onPageSaved.observeEvent(this, PagesSavedObserver(viewBinding.container))
         viewModel.onDownloadStarted.observeEvent(this) {
+            val anchor = if (viewBinding.customReaderBottomProgressLayout?.isVisible == true) {
+                viewBinding.customReaderBottomProgressLayout
+            } else {
+                null
+            }
             Snackbar.make(viewBinding.container, R.string.download_started, Snackbar.LENGTH_SHORT)
-                .setAnchorView(viewBinding.toolbarDocked)
+                .setAnchorView(anchor)
                 .show()
         }
         viewModel.onDownloadFinished.observeEvent(this) {
+            val anchor = if (viewBinding.customReaderBottomProgressLayout?.isVisible == true) {
+                viewBinding.customReaderBottomProgressLayout
+            } else {
+                null
+            }
             Snackbar.make(viewBinding.container, R.string.download_finished, Snackbar.LENGTH_SHORT)
-                .setAnchorView(viewBinding.toolbarDocked)
+                .setAnchorView(anchor)
                 .show()
         }
         viewModel.uiState.zipWithPrevious().observe(this, this::onUiStateChanged)
@@ -239,8 +265,13 @@ class ReaderActivity :
         viewModel.isBookmarkAdded.observe(this, MenuInvalidator(this))
         viewModel.onAskNsfwIncognito.observeEvent(this) { askForIncognitoMode() }
         viewModel.onShowToast.observeEvent(this) { msgId ->
+            val anchor = if (viewBinding.customReaderBottomProgressLayout?.isVisible == true) {
+                viewBinding.customReaderBottomProgressLayout
+            } else {
+                null
+            }
             Snackbar.make(viewBinding.container, msgId, Snackbar.LENGTH_SHORT)
-                .setAnchorView(viewBinding.toolbarDocked)
+                .setAnchorView(anchor)
                 .show()
         }
         viewModel.readerSettingsProducer.observe(this) {
@@ -316,6 +347,21 @@ class ReaderActivity :
             R.id.buttonEndPrevChapter -> switchChapterBy(-1)
             R.id.buttonEndChapters -> router.showChapterPagesSheet(ChaptersPagesSheet.TAB_CHAPTERS)
             R.id.buttonEndNextChapter -> switchChapterBy(1)
+            R.id.custom_button_back -> dispatchNavigateUp()
+            R.id.custom_button_home -> {
+                val intent = AppRouter.homeIntent(this)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                startActivity(intent)
+            }
+            R.id.custom_button_download -> showDownloadOptionsDialog()
+            R.id.customButtonPlay -> scrollTimer.setActive(!scrollTimer.isActive.value)
+            R.id.custom_button_prev_chapter -> switchChapterBy(-1)
+            R.id.custom_button_next_chapter -> switchChapterBy(1)
+            R.id.custom_button_scroll_to_top -> switchPageTo(0)
+            R.id.custom_button_settings -> openMenu()
+            R.id.custom_reader_bottom_progress_capsule -> {
+                ReaderChaptersSheet().show(supportFragmentManager, "ReaderChaptersSheet")
+            }
         }
     }
 
@@ -456,6 +502,10 @@ class ReaderActivity :
                 viewBinding.toolbarDocked?.let {
                     transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it))
                 }
+                viewBinding.customReaderTopLeftStack?.let { transition.addTransition(Slide(Gravity.TOP).addTarget(it)) }
+                viewBinding.customButtonPlay?.let { transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it)) }
+                viewBinding.customReaderBottomProgressLayout?.let { transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it)) }
+                viewBinding.customReaderBottomRightStack?.let { transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it)) }
                 TransitionManager.beginDelayedTransition(viewBinding.root, transition)
             }
             val isFullscreen = settings.isReaderFullscreenEnabled
@@ -463,6 +513,11 @@ class ReaderActivity :
             viewBinding.buttonReaderTopBack?.isVisible = isUiVisible
             viewBinding.buttonReaderTopSettings?.isVisible = isUiVisible
             viewBinding.toolbarDocked?.isVisible = isUiVisible
+            viewBinding.customReaderTopTitleLayout?.isVisible = isUiVisible
+            viewBinding.customReaderTopLeftStack?.isVisible = isUiVisible
+            viewBinding.customButtonPlay?.isVisible = isUiVisible
+            viewBinding.customReaderBottomProgressLayout?.isVisible = isUiVisible
+            viewBinding.customReaderBottomRightStack?.isVisible = isUiVisible
             viewBinding.infoBar.isGone = isUiVisible || (!viewModel.isInfoBarEnabled.value)
             viewBinding.infoBar.isTimeVisible = isFullscreen
             updateScrollTimerButton()
@@ -509,6 +564,22 @@ class ReaderActivity :
 			top = resources.getDimensionPixelOffset(R.dimen.margin_small),
 			bottom = systemBars.bottom + resources.getDimensionPixelOffset(R.dimen.margin_small),
 		)
+        val marginNormal = resources.getDimensionPixelOffset(R.dimen.margin_normal)
+        viewBinding.customReaderTopLeftStack?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            topMargin = systemBars.top + marginNormal
+            leftMargin = systemBars.left + marginNormal
+        }
+        viewBinding.customButtonPlay?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            bottomMargin = systemBars.bottom + marginNormal
+            leftMargin = systemBars.left + marginNormal
+        }
+        viewBinding.customReaderBottomProgressLayout?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            bottomMargin = systemBars.bottom + marginNormal
+        }
+        viewBinding.customReaderBottomRightStack?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            bottomMargin = systemBars.bottom + marginNormal
+            rightMargin = systemBars.right + marginNormal
+        }
         val innerInsets = Insets.of(
             systemBars.left,
             if (viewBinding.appbarTop.isVisible) viewBinding.appbarTop.height else systemBars.top,
@@ -569,6 +640,11 @@ class ReaderActivity :
 
     override fun toggleScreenOrientation() {
         if (screenOrientationHelper.toggleScreenOrientation()) {
+            val anchor = if (viewBinding.customReaderBottomProgressLayout?.isVisible == true) {
+                viewBinding.customReaderBottomProgressLayout
+            } else {
+                null
+            }
             Snackbar.make(
                 viewBinding.container,
                 if (screenOrientationHelper.isLocked) {
@@ -577,7 +653,7 @@ class ReaderActivity :
                     R.string.screen_rotation_unlocked
                 },
                 Snackbar.LENGTH_SHORT,
-            ).setAnchorView(viewBinding.toolbarDocked)
+            ).setAnchorView(anchor)
                 .show()
         }
     }
@@ -616,6 +692,13 @@ class ReaderActivity :
             viewBinding.actionsView.setSliderValue(0, 1)
             viewBinding.actionsView.isSliderEnabled = false
             updateEndChapterActions(null)
+
+            viewBinding.textViewReaderTitleCustom?.text = getString(R.string.loading_)
+            viewBinding.textViewReaderPageProgressCustom?.text = getString(R.string.loading_)
+            viewBinding.customButtonPrevChapter?.isEnabled = false
+            viewBinding.customButtonPrevChapter?.alpha = 0.36f
+            viewBinding.customButtonNextChapter?.isEnabled = false
+            viewBinding.customButtonNextChapter?.alpha = 0.36f
             return
         }
         val chapterTitle = uiState.getChapterTitle(resources)
@@ -650,6 +733,22 @@ class ReaderActivity :
         viewBinding.actionsView.isNextEnabled = uiState.hasNextChapter()
         viewBinding.actionsView.isPrevEnabled = uiState.hasPreviousChapter()
         updateEndChapterActions(uiState)
+
+        // Custom UI updates
+        viewBinding.textViewReaderTitleCustom?.text = uiState.mangaName
+        val progressText = if (uiState.chaptersTotal > 0) {
+            "Chapter ${uiState.chapterNumber}/${uiState.chaptersTotal}"
+        } else {
+            chapterTitle
+        }
+        viewBinding.textViewReaderPageProgressCustom?.text = progressText
+
+        val hasPrev = uiState.hasPreviousChapter()
+        val hasNext = uiState.hasNextChapter()
+        viewBinding.customButtonPrevChapter?.isEnabled = hasPrev
+        viewBinding.customButtonPrevChapter?.alpha = if (hasPrev) 1f else 0.36f
+        viewBinding.customButtonNextChapter?.isEnabled = hasNext
+        viewBinding.customButtonNextChapter?.alpha = if (hasNext) 1f else 0.36f
     }
 
     private fun updateEndChapterActions(uiState: ReaderUiState?) {
@@ -728,6 +827,12 @@ class ReaderActivity :
             setCancelable(true)
         }.show()
     }
+
+    private fun showDownloadOptionsDialog() {
+        ReaderDownloadSheet().show(supportFragmentManager, "ReaderDownloadSheet")
+    }
+
+    private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 
     companion object {
 
