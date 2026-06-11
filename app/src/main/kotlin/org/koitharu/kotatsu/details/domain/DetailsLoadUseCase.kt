@@ -178,10 +178,16 @@ class DetailsLoadUseCase @Inject constructor(
     }
 
     private fun Manga.normalizeSourceMetadata(): Manga {
-        if (source.name != MangaParserSource.DEMONICSCANS.name) {
-            return this
+        val cleanedAuthors = when {
+            source.name == MangaParserSource.DEMONICSCANS.name -> normalizeDemonicScansAuthors()
+            source.name.contains("ASURA", ignoreCase = true) -> normalizeAsuraAuthors()
+            else -> authors
         }
-        val cleanedAuthors = authors
+        return if (cleanedAuthors == authors) this else copy(authors = cleanedAuthors)
+    }
+
+    private fun Manga.normalizeDemonicScansAuthors(): Set<String> {
+        return authors
             .filterNot { it.equals("updating", ignoreCase = true) || it.equals("updated", ignoreCase = true) }
             .ifEmpty {
                 tags
@@ -193,11 +199,69 @@ class DetailsLoadUseCase @Inject constructor(
                     .filter { it.isNotBlank() }
             }
             .toSet()
-        return if (cleanedAuthors == authors) {
-            this
-        } else {
-            copy(authors = cleanedAuthors)
+    }
+
+    private fun Manga.normalizeAsuraAuthors(): Set<String> {
+        val result = LinkedHashSet<String>()
+        val stopWords = asuraMetadataStopWords()
+        for (author in authors) {
+            val cleaned = author.cleanAsuraAuthor(stopWords)
+            result.addAll(cleaned)
         }
+        return result
+    }
+
+    private fun Manga.asuraMetadataStopWords(): Set<String> {
+        return buildSet {
+            addAll(ASURA_AUTHOR_METADATA_LABELS)
+            tags.mapTo(this) { it.title }
+        }
+    }
+
+    private fun String.cleanAsuraAuthor(stopWords: Set<String>): List<String> {
+        val normalized = replace(Regex("""\s+"""), " ").trim()
+        if (normalized.isEmpty()) {
+            return emptyList()
+        }
+        val extracted = listOfNotNull(
+            normalized.extractAsuraMetadataValue("Author", stopWords),
+            normalized.extractAsuraMetadataValue("Artist", stopWords),
+        ).filter { it.isUsefulAsuraAuthor() }
+        if (extracted.isNotEmpty()) {
+            return extracted.distinct()
+        }
+        return if (normalized.isUsefulAsuraAuthor()) {
+            listOf(normalized)
+        } else {
+            emptyList()
+        }
+    }
+
+    private fun String.extractAsuraMetadataValue(label: String, stopWords: Set<String>): String? {
+        val labelRegex = Regex("""\b${Regex.escape(label)}\b""", RegexOption.IGNORE_CASE)
+        val match = labelRegex.find(this) ?: return null
+        val start = match.range.last + 1
+        var end = length
+        for (word in stopWords) {
+            if (word.equals(label, ignoreCase = true) || word.isBlank()) {
+                continue
+            }
+            val wordRegex = Regex("""\b${Regex.escape(word)}\b""", RegexOption.IGNORE_CASE)
+            val next = wordRegex.find(this, start)?.range?.first ?: continue
+            if (next < end) {
+                end = next
+            }
+        }
+        return substring(start, end)
+            .trim(' ', ':', '-', '•', ',', '|')
+            .takeIf { it.isNotBlank() }
+    }
+
+    private fun String.isUsefulAsuraAuthor(): Boolean {
+        if (length > ASURA_AUTHOR_MAX_LENGTH) {
+            return false
+        }
+        return ASURA_AUTHOR_METADATA_LABELS.none { contains(it, ignoreCase = true) }
     }
 
     private suspend fun String.parseAsHtml(withImages: Boolean): CharSequence? = if (withImages) {
@@ -217,5 +281,26 @@ class DetailsLoadUseCase @Inject constructor(
             spannable.removeSpan(span)
         }
         return spannable
+    }
+
+    private companion object {
+        const val ASURA_AUTHOR_MAX_LENGTH = 64
+
+        val ASURA_AUTHOR_METADATA_LABELS = setOf(
+            "Rating",
+            "Chapters",
+            "Bookmarks",
+            "Bookmark",
+            "Status",
+            "Type",
+            "Author",
+            "Artist",
+            "Show more",
+            "First Chapter",
+            "Premium",
+            "Download",
+            "Offline",
+            "Newest Chapter",
+        )
     }
 }
