@@ -16,6 +16,11 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.util.ext.awaitUniqueWorkInfoByName
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
@@ -61,7 +66,11 @@ class RecentUpdatesWorker @AssistedInject constructor(
 			if (groups.size >= RECENT_LIMIT) {
 				break
 			}
-			loadSourceUpdates(source, groups, seenIds)
+			runCatchingCancellable {
+				loadSourceUpdates(source, groups, seenIds)
+			}.onFailure {
+				it.printStackTraceDebug()
+			}
 		}
 		return groups.rank()
 	}
@@ -70,7 +79,7 @@ class RecentUpdatesWorker @AssistedInject constructor(
 		source: MangaParserSource,
 		groups: MutableList<RecentUpdateGroup>,
 		seenIds: MutableSet<Long>,
-	) {
+	) = coroutineScope {
 		val repository = mangaRepositoryFactory.create(source)
 		val order = when {
 			SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
@@ -78,8 +87,10 @@ class RecentUpdatesWorker @AssistedInject constructor(
 			else -> repository.defaultSortOrder
 		}
 		var offset = 0
+		var sourceCount = 0
+		val semaphore = Semaphore(DETAIL_CONCURRENCY)
 		repeat(PAGE_ATTEMPTS) {
-			if (groups.size >= RECENT_LIMIT) {
+			if (groups.size >= RECENT_LIMIT || sourceCount >= RECENT_SOURCE_LIMIT) {
 				return@repeat
 			}
 			val page = withTimeoutOrNull(PAGE_TIMEOUT_MS) {
@@ -88,13 +99,28 @@ class RecentUpdatesWorker @AssistedInject constructor(
 			if (page.isEmpty()) {
 				return@repeat
 			}
-			for (manga in page) {
-				if (groups.size >= RECENT_LIMIT || !seenIds.add(manga.id)) {
-					continue
+			val candidates = page.filter { seenIds.add(it.id) }
+			if (candidates.isEmpty()) {
+				offset += page.size
+				return@repeat
+			}
+			val deferredDetails = candidates.map { manga ->
+				async {
+					semaphore.withPermit {
+						val details = withTimeoutOrNull(DETAILS_TIMEOUT_MS) {
+							repository.getDetails(manga)
+						} ?: manga
+						delay(DETAIL_DELAY_MS)
+						details
+					}
 				}
-				val details = withTimeoutOrNull(DETAILS_TIMEOUT_MS) {
-					repository.getDetails(manga)
-				} ?: manga
+			}
+			val detailsList = deferredDetails.awaitAll()
+			for (details in detailsList) {
+				if (groups.size >= RECENT_LIMIT || sourceCount >= RECENT_SOURCE_LIMIT) {
+					break
+				}
+				sourceCount++
 				val chapters = details.chapters.orEmpty()
 					.sortedWith(CHAPTER_COMPARATOR)
 					.take(CHAPTERS_PER_TITLE)
@@ -107,7 +133,6 @@ class RecentUpdatesWorker @AssistedInject constructor(
 					sourceTitle = source.title,
 					sortDate = chapters.maxOf(MangaChapter::uploadDate),
 				)
-				delay(DETAIL_DELAY_MS)
 			}
 			offset += page.size
 			delay(PAGE_DELAY_MS)
@@ -139,10 +164,10 @@ class RecentUpdatesWorker @AssistedInject constructor(
 	}
 
 	private fun List<RecentUpdateGroup>.rank(): List<RecentUpdateGroup> {
-		return distinctBy { group ->
-			val newestChapter = group.chapters.maxByOrNull { it.uploadDate }
-			"${group.manga.source.name}:${group.manga.id}:${newestChapter?.id ?: newestChapter?.url ?: group.manga.url}"
-		}.sortedByDescending { it.sortDate }.take(RECENT_LIMIT)
+		return rankRecentUpdateGroups(
+			limit = RECENT_LIMIT,
+			chaptersPerTitle = CHAPTERS_PER_TITLE,
+		)
 	}
 
 	@Reusable
@@ -174,19 +199,27 @@ class RecentUpdatesWorker @AssistedInject constructor(
 
 	private companion object {
 		const val TAG = "recent_updates_worker"
-		const val RECENT_LIMIT = 60
+		const val RECENT_LIMIT = 2_000
+		const val RECENT_SOURCE_LIMIT = 350
 		const val CHAPTERS_PER_TITLE = 3
-		const val PAGE_ATTEMPTS = 8
-		const val PAGE_TIMEOUT_MS = 3_000L
-		const val DETAILS_TIMEOUT_MS = 4_000L
-		const val PAGE_DELAY_MS = 350L
-		const val DETAIL_DELAY_MS = 40L
-		const val RECENT_CACHE_VERSION = 8
+		const val PAGE_ATTEMPTS = 24
+		const val PAGE_TIMEOUT_MS = 6_000L
+		const val DETAILS_TIMEOUT_MS = 6_000L
+		const val PAGE_DELAY_MS = 750L
+		const val DETAIL_DELAY_MS = 80L
+		const val DETAIL_CONCURRENCY = 2
+		const val RECENT_CACHE_VERSION = 9
 
 		val RECENT_SOURCES = listOf(
 			MangaParserSource.MANGAPLUSPARSER_EN,
 			MangaParserSource.AQUAMANGA,
 			MangaParserSource.ASURASCANS,
+			MangaParserSource.ASURASCANS_US,
+			MangaParserSource.ASURASCANSGG,
+			MangaParserSource.WEEBCENTRAL,
+			MangaParserSource.FLAMECOMICS,
+			MangaParserSource.MANGAFIRE_EN,
+			MangaParserSource.MANHUAFAST,
 		)
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }

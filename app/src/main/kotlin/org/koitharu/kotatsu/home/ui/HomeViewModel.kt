@@ -11,6 +11,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -134,7 +139,7 @@ class HomeViewModel @Inject constructor(
 				_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty()
 				try {
 					val updates = runCatchingCancellable {
-						loadRecentUpdates(RECENT_CACHE_LIMIT) { partial ->
+						loadRecentUpdates(RECENT_FOREGROUND_REFRESH_LIMIT) { partial ->
 							publishRecentUpdates(partial, updateSavedAt = false)
 						}
 					}.onFailure {
@@ -576,7 +581,11 @@ class HomeViewModel @Inject constructor(
 			if (groups.size >= limit) {
 				break
 			}
-			loadRecentUpdatesFromParserSource(source, groups, seenIds, limit, onPartial)
+			runCatchingCancellable {
+				loadRecentUpdatesFromParserSource(source, groups, seenIds, limit, onPartial)
+			}.onFailure {
+				it.printStackTraceDebug()
+			}
 		}
 		return rankRecentUpdates(groups, limit)
 	}
@@ -587,7 +596,7 @@ class HomeViewModel @Inject constructor(
 		seenIds: MutableSet<Long>,
 		limit: Int,
 		onPartial: (List<RecentUpdateGroup>) -> Unit,
-	) {
+	) = coroutineScope {
 		val repository = mangaRepositoryFactory.create(source)
 		val order = when {
 			SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
@@ -596,6 +605,7 @@ class HomeViewModel @Inject constructor(
 		}
 		var offset = 0
 		var sourceCount = 0
+		val semaphore = Semaphore(4)
 		repeat(RECENT_SOURCE_PAGE_ATTEMPTS) {
 			if (sourceCount >= RECENT_CANDIDATES_PER_SOURCE || groups.size >= limit) {
 				return@repeat
@@ -606,17 +616,29 @@ class HomeViewModel @Inject constructor(
 			if (page.isEmpty()) {
 				return@repeat
 			}
-			for (manga in page) {
-				if (sourceCount >= RECENT_CANDIDATES_PER_SOURCE || groups.size >= limit) {
+			val candidates = page.filter { seenIds.add(it.id) }
+			if (candidates.isEmpty()) {
+				offset += page.size
+				return@repeat
+			}
+			val deferredDetails = candidates.map { manga ->
+				async {
+					semaphore.withPermit {
+						val details = withTimeoutOrNull(RECENT_DETAILS_TIMEOUT_MS) {
+							repository.getDetails(manga)
+						} ?: manga
+						delay(RECENT_DETAILS_DELAY_MS)
+						details
+					}
+				}
+			}
+			val detailsList = deferredDetails.awaitAll()
+			var updated = false
+			for (details in detailsList) {
+				if (groups.size >= limit || sourceCount >= RECENT_CANDIDATES_PER_SOURCE) {
 					break
 				}
-				if (!seenIds.add(manga.id)) {
-					continue
-				}
 				sourceCount++
-				val details = withTimeoutOrNull(RECENT_DETAILS_TIMEOUT_MS) {
-					repository.getDetails(manga)
-				} ?: manga
 				val chapters = details.chapters.orEmpty()
 					.sortedWith(CHAPTER_COMPARATOR)
 					.take(RECENT_CHAPTERS_PER_TITLE)
@@ -629,12 +651,10 @@ class HomeViewModel @Inject constructor(
 					sourceTitle = (details.source as? MangaParserSource)?.title ?: details.source.name,
 					sortDate = chapters.maxOf(MangaChapter::uploadDate),
 				)
-				if (groups.size == 1 || groups.size % RECENT_PUBLISH_BATCH_SIZE == 0) {
-					onPartial(rankRecentUpdates(groups, limit))
-				}
-				if (groups.size < limit) {
-					delay(RECENT_DETAILS_DELAY_MS)
-				}
+				updated = true
+			}
+			if (updated) {
+				onPartial(rankRecentUpdates(groups, limit))
 			}
 			offset += page.size
 			if (groups.size < limit) {
@@ -659,10 +679,10 @@ class HomeViewModel @Inject constructor(
 	}
 
 	private fun rankRecentUpdates(groups: List<RecentUpdateGroup>, limit: Int): List<RecentUpdateGroup> {
-		return groups
-			.distinctBy { recentUpdateKey(it) }
-			.sortedByDescending { it.sortDate }
-			.take(limit)
+		return groups.rankRecentUpdateGroups(
+			limit = limit,
+			chaptersPerTitle = RECENT_CHAPTERS_PER_TITLE,
+		)
 	}
 
 	private fun mergeRecentUpdates(
@@ -674,11 +694,6 @@ class HomeViewModel @Inject constructor(
 
 	private fun List<RecentUpdateGroup>.visibleRecentUpdates(): List<RecentUpdateGroup> {
 		return take(RECENT_VISIBLE_LIMIT)
-	}
-
-	private fun recentUpdateKey(group: RecentUpdateGroup): String {
-		val newestChapter = group.chapters.maxByOrNull { it.uploadDate }
-		return "${group.manga.source.name}:${group.manga.id}:${newestChapter?.id ?: newestChapter?.url ?: group.manga.url}"
 	}
 
 	private fun List<RecentUpdateGroup>.isRecentUpdatesCacheCompatible(): Boolean {
@@ -797,19 +812,20 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_PAGE_SIZE = 10
 		const val RECENT_PAGE_COUNT = 6
 		const val RECENT_VISIBLE_LIMIT = RECENT_PAGE_SIZE * RECENT_PAGE_COUNT
-		const val RECENT_CACHE_LIMIT = RECENT_VISIBLE_LIMIT
+		const val RECENT_CACHE_LIMIT = 2_000
+		const val RECENT_FOREGROUND_REFRESH_LIMIT = 120
 		const val RECENT_CHAPTERS_PER_TITLE = 3
-		const val RECENT_CANDIDATES_PER_SOURCE = RECENT_VISIBLE_LIMIT
-		const val RECENT_SOURCE_PAGE_ATTEMPTS = 8
+		const val RECENT_CANDIDATES_PER_SOURCE = 36
+		const val RECENT_SOURCE_PAGE_ATTEMPTS = 4
 		const val RECENT_PUBLISH_BATCH_SIZE = 3
 		const val RECENT_SOURCE_TIMEOUT_MS = 12_000L
 		const val RECENT_PAGE_TIMEOUT_MS = 3_000L
 		const val RECENT_DETAILS_TIMEOUT_MS = 4_000L
 		const val RECENT_SOURCE_PAGE_DELAY_MS = 350L
-		const val RECENT_DETAILS_DELAY_MS = 40L
+		const val RECENT_DETAILS_DELAY_MS = 60L
 		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
 		const val RECENT_CACHE_TTL_MS = 6L * 60L * 60L * 1000L
-		const val RECENT_CACHE_VERSION = 8
+		const val RECENT_CACHE_VERSION = 9
 		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val SMART_RECOMMENDATION_ROTATION_MS = 2L * 24L * 60L * 60L * 1000L
@@ -828,6 +844,12 @@ class HomeViewModel @Inject constructor(
 			MangaParserSource.MANGAPLUSPARSER_EN,
 			MangaParserSource.AQUAMANGA,
 			MangaParserSource.ASURASCANS,
+			MangaParserSource.ASURASCANS_US,
+			MangaParserSource.ASURASCANSGG,
+			MangaParserSource.WEEBCENTRAL,
+			MangaParserSource.FLAMECOMICS,
+			MangaParserSource.MANGAFIRE_EN,
+			MangaParserSource.MANHUAFAST,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(

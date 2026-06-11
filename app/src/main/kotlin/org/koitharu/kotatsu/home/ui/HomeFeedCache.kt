@@ -15,10 +15,10 @@ class HomeFeedCache(context: Context) {
 
 	private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-	fun load(): HomeFeedSnapshot? {
+	fun load(recentUpdatesLimit: Int = Int.MAX_VALUE): HomeFeedSnapshot? {
 		val payload = preferences.getString(KEY_SNAPSHOT, null) ?: return null
 		return runCatching {
-			JSONObject(payload).toSnapshot()
+			JSONObject(payload).toSnapshot(recentUpdatesLimit)
 		}.getOrNull()
 	}
 
@@ -28,7 +28,7 @@ class HomeFeedCache(context: Context) {
 			.apply()
 	}
 
-	private fun JSONObject.toSnapshot() = HomeFeedSnapshot(
+	private fun JSONObject.toSnapshot(recentUpdatesLimit: Int) = HomeFeedSnapshot(
 		savedAt = optLong("savedAt", 0L),
 		recentUpdatesSavedAt = optLong("recentUpdatesSavedAt", optLong("savedAt", 0L)),
 		recentUpdatesCacheVersion = optInt("recentUpdatesCacheVersion", 0),
@@ -40,7 +40,7 @@ class HomeFeedCache(context: Context) {
 		mangaRecommendations = optMangaArray("mangaRecommendations"),
 		smartRecommendationPeriod = optLong("smartRecommendationPeriod", -1L),
 		smartRecommendations = optMangaArray("smartRecommendations"),
-		recentUpdates = optJSONArray("recentUpdates").toRecentUpdates(),
+		recentUpdates = optJSONArray("recentUpdates").toRecentUpdates(recentUpdatesLimit),
 	)
 
 	private fun HomeFeedSnapshot.toJson() = JSONObject()
@@ -72,12 +72,13 @@ class HomeFeedCache(context: Context) {
 		}
 	}
 
-	private fun JSONArray?.toRecentUpdates(): List<RecentUpdateGroup> {
+	private fun JSONArray?.toRecentUpdates(limit: Int): List<RecentUpdateGroup> {
 		if (this == null) {
 			return emptyList()
 		}
-		return buildList(length()) {
-			for (i in 0 until length()) {
+		val itemLimit = length().coerceAtMost(limit)
+		return buildList(itemLimit) {
+			for (i in 0 until itemLimit) {
 				val item = optJSONObject(i) ?: continue
 				val manga = item.optString("manga", null)?.decodeManga() ?: continue
 				val chapters = item.optJSONArray("chapters").toChapters()
