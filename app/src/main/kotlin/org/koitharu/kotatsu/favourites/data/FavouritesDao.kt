@@ -23,6 +23,7 @@ import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.domain.ListSortOrder
 import org.koitharu.kotatsu.list.domain.ReadingProgress.Companion.PROGRESS_COMPLETED
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.tracker.data.TrackEntity
 
 @Dao
 abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
@@ -222,7 +223,7 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	abstract suspend fun upsert(entity: FavouriteEntity)
 
 	@Transaction
-	@RawQuery(observedEntities = [FavouriteEntity::class])
+	@RawQuery(observedEntities = [FavouriteEntity::class, TrackEntity::class])
 	protected abstract fun observeAllImpl(query: SupportSQLiteQuery): Flow<List<FavouriteManga>>
 
 	@RawQuery

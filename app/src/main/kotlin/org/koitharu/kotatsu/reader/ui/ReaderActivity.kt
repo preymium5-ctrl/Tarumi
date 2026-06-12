@@ -491,6 +491,7 @@ class ReaderActivity :
             if (isAnimationsEnabled) {
                 val transition = TransitionSet()
                     .setOrdering(TransitionSet.ORDERING_TOGETHER)
+                    .setDuration(250)
                     .addTransition(Slide(Gravity.TOP).addTarget(viewBinding.appbarTop))
                     .addTransition(Fade().addTarget(viewBinding.infoBar))
                 viewBinding.buttonReaderTopBack?.let {
@@ -502,10 +503,27 @@ class ReaderActivity :
                 viewBinding.toolbarDocked?.let {
                     transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it))
                 }
-                viewBinding.customReaderTopLeftStack?.let { transition.addTransition(Slide(Gravity.TOP).addTarget(it)) }
-                viewBinding.customButtonPlay?.let { transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it)) }
-                viewBinding.customReaderBottomProgressLayout?.let { transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it)) }
-                viewBinding.customReaderBottomRightStack?.let { transition.addTransition(Slide(Gravity.BOTTOM).addTarget(it)) }
+                viewBinding.customReaderTopLeftStack?.let {
+                    transition.addTransition(TransitionSet().apply {
+                        ordering = TransitionSet.ORDERING_TOGETHER
+                        addTransition(Slide(Gravity.TOP).addTarget(it))
+                        addTransition(Fade().addTarget(it))
+                    })
+                }
+                viewBinding.customReaderBottomProgressLayout?.let {
+                    transition.addTransition(TransitionSet().apply {
+                        ordering = TransitionSet.ORDERING_TOGETHER
+                        addTransition(Slide(Gravity.BOTTOM).addTarget(it))
+                        addTransition(Fade().addTarget(it))
+                    })
+                }
+                viewBinding.customReaderBottomRightStack?.let {
+                    transition.addTransition(TransitionSet().apply {
+                        ordering = TransitionSet.ORDERING_TOGETHER
+                        addTransition(Slide(Gravity.BOTTOM).addTarget(it))
+                        addTransition(Fade().addTarget(it))
+                    })
+                }
                 TransitionManager.beginDelayedTransition(viewBinding.root, transition)
             }
             val isFullscreen = settings.isReaderFullscreenEnabled
@@ -513,9 +531,7 @@ class ReaderActivity :
             viewBinding.buttonReaderTopBack?.isVisible = isUiVisible
             viewBinding.buttonReaderTopSettings?.isVisible = isUiVisible
             viewBinding.toolbarDocked?.isVisible = isUiVisible
-            viewBinding.customReaderTopTitleLayout?.isVisible = isUiVisible
             viewBinding.customReaderTopLeftStack?.isVisible = isUiVisible
-            viewBinding.customButtonPlay?.isVisible = isUiVisible
             viewBinding.customReaderBottomProgressLayout?.isVisible = isUiVisible
             viewBinding.customReaderBottomRightStack?.isVisible = isUiVisible
             viewBinding.infoBar.isGone = isUiVisible || (!viewModel.isInfoBarEnabled.value)
@@ -569,15 +585,13 @@ class ReaderActivity :
             topMargin = systemBars.top + marginNormal
             leftMargin = systemBars.left + marginNormal
         }
-        viewBinding.customButtonPlay?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-            bottomMargin = systemBars.bottom + marginNormal
-            leftMargin = systemBars.left + marginNormal
-        }
         viewBinding.customReaderBottomProgressLayout?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
             bottomMargin = systemBars.bottom + marginNormal
+            leftMargin = systemBars.left + marginNormal
+            rightMargin = systemBars.right + marginNormal
         }
         viewBinding.customReaderBottomRightStack?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-            bottomMargin = systemBars.bottom + marginNormal
+            bottomMargin = systemBars.bottom + marginNormal + (48 * resources.displayMetrics.density).toInt()
             rightMargin = systemBars.right + marginNormal
         }
         val innerInsets = Insets.of(
@@ -694,7 +708,9 @@ class ReaderActivity :
             updateEndChapterActions(null)
 
             viewBinding.textViewReaderTitleCustom?.text = getString(R.string.loading_)
-            viewBinding.textViewReaderPageProgressCustom?.text = getString(R.string.loading_)
+            viewBinding.textViewReaderChapterTitleCustom?.text = getString(R.string.loading_)
+            viewBinding.textViewReaderChapterTitleCustom?.isVisible = true
+            viewBinding.textViewReaderPageProgressCustom?.isVisible = false
             viewBinding.customButtonPrevChapter?.isEnabled = false
             viewBinding.customButtonPrevChapter?.alpha = 0.36f
             viewBinding.customButtonNextChapter?.isEnabled = false
@@ -736,12 +752,37 @@ class ReaderActivity :
 
         // Custom UI updates
         viewBinding.textViewReaderTitleCustom?.text = uiState.mangaName
-        val progressText = if (uiState.chaptersTotal > 0) {
-            "Chapter ${uiState.chapterNumber}/${uiState.chaptersTotal}"
+
+        val chapter = uiState.chapter
+        val titleNumber = chapter.numberString()
+        val parts = chapterTitle.split(Regex("[:\\-]"), 2)
+        val chapterPrefix = parts.getOrNull(0)?.trim() ?: chapterTitle
+        val chapterName = parts.getOrNull(1)?.trim() ?: ""
+
+        val displayPrefix = if (titleNumber != null && chapterPrefix.contains(titleNumber)) {
+            chapterPrefix.replace(titleNumber, uiState.chapterNumber.toString())
         } else {
-            chapterTitle
+            chapterPrefix
         }
-        viewBinding.textViewReaderPageProgressCustom?.text = progressText
+
+        if (chapterName.isNotEmpty()) {
+            viewBinding.textViewReaderChapterTitleCustom?.text = chapterName
+            viewBinding.textViewReaderChapterTitleCustom?.isVisible = true
+            viewBinding.textViewReaderPageProgressCustom?.text = if (uiState.chaptersTotal > 0) {
+                "$displayPrefix / ${uiState.chaptersTotal}"
+            } else {
+                displayPrefix
+            }
+            viewBinding.textViewReaderPageProgressCustom?.isVisible = true
+        } else {
+            viewBinding.textViewReaderChapterTitleCustom?.text = if (uiState.chaptersTotal > 0) {
+                "$displayPrefix / ${uiState.chaptersTotal}"
+            } else {
+                displayPrefix
+            }
+            viewBinding.textViewReaderChapterTitleCustom?.isVisible = true
+            viewBinding.textViewReaderPageProgressCustom?.isVisible = false
+        }
 
         val hasPrev = uiState.hasPreviousChapter()
         val hasNext = uiState.hasNextChapter()
@@ -753,16 +794,7 @@ class ReaderActivity :
 
     private fun updateEndChapterActions(uiState: ReaderUiState?) {
         val actions = viewBinding.endChapterActions ?: return
-        val isAtChapterEnd = uiState != null &&
-            uiState.totalPages > 0 &&
-            uiState.currentPage >= uiState.totalPages - 1 &&
-            (uiState.hasPreviousChapter() || uiState.hasNextChapter()) &&
-            !viewBinding.appbarTop.isVisible &&
-            viewBinding.toolbarDocked?.isVisible != true
-        if (actions.isVisible != isAtChapterEnd) {
-            TransitionManager.beginDelayedTransition(viewBinding.root, Fade().addTarget(actions))
-            actions.isVisible = isAtChapterEnd
-        }
+        actions.isVisible = false
         if (uiState == null) {
             return
         }

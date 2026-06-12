@@ -178,35 +178,35 @@
 		android:visibility="gone"
 		tools:visibility="visible">
 
-		<!-- Back Button -->
+		<!-- Back Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/custom_button_back"
 			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
 			android:insetLeft="0dp"
 			android:insetRight="0dp"
 			android:insetTop="0dp"
 			android:insetBottom="0dp"
 			android:minWidth="0dp"
 			android:minHeight="0dp"
-			android:padding="12dp"
+			android:padding="10dp"
 			app:backgroundTint="#E0121212"
 			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
+			app:cornerRadius="10dp"
 			app:icon="@drawable/ic_reader_back"
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
-			app:iconSize="24dp" />
+			app:iconSize="20dp" />
 
-		<!-- Title Pill next to Back Button -->
+		<!-- Title Rectangle next to Back Button (shifted slightly to the right with 12dp margin, 40dp height) -->
 		<LinearLayout
 			android:id="@+id/customReaderTopTitleLayout"
 			android:layout_width="wrap_content"
-			android:layout_height="48dp"
+			android:layout_height="40dp"
 			android:layout_toEndOf="@id/custom_button_back"
-			android:layout_marginStart="8dp"
-			android:background="@drawable/bg_reader_pill_dark"
+			android:layout_marginStart="16dp"
+			android:background="@drawable/bg_reader_button_dark"
 			android:gravity="center"
 			android:paddingHorizontal="16dp">
 
@@ -223,86 +223,60 @@
 				tools:text="Return of the Mad Demon" />
 		</LinearLayout>
 
-		<!-- Home Button under Back Button -->
+		<!-- Home Button under Back Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/custom_button_home"
 			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
 			android:layout_below="@id/custom_button_back"
-			android:layout_marginTop="8dp"
+			android:layout_marginTop="6dp"
 			android:insetLeft="0dp"
 			android:insetRight="0dp"
 			android:insetTop="0dp"
 			android:insetBottom="0dp"
 			android:minWidth="0dp"
 			android:minHeight="0dp"
-			android:padding="12dp"
+			android:padding="10dp"
 			app:backgroundTint="#E0121212"
 			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
+			app:cornerRadius="10dp"
 			app:icon="@drawable/ic_home"
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
-			app:iconSize="24dp" />
+			app:iconSize="20dp" />
 
-		<!-- Download Button under Home Button -->
+		<!-- Download Button under Home Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/custom_button_download"
 			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
 			android:layout_below="@id/custom_button_home"
-			android:layout_marginTop="8dp"
+			android:layout_marginTop="6dp"
 			android:insetLeft="0dp"
 			android:insetRight="0dp"
 			android:insetTop="0dp"
 			android:insetBottom="0dp"
 			android:minWidth="0dp"
 			android:minHeight="0dp"
-			android:padding="12dp"
+			android:padding="10dp"
 			app:backgroundTint="#E0121212"
 			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
+			app:cornerRadius="10dp"
 			app:icon="@drawable/ic_download"
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
-			app:iconSize="24dp" />
+			app:iconSize="20dp" />
 	</RelativeLayout>
 
-	<!-- 3. Bottom Left Play Button (Auto Scroll) -->
-	<com.google.android.material.button.MaterialButton
-		android:id="@+id/customButtonPlay"
-		style="?materialIconButtonOutlinedStyle"
-		android:layout_width="48dp"
-		android:layout_height="48dp"
-		android:layout_gravity="bottom|start"
-		android:layout_marginStart="16dp"
-		android:layout_marginBottom="16dp"
-		android:insetLeft="0dp"
-		android:insetRight="0dp"
-		android:insetTop="0dp"
-		android:insetBottom="0dp"
-		android:minWidth="0dp"
-		android:minHeight="0dp"
-		android:padding="12dp"
-		android:elevation="10dp"
-		android:visibility="gone"
-		app:backgroundTint="#E0121212"
-		app:strokeWidth="0dp"
-		app:cornerRadius="12dp"
-		app:icon="@drawable/ic_play"
-		app:iconTint="#FFFFFF"
-		app:iconPadding="0dp"
-		app:iconSize="24dp"
-		tools:visibility="visible" />
-
-	<!-- 4. Bottom Center Progress Layout (Prev, Progress Pill, Next) -->
+	<!-- 3. Bottom Progress Bar with Play, Prev, Capsule, Next, Settings aligned horizontally -->
 	<LinearLayout
 		android:id="@+id/customReaderBottomProgressLayout"
-		android:layout_width="wrap_content"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:layout_gravity="bottom|center_horizontal"
+		android:layout_gravity="bottom"
+		android:layout_marginHorizontal="16dp"
 		android:layout_marginBottom="16dp"
 		android:orientation="horizontal"
 		android:gravity="center_vertical"
@@ -310,55 +284,91 @@
 		android:visibility="gone"
 		tools:visibility="visible">
 
-		<!-- Previous Chapter Button -->
+		<!-- Play Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
-			android:id="@+id/custom_button_prev_chapter"
+			android:id="@+id/customButtonPlay"
 			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
 			android:insetLeft="0dp"
 			android:insetRight="0dp"
 			android:insetTop="0dp"
 			android:insetBottom="0dp"
 			android:minWidth="0dp"
 			android:minHeight="0dp"
-			android:padding="12dp"
+			android:padding="10dp"
 			app:backgroundTint="#E0121212"
 			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
+			app:cornerRadius="10dp"
+			app:icon="@drawable/ic_play"
+			app:iconTint="#FFFFFF"
+			app:iconPadding="0dp"
+			app:iconSize="20dp" />
+
+		<!-- Previous Chapter Button (compact 40dp size) -->
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/custom_button_prev_chapter"
+			style="?materialIconButtonOutlinedStyle"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:layout_marginStart="8dp"
+			android:insetLeft="0dp"
+			android:insetRight="0dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:minWidth="0dp"
+			android:minHeight="0dp"
+			android:padding="10dp"
+			app:backgroundTint="#E0121212"
+			app:strokeWidth="0dp"
+			app:cornerRadius="10dp"
 			app:icon="@drawable/ic_reader_back"
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
-			app:iconSize="24dp" />
+			app:iconSize="20dp" />
 
-		<!-- Progress Text Pill -->
+		<!-- Progress Text Capsule (Chapter Title and Progress arranged vertically, 40dp height) -->
 		<LinearLayout
 			android:id="@+id/custom_reader_bottom_progress_capsule"
-			android:layout_width="wrap_content"
-			android:layout_height="48dp"
+			android:layout_width="0dp"
+			android:layout_height="40dp"
+			android:layout_weight="1"
 			android:layout_marginStart="8dp"
-			android:background="@drawable/bg_reader_pill_dark"
+			android:background="@drawable/bg_reader_button_dark"
 			android:gravity="center"
-			android:paddingHorizontal="24dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="16dp"
 			android:clickable="true"
 			android:focusable="true">
+
+			<TextView
+				android:id="@+id/textView_reader_chapter_title_custom"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="#FFFFFF"
+				android:textSize="12sp"
+				android:fontFamily="@font/outfit"
+				android:ellipsize="end"
+				android:maxLines="1"
+				tools:text="Fall of the Demon King" />
 
 			<TextView
 				android:id="@+id/textView_reader_page_progress_custom"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:textColor="#FFFFFF"
-				android:textSize="14sp"
+				android:layout_marginTop="2dp"
+				android:textColor="#A0A0A0"
+				android:textSize="10sp"
 				android:fontFamily="@font/outfit"
 				tools:text="Episode 198 / 199" />
 		</LinearLayout>
 
-		<!-- Next Chapter Button -->
+		<!-- Next Chapter Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/custom_button_next_chapter"
 			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
 			android:layout_marginStart="8dp"
 			android:insetLeft="0dp"
 			android:insetRight="0dp"
@@ -366,17 +376,39 @@
 			android:insetBottom="0dp"
 			android:minWidth="0dp"
 			android:minHeight="0dp"
-			android:padding="12dp"
+			android:padding="10dp"
 			app:backgroundTint="#E0121212"
 			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
+			app:cornerRadius="10dp"
 			app:icon="@drawable/ic_arrow_forward"
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
-			app:iconSize="24dp" />
+			app:iconSize="20dp" />
+
+		<!-- Settings Button (compact 40dp size) -->
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/custom_button_settings"
+			style="?materialIconButtonOutlinedStyle"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:layout_marginStart="8dp"
+			android:insetLeft="0dp"
+			android:insetRight="0dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:minWidth="0dp"
+			android:minHeight="0dp"
+			android:padding="10dp"
+			app:backgroundTint="#E0121212"
+			app:strokeWidth="0dp"
+			app:cornerRadius="10dp"
+			app:icon="@drawable/ic_reader_settings_slider"
+			app:iconTint="#FFFFFF"
+			app:iconPadding="0dp"
+			app:iconSize="20dp" />
 	</LinearLayout>
 
-	<!-- 5. Bottom Right Stack (Scroll to Top & Settings) -->
+	<!-- 4. Bottom Right Stack (Scroll to Top floating above Settings) -->
 	<LinearLayout
 		android:id="@+id/customReaderBottomRightStack"
 		android:layout_width="wrap_content"
@@ -389,48 +421,26 @@
 		android:visibility="gone"
 		tools:visibility="visible">
 
-		<!-- Arrow Up Button -->
+		<!-- Arrow Up Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/custom_button_scroll_to_top"
 			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
 			android:insetLeft="0dp"
 			android:insetRight="0dp"
 			android:insetTop="0dp"
 			android:insetBottom="0dp"
 			android:minWidth="0dp"
 			android:minHeight="0dp"
-			android:padding="12dp"
+			android:padding="10dp"
 			app:backgroundTint="#E0121212"
 			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
+			app:cornerRadius="10dp"
 			app:icon="@drawable/ic_arrow_up"
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
-			app:iconSize="24dp" />
-
-		<!-- Settings Button -->
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/custom_button_settings"
-			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
-			android:layout_marginTop="8dp"
-			android:insetLeft="0dp"
-			android:insetRight="0dp"
-			android:insetTop="0dp"
-			android:insetBottom="0dp"
-			android:minWidth="0dp"
-			android:minHeight="0dp"
-			android:padding="12dp"
-			app:backgroundTint="#E0121212"
-			app:strokeWidth="0dp"
-			app:cornerRadius="12dp"
-			app:icon="@drawable/ic_reader_settings_slider"
-			app:iconTint="#FFFFFF"
-			app:iconPadding="0dp"
-			app:iconSize="24dp" />
+			app:iconSize="20dp" />
 	</LinearLayout>
 
 	<org.koitharu.kotatsu.reader.ui.ReaderToastView

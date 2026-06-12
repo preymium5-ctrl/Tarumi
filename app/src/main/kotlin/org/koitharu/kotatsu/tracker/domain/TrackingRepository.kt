@@ -20,6 +20,7 @@ import org.koitharu.kotatsu.details.domain.ProgressUpdateUseCase
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.parsers.config.ConfigKey
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.ifZero
 import org.koitharu.kotatsu.tracker.data.TrackEntity
@@ -256,13 +257,14 @@ class TrackingRepository @Inject constructor(
 
 			is MangaUpdates.Success -> {
 				val chapters = updates.manga.getChapters(updates.branch)
+				val latestChapter = chapters.latestChapter()
 				TrackEntity(
 					mangaId = mangaId,
-					lastChapterId = chapters.lastOrNull()?.id ?: NO_ID,
+					lastChapterId = latestChapter?.id ?: NO_ID,
 					// Cap at the total chapter count: the unread counter can never exceed how many
 					// chapters exist, even if a transient detection glitch tries to inflate it.
 					newChapters = if (updates.isValid) {
-						(newChapters + updates.newChapters.size).coerceIn(0, chapters.size)
+						(newChapters + updates.newChapters.size).coerceIn(0, chapters.orEmpty().size)
 					} else {
 						0
 					},
@@ -273,6 +275,13 @@ class TrackingRepository @Inject constructor(
 				)
 			}
 		}
+	}
+
+	private fun List<MangaChapter>?.latestChapter(): MangaChapter? {
+		val chapters = orEmpty()
+		chapters.filter { it.uploadDate > 0L }.maxByOrNull { it.uploadDate }?.let { return it }
+		chapters.filter { it.number > 0 }.maxByOrNull { it.number }?.let { return it }
+		return chapters.lastOrNull()
 	}
 
 	private suspend fun gcIfNotCalled() {

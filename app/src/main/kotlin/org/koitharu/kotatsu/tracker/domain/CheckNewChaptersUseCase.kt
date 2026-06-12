@@ -52,26 +52,21 @@ class CheckNewChaptersUseCase @Inject constructor(
 			val track = repository.getTrackOrNull(manga) ?: return@withLock
 			val branch = checkNotNull(details.chapters?.findById(currentChapterId)).branch
 			val chapters = details.getChapters(branch)
-			val chapterIndex = chapters.indexOfFirst { x -> x.id == currentChapterId }
-			val lastChapter = chapters.lastOrNull()
-			// Credit chapters that appeared since the previously tracked last chapter.
-			// Without this, opening the reader on an older chapter while a release
-			// dropped in the meantime would advance lastChapterId past the unseen
-			// chapter without ever flagging it as new, hiding it from the Updates tab.
-			val prevLastIndex = chapters.indexOfFirst { it.id == track.lastChapterId }
-			val addedSinceLastTrack = if (prevLastIndex >= 0) chapters.lastIndex - prevLastIndex else 0
-			val effectiveNew = track.newChapters + addedSinceLastTrack
-			val lastNewChapterIndex = chapters.size - effectiveNew
+			val latestChapter = chapters.latestChapter()
+			val detectedUpdates = compare(track, details, branch, currentChapterId)
+			val carriedUpdates = chapters.inferNewestChapters(track.newChapters)
+			val effectiveUpdates = (carriedUpdates + detectedUpdates.newChapters).distinctBy { it.id }
+			val isReadingNewChapter = effectiveUpdates.any { it.id == currentChapterId } ||
+				latestChapter?.id == currentChapterId
 			val tracking = MangaTracking(
 				manga = details,
-				lastChapterId = lastChapter?.id ?: 0L,
+				lastChapterId = latestChapter?.id ?: 0L,
 				lastCheck = Instant.now(),
-				lastChapterDate = lastChapter?.uploadDate?.toInstantOrNull() ?: track.lastChapterDate,
-				newChapters = when {
-					effectiveNew == 0 -> 0
-					chapterIndex < 0 -> effectiveNew
-					chapterIndex >= lastNewChapterIndex -> chapters.lastIndex - chapterIndex
-					else -> effectiveNew
+				lastChapterDate = latestChapter?.uploadDate?.toInstantOrNull() ?: track.lastChapterDate,
+				newChapters = if (isReadingNewChapter) {
+					0
+				} else {
+					effectiveUpdates.size.coerceAtMost(chapters.size)
 				},
 			)
 			repository.mergeWith(tracking)
@@ -154,9 +149,8 @@ class CheckNewChaptersUseCase @Inject constructor(
 		if (BuildConfig.DEBUG && chapters.findById(track.lastChapterId) == null) {
 			Log.e("Tracker", "Chapter ${track.lastChapterId} not found")
 		}
-		compareAgainst(manga, branch, chapters, track.lastChapterId)?.let { return it }
-		// lastChapterId is stale (not in the fresh list) -> prefer the date baseline.
 		compareByDate(manga, branch, chapters, track.lastChapterDate?.toEpochMilli() ?: 0L)?.let { return it }
+		compareAgainst(manga, branch, chapters, track.lastChapterId)?.let { return it }
 		// No usable id or date -> last resort: the user's reading position.
 		if (historyChapterId != 0L && historyChapterId != track.lastChapterId) {
 			compareAgainst(manga, branch, chapters, historyChapterId)?.let { return it }
@@ -166,8 +160,9 @@ class CheckNewChaptersUseCase @Inject constructor(
 	}
 
 	/**
-	 * Returns a result if [anchorChapterId] is a usable anchor in [chapters] (either it is the last
-	 * chapter, or there are some chapters after it), or `null` if the anchor is absent from the list.
+	 * Returns a result if [anchorChapterId] is a usable anchor in [chapters], or `null` if the
+	 * anchor is absent from the list. Sources disagree on chapter ordering, so prefer real upload
+	 * dates and chapter numbers before falling back to list direction.
 	 */
 	private fun compareAgainst(
 		manga: Manga,
@@ -175,18 +170,41 @@ class CheckNewChaptersUseCase @Inject constructor(
 		chapters: List<MangaChapter>,
 		anchorChapterId: Long,
 	): MangaUpdates.Success? {
-		val newChapters = chapters.takeLastWhile { x -> x.id != anchorChapterId }
-		return when {
-			newChapters.isEmpty() -> MangaUpdates.Success(
+		val anchorIndex = chapters.indexOfFirst { it.id == anchorChapterId }
+		if (anchorIndex == -1) {
+			return null
+		}
+		val anchor = chapters[anchorIndex]
+		val newerByDate = if (anchor.uploadDate > 0L) {
+			chapters.filter { it.uploadDate > anchor.uploadDate }
+		} else {
+			emptyList()
+		}
+		if (newerByDate.isNotEmpty() && newerByDate.size < chapters.size) {
+			return MangaUpdates.Success(manga, branch, newerByDate, isValid = true)
+		}
+		val newerByNumber = if (anchor.number > 0) {
+			chapters.filter { it.number > anchor.number }
+		} else {
+			emptyList()
+		}
+		if (newerByNumber.isNotEmpty() && newerByNumber.size < chapters.size) {
+			return MangaUpdates.Success(manga, branch, newerByNumber, isValid = true)
+		}
+		val newChapters = when (chapters.isLikelyNewestFirst()) {
+			true -> chapters.take(anchorIndex)
+			false -> chapters.drop(anchorIndex + 1)
+			null -> chapters.drop(anchorIndex + 1)
+		}
+		return if (newChapters.isEmpty()) {
+			MangaUpdates.Success(
 				manga = manga,
 				branch = branch,
 				newChapters = emptyList(),
-				isValid = chapters.lastOrNull()?.id == anchorChapterId,
+				isValid = true,
 			)
-
-			newChapters.size == chapters.size -> null // anchor not found in the list
-
-			else -> MangaUpdates.Success(manga, branch, newChapters, isValid = true)
+		} else {
+			MangaUpdates.Success(manga, branch, newChapters, isValid = true)
 		}
 	}
 
@@ -208,5 +226,33 @@ class CheckNewChaptersUseCase @Inject constructor(
 			newChapters.size == chapters.size -> null
 			else -> MangaUpdates.Success(manga, branch, newChapters, isValid = true)
 		}
+	}
+
+	private fun List<MangaChapter>.latestChapter(): MangaChapter? {
+		filter { it.uploadDate > 0L }.maxByOrNull { it.uploadDate }?.let { return it }
+		filter { it.number > 0 }.maxByOrNull { it.number }?.let { return it }
+		return lastOrNull()
+	}
+
+	private fun List<MangaChapter>.inferNewestChapters(count: Int): List<MangaChapter> {
+		if (count <= 0) {
+			return emptyList()
+		}
+		return when (isLikelyNewestFirst()) {
+			true -> take(count)
+			false, null -> takeLast(count)
+		}
+	}
+
+	private fun List<MangaChapter>.isLikelyNewestFirst(): Boolean? {
+		val datedChapters = filter { it.uploadDate > 0L }
+		if (datedChapters.size >= 2) {
+			return datedChapters.first().uploadDate > datedChapters.last().uploadDate
+		}
+		val numberedChapters = filter { it.number > 0 }
+		if (numberedChapters.size >= 2) {
+			return numberedChapters.first().number > numberedChapters.last().number
+		}
+		return null
 	}
 }

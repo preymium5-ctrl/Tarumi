@@ -3,7 +3,6 @@ package org.koitharu.kotatsu.tracker.domain.model
 import org.koitharu.kotatsu.parsers.exception.TooManyRequestExceptions
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
-import org.koitharu.kotatsu.parsers.util.ifZero
 
 sealed interface MangaUpdates {
 
@@ -19,9 +18,14 @@ sealed interface MangaUpdates {
 		fun isNotEmpty() = newChapters.isNotEmpty()
 
 		fun lastChapterDate(): Long {
-			val lastChapter = newChapters.lastOrNull()
-			return lastChapter?.uploadDate?.ifZero { System.currentTimeMillis() }
-				?: (manga.chapters?.lastOrNull()?.uploadDate ?: 0L)
+			val latestNewChapterDate = newChapters.maxOfOrNull { it.uploadDate } ?: 0L
+			if (latestNewChapterDate > 0L) {
+				return latestNewChapterDate
+			}
+			if (newChapters.isNotEmpty()) {
+				return System.currentTimeMillis()
+			}
+			return manga.chapters?.maxOfOrNull { it.uploadDate } ?: 0L
 		}
 	}
 
