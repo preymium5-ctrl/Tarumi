@@ -215,7 +215,8 @@ class HistoryListViewModel @Inject constructor(
 		} ?: ListHeader(R.string.unknown)
 
 		ListSortOrder.UNREAD,
-		ListSortOrder.PROGRESS -> ListHeader(
+		ListSortOrder.PROGRESS,
+		ListSortOrder.STATUS_GROUP -> ListHeader(
 			when {
 				ReadingProgress.isCompleted(percent) -> R.string.status_completed
 				percent in 0f..0.01f -> R.string.status_planned

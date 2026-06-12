@@ -78,6 +78,16 @@ class SourcesSettingsFragment : BasePreferenceFragment(R.string.remote_sources),
 			true
 		}
 
+		AppSettings.KEY_SOURCE_HEALTH -> {
+			router.openSourceHealthSystemChecker()
+			true
+		}
+
+		AppSettings.KEY_METADATA_QUALITY -> {
+			router.openMetadataQualityDashboard()
+			true
+		}
+
 		AppSettings.KEY_HANDLE_LINKS -> {
 			viewModel.setLinksEnabled((preference as TwoStatePreference).isChecked)
 			true

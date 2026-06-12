@@ -52,7 +52,7 @@ abstract class CachingMangaRepository(
 			cache.getDetails(source, manga.url)?.let { return it }
 		}
 		val details = asyncSafe {
-			getDetailsImpl(manga)
+			getDetailsImpl(manga).normalizeDetailsMetadata()
 		}
 		if (cachePolicy.writeEnabled) {
 			cache.putDetails(source, manga.url, details)

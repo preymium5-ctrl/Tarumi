@@ -123,6 +123,28 @@ class MangaDataRepository @Inject constructor(
 		return db.getMangaDao().findByPublicUrl(publicUrl)?.toManga()
 	}
 
+	suspend fun findSmartMetadataCandidates(manga: Manga, limit: Int): List<Manga> {
+		val normalizedTitle = manga.title.normalizedMetadataTitle()
+		if (normalizedTitle.isEmpty()) {
+			return emptyList()
+		}
+		return db.getMangaDao()
+			.findMetadataCandidates(manga.id, "%${manga.title}%", limit * 4)
+			.asSequence()
+			.map { it.toManga() }
+			.filter { it.source != manga.source }
+			.filter { candidate ->
+				candidate.title.normalizedMetadataTitle() == normalizedTitle ||
+					candidate.altTitles.any { it.normalizedMetadataTitle() == normalizedTitle } ||
+					manga.altTitles.any { alt ->
+						val normalizedAlt = alt.normalizedMetadataTitle()
+						normalizedAlt.isNotEmpty() && normalizedAlt == candidate.title.normalizedMetadataTitle()
+					}
+			}
+			.take(limit)
+			.toList()
+	}
+
 	suspend fun resolveIntent(intent: MangaIntent, withChapters: Boolean): Manga? = when {
 		intent.manga != null -> intent.manga.withCachedChaptersIfNeeded(withChapters)
 		intent.mangaId != 0L -> findMangaById(intent.mangaId, withChapters)
@@ -245,4 +267,11 @@ class MangaDataRepository @Inject constructor(
 		coverUrlOverride = null,
 		contentRatingOverride = null,
 	)
+}
+
+private fun String.normalizedMetadataTitle(): String {
+	return lowercase()
+		.replace(Regex("""\s+"""), " ")
+		.replace(Regex("""[^\p{L}\p{N} ]"""), "")
+		.trim()
 }

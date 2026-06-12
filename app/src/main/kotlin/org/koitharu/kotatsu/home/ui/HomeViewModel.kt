@@ -24,6 +24,7 @@ import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.model.distinctById
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.parser.SourceDiagnosticsStore
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.history.data.HistoryRepository
@@ -47,6 +48,7 @@ class HomeViewModel @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	@BaseHttpClient private val okHttpClient: OkHttpClient,
 	private val historyRepository: HistoryRepository,
+	private val diagnosticsStore: SourceDiagnosticsStore,
 ) : BaseViewModel() {
 
 	private val homeFeedCache = HomeFeedCache(context)
@@ -581,9 +583,29 @@ class HomeViewModel @Inject constructor(
 			if (groups.size >= limit) {
 				break
 			}
+			if (diagnosticsStore.shouldSkipRecentCrawl(source)) {
+				continue
+			}
+			val startedAt = System.currentTimeMillis()
+			val beforeCount = groups.size
 			runCatchingCancellable {
 				loadRecentUpdatesFromParserSource(source, groups, seenIds, limit, onPartial)
+			}.onSuccess {
+				diagnosticsStore.recordRecentCheck(
+					source = source,
+					success = true,
+					itemsFound = groups.size - beforeCount,
+					elapsedMs = System.currentTimeMillis() - startedAt,
+					error = null,
+				)
 			}.onFailure {
+				diagnosticsStore.recordRecentCheck(
+					source = source,
+					success = false,
+					itemsFound = groups.size - beforeCount,
+					elapsedMs = System.currentTimeMillis() - startedAt,
+					error = it,
+				)
 				it.printStackTraceDebug()
 			}
 		}

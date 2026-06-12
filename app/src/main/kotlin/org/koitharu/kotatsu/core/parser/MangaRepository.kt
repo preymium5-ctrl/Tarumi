@@ -85,11 +85,36 @@ interface MangaRepository {
 		}
 
 		private fun createRepository(source: MangaSource): MangaRepository? = when (source) {
-			is MangaParserSource -> ParserMangaRepository(
-				parser = loaderContext.newParserInstance(source),
-				cache = contentCache,
-				mirrorSwitcher = mirrorSwitcher,
-			)
+			is MangaParserSource -> {
+				val parser = when (source) {
+					MangaParserSource.ALLPORN_COMIC -> {
+						org.koitharu.kotatsu.parsers.site.en.AllPornComicParser(
+							loaderContext as org.koitharu.kotatsu.core.parser.MangaLoaderContextImpl,
+							loaderContext.newParserInstance(source)
+						)
+					}
+					MangaParserSource.HENTAIMANGA -> {
+						org.koitharu.kotatsu.parsers.site.en.HentaiMangaParser(
+							loaderContext as org.koitharu.kotatsu.core.parser.MangaLoaderContextImpl,
+							loaderContext.newParserInstance(source)
+						)
+					}
+					MangaParserSource.ADULT_WEBTOON -> {
+						org.koitharu.kotatsu.parsers.site.en.AdultWebtoonParser(
+							loaderContext as org.koitharu.kotatsu.core.parser.MangaLoaderContextImpl,
+							loaderContext.newParserInstance(source)
+						)
+					}
+					else -> {
+						loaderContext.newParserInstance(source)
+					}
+				}
+				ParserMangaRepository(
+					parser = parser,
+					cache = contentCache,
+					mirrorSwitcher = mirrorSwitcher,
+				)
+			}
 
 			TestMangaSource -> TestMangaRepository(
 				loaderContext = loaderContext,

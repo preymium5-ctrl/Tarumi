@@ -107,13 +107,25 @@ class AsuraScansParser(context: org.koitharu.kotatsu.parsers.MangaLoaderContext)
             ?: ""
 
         val tagElements = document.select("a[href*=\"genres=\"]")
-        val tags = tagElements.toList().mapNotNull { element ->
+        val tags = LinkedHashSet<MangaTag>()
+        tagElements.toList().mapNotNullTo(tags) { element ->
             val titleText = element.text().trim()
             if (titleText.isEmpty()) null else {
                 tagMap[titleText.lowercase(Locale.ENGLISH)]
                     ?: MangaTag(titleText, titleText.lowercase(Locale.ENGLISH).replace(asuraGenreKeyRegex, "-").trim('-'), source)
             }
-        }.toSet()
+        }
+
+        val typeText = findMetadataText(document, "Type")
+        typeText.toAsuraContentTypeTag()?.let(tags::add)
+
+        val rating = findMetadataText(document, "Rating")
+            .parseAsuraRating()
+            ?: asuraRatingTextRegex.find(document.body()?.text().orEmpty())
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.parseAsuraRating()
+            ?: manga.rating
 
         val statusText = document.selectFirst("div:containsOwn(Status) + div")?.text()?.trim()?.lowercase(Locale.ENGLISH) ?: ""
         val state = when (statusText) {
@@ -125,8 +137,8 @@ class AsuraScansParser(context: org.koitharu.kotatsu.parsers.MangaLoaderContext)
             else -> null
         }
 
-        val authorName = document.selectFirst("div:has(span:containsOwn(Author)) > *:last-child")?.text()?.trim() ?: ""
-        val artistName = document.selectFirst("div:has(span:containsOwn(Artist)) > *:last-child")?.text()?.trim() ?: ""
+        val authorName = findMetadataText(document, "Author").cleanAsuraCreatorValue()
+        val artistName = findMetadataText(document, "Artist").cleanAsuraCreatorValue()
 
         val authors = LinkedHashSet<String>()
         if (authorName.isNotEmpty() && !authorName.equals("unknown", ignoreCase = true)) {
@@ -182,6 +194,7 @@ class AsuraScansParser(context: org.koitharu.kotatsu.parsers.MangaLoaderContext)
         return manga.copy(
             title = title,
             altTitles = altTitles,
+            rating = rating,
             description = description,
             tags = tags,
             state = state,
@@ -406,7 +419,79 @@ class AsuraScansParser(context: org.koitharu.kotatsu.parsers.MangaLoaderContext)
     companion object {
         val chapterNumberRegex = Regex("Chapter\\s+(\\d+(?:\\.\\d+)?)", RegexOption.IGNORE_CASE)
         val pageUrlRegex = Regex("\"url\":\\s*\\[0,\\s*\"([^\"]+)\"")
+        val asuraRatingTextRegex = Regex("""\bRating\s+([0-9]+(?:\.[0-9]+)?)\b""", RegexOption.IGNORE_CASE)
         val ASURA_GENRES = listOf("Action", "Adventure", "Comedy", "Crazy MC", "Demon", "Dungeons", "Fantasy", "Game", "Genius MC", "Isekai", "Magic", "Murim", "Mystery", "Necromancer", "Overpowered", "Regression", "Reincarnation", "Revenge", "Romance", "School Life", "Sci-fi", "Shoujo", "Shounen", "System", "Tower", "Tragedy", "Villain", "Violence")
         val asuraGenreKeyRegex = Regex("[^a-z0-9]+")
+        val asuraCreatorJunkMarkers = setOf(
+            "Safari",
+            "ad blockers",
+            "break part of our website",
+            "disable your ad blockers",
+            "Rating",
+            "Chapters",
+            "Bookmarks",
+            "Status",
+            "Type",
+            "Summary",
+            "First Chapter",
+            "Newest Chapter",
+        )
+    }
+
+    private fun findMetadataText(document: Document, label: String): String {
+        val selectors = arrayOf(
+            "div:has(span:containsOwn($label)) > *:last-child",
+            "div:containsOwn($label) + div",
+            "li:containsOwn($label)",
+        )
+        for (selector in selectors) {
+            val text = document.selectFirst(selector)
+                ?.text()
+                ?.replace(Regex("""\s+"""), " ")
+                ?.trim(' ', ':', '-', '•')
+                .orEmpty()
+            if (text.isNotEmpty() && !text.equals(label, ignoreCase = true)) {
+                return text.removePrefix(label).trim(' ', ':', '-', '•')
+            }
+        }
+        return ""
+    }
+
+    private fun String.cleanAsuraCreatorValue(): String {
+        var value = replace(Regex("""\s+"""), " ").trim(' ', ':', '-', '|', ',')
+        for (stop in asuraCreatorJunkMarkers) {
+            val index = value.indexOf(stop, ignoreCase = true)
+            if (index == 0) {
+                return ""
+            }
+            if (index > 0) {
+                value = value.substring(0, index).trim(' ', ':', '-', '|', ',')
+            }
+        }
+        return value
+            .takeIf { it.length in 2..72 }
+            ?.takeUnless { candidate ->
+                asuraCreatorJunkMarkers.any { candidate.contains(it, ignoreCase = true) }
+            }
+            .orEmpty()
+    }
+
+    private fun String.parseAsuraRating(): Float? {
+        return Regex("""[0-9]+(?:\.[0-9]+)?""")
+            .find(this)
+            ?.value
+            ?.toFloatOrNull()
+    }
+
+    private fun String.toAsuraContentTypeTag(): MangaTag? {
+        val normalized = lowercase(Locale.ENGLISH)
+        val title = when {
+            "manhua" in normalized -> "Manhua"
+            "manhwa" in normalized || "webtoon" in normalized -> "Manhwa"
+            "manga" in normalized -> "Manga"
+            else -> return null
+        }
+        val key = title.lowercase(Locale.ENGLISH)
+        return MangaTag(title, key, source)
     }
 }

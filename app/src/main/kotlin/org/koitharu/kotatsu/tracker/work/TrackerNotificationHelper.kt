@@ -17,8 +17,10 @@ import coil3.request.ImageRequest
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.model.getLocalizedTitle
+import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.checkNotificationPermission
 import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
@@ -26,6 +28,9 @@ import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.core.util.ext.toBitmapOrNull
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
+import org.koitharu.kotatsu.reader.ui.ReaderState
+import java.text.DateFormat
+import java.util.Date
 import javax.inject.Inject
 
 class TrackerNotificationHelper @Inject constructor(
@@ -57,13 +62,24 @@ class TrackerNotificationHelper @Inject constructor(
 		}
 		val id = manga.url.hashCode()
 		val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+		val newestChapter = newChapters.maxWithOrNull(
+			compareBy<MangaChapter> { it.uploadDate }.thenBy { it.number },
+		)
 		val summary = applicationContext.resources.getQuantityStringSafe(
 			R.plurals.new_chapters,
 			newChapters.size,
 			newChapters.size,
 		)
+		val detectedAt = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())
+		val sourceTitle = manga.source.getTitle(applicationContext)
+		val chapterTitle = newestChapter?.getLocalizedTitle(applicationContext.resources)
+		val notificationText = listOfNotNull(
+			chapterTitle,
+			sourceTitle,
+			applicationContext.getString(R.string.detected_at_pattern, detectedAt),
+		).joinToString(" - ")
 		with(builder) {
-			setContentText(summary)
+			setContentText(notificationText)
 			setContentTitle(manga.title)
 			setNumber(newChapters.size)
 			setLargeIcon(
@@ -78,12 +94,25 @@ class TrackerNotificationHelper @Inject constructor(
 			setGroup(GROUP_NEW_CHAPTERS)
 			val style = NotificationCompat.InboxStyle(this)
 			for (chapter in newChapters) {
-				style.addLine(chapter.getLocalizedTitle(applicationContext.resources))
+				style.addLine(
+					applicationContext.getString(
+						R.string.new_chapter_notification_line,
+						chapter.getLocalizedTitle(applicationContext.resources),
+						sourceTitle,
+						detectedAt,
+					),
+				)
 			}
-			style.setSummaryText(manga.title)
+			style.setSummaryText(sourceTitle)
 			style.setBigContentTitle(summary)
 			setStyle(style)
-			val intent = AppRouter.detailsIntent(applicationContext, manga)
+			val intent = newestChapter?.let { chapter ->
+				ReaderIntent.Builder(applicationContext)
+					.manga(manga)
+					.state(ReaderState(chapter.id, 0, 0))
+					.build()
+					.intent
+			} ?: AppRouter.detailsIntent(applicationContext, manga)
 			setContentIntent(
 				PendingIntentCompat.getActivity(
 					applicationContext,

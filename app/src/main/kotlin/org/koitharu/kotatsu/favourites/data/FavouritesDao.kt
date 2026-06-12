@@ -266,6 +266,10 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 		ListSortOrder.LAST_READ -> "IFNULL((SELECT updated_at FROM history WHERE history.manga_id = manga.manga_id), 0) DESC"
 		ListSortOrder.LONG_AGO_READ -> "IFNULL((SELECT updated_at FROM history WHERE history.manga_id = manga.manga_id), 0) ASC"
 		ListSortOrder.UPDATED -> "IFNULL((SELECT last_chapter_date FROM tracks WHERE tracks.manga_id = manga.manga_id), 0) DESC"
+		ListSortOrder.STATUS_GROUP -> "CASE " +
+			"WHEN IFNULL((SELECT percent FROM history WHERE history.manga_id = manga.manga_id), -1) >= $PROGRESS_COMPLETED THEN 2 " +
+			"WHEN IFNULL((SELECT percent FROM history WHERE history.manga_id = manga.manga_id), -1) >= 0 THEN 0 " +
+			"ELSE 1 END ASC, manga.title ASC"
 
 		else -> throw IllegalArgumentException("Sort order $sortOrder is not supported")
 	}

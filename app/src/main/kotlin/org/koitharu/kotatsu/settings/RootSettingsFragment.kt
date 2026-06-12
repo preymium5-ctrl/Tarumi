@@ -45,6 +45,14 @@ class RootSettingsFragment : BasePreferenceFragment(0) {
 			router.openStatistic()
 			true
 		}
+		findPreference<Preference>(AppSettings.KEY_SOURCE_HEALTH)?.setOnPreferenceClickListener {
+			router.openSourceHealthSystemChecker()
+			true
+		}
+		findPreference<Preference>(AppSettings.KEY_METADATA_QUALITY)?.setOnPreferenceClickListener {
+			router.openMetadataQualityDashboard()
+			true
+		}
 		findPreference<Preference>("about")?.summary = getString(R.string.app_version, BuildConfig.VERSION_NAME)
 		findPreference<Preference>("check_app_updates")?.order = TARUMI_UPDATES_ORDER
 		findPreference<Preference>("about")?.order = TARUMI_ABOUT_PREF_ORDER

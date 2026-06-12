@@ -32,6 +32,18 @@
         android:persistent="false"
         android:title="@string/sources_catalog" />
 
+    <Preference
+        android:key="source_health"
+        android:persistent="false"
+        android:summary="@string/source_health_system_checker_summary"
+        android:title="@string/source_health_system_checker" />
+
+    <Preference
+        android:key="metadata_quality"
+        android:persistent="false"
+        android:summary="@string/metadata_quality_dashboard_summary"
+        android:title="@string/metadata_quality_dashboard" />
+
     <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="no_nsfw"

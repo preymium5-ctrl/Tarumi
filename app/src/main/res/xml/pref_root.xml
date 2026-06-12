@@ -15,6 +15,18 @@
         android:title="@string/remote_sources" />
 
     <Preference
+        android:icon="@drawable/ic_info_outline"
+        android:key="source_health"
+        android:summary="@string/source_health_system_checker_summary"
+        android:title="@string/source_health_system_checker" />
+
+    <Preference
+        android:icon="@drawable/ic_ladder_stats"
+        android:key="metadata_quality"
+        android:summary="@string/metadata_quality_dashboard_summary"
+        android:title="@string/metadata_quality_dashboard" />
+
+    <Preference
         android:icon="@drawable/ic_storage"
         android:key="local_storage"
         android:title="@string/local_storage" />

@@ -14,6 +14,7 @@ import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.TABLE_SOURCES
+import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
@@ -143,7 +144,7 @@ class SourcesCatalogViewModel @Inject constructor(
 			locale = filter.locale,
 			sortOrder = SourcesSortOrder.ALPHABETIC,
 			skipNsfwSources = false,
-		)
+		).filter { it.isNsfw() }
 		return if (sources.isEmpty()) {
 			listOf(
 				if (query == null) {
@@ -172,7 +173,9 @@ class SourcesCatalogViewModel @Inject constructor(
 
 	@WorkerThread
 	private fun getContentTypes(): List<ContentType> {
-		return repository.allMangaSources.mapSortedByCount { it.contentType }
+		return repository.allMangaSources
+			.filter { it.isNsfw() }
+			.mapSortedByCount { it.contentType }
 	}
 
 	private suspend fun loadActivePreset() {

@@ -22,6 +22,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.parser.SourceDiagnosticsStore
 import org.koitharu.kotatsu.core.util.ext.awaitUniqueWorkInfoByName
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.model.MangaChapter
@@ -37,6 +38,7 @@ class RecentUpdatesWorker @AssistedInject constructor(
 	@Assisted appContext: Context,
 	@Assisted params: WorkerParameters,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	private val diagnosticsStore: SourceDiagnosticsStore,
 ) : CoroutineWorker(appContext, params) {
 
 	private val homeFeedCache = HomeFeedCache(appContext)
@@ -66,9 +68,29 @@ class RecentUpdatesWorker @AssistedInject constructor(
 			if (groups.size >= RECENT_LIMIT) {
 				break
 			}
+			if (diagnosticsStore.shouldSkipRecentCrawl(source)) {
+				continue
+			}
+			val startedAt = System.currentTimeMillis()
+			val beforeCount = groups.size
 			runCatchingCancellable {
 				loadSourceUpdates(source, groups, seenIds)
+			}.onSuccess {
+				diagnosticsStore.recordRecentCheck(
+					source = source,
+					success = true,
+					itemsFound = groups.size - beforeCount,
+					elapsedMs = System.currentTimeMillis() - startedAt,
+					error = null,
+				)
 			}.onFailure {
+				diagnosticsStore.recordRecentCheck(
+					source = source,
+					success = false,
+					itemsFound = groups.size - beforeCount,
+					elapsedMs = System.currentTimeMillis() - startedAt,
+					error = it,
+				)
 				it.printStackTraceDebug()
 			}
 		}

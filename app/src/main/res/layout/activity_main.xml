@@ -98,6 +98,9 @@
 		app:itemIconTint="@color/taru_nav_item_color"
 		app:itemTextColor="@color/taru_nav_item_color"
 		app:itemActiveIndicatorStyle="@style/Widget.Tarumi.BottomNavigationView.ActiveIndicator"
+		app:itemIconSize="20dp"
+		app:itemTextAppearanceActive="@style/TextAppearance.Tarumi.BottomNavigationView.Active"
+		app:itemTextAppearanceInactive="@style/TextAppearance.Tarumi.BottomNavigationView.Inactive"
 		app:labelVisibilityMode="labeled" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

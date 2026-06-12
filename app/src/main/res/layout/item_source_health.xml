@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:background="?selectableItemBackground"
+	android:gravity="center_vertical"
+	android:minHeight="64dp"
+	android:orientation="horizontal"
+	android:paddingStart="?listPreferredItemPaddingStart"
+	android:paddingTop="10dp"
+	android:paddingEnd="?listPreferredItemPaddingEnd"
+	android:paddingBottom="10dp">
+
+	<org.koitharu.kotatsu.core.ui.image.FaviconView
+		android:id="@+id/imageView_icon"
+		android:layout_width="40dp"
+		android:layout_height="40dp"
+		android:background="?colorControlHighlight"
+		android:labelFor="@id/textView_title"
+		android:scaleType="fitCenter"
+		app:iconStyle="@style/FaviconDrawable.Small"
+		app:shapeAppearance="?shapeAppearanceCornerMedium"
+		tools:src="@tools:sample/avatars" />
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="16dp"
+		android:layout_marginEnd="12dp"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<TextView
+			android:id="@+id/textView_title"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textAppearance="?attr/textAppearanceTitleSmall"
+			tools:text="Asura Comics" />
+
+		<TextView
+			android:id="@+id/textView_description"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="2dp"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textAppearance="?attr/textAppearanceBodySmall"
+			tools:text="Manga, English - Enabled" />
+
+	</LinearLayout>
+
+	<TextView
+		android:id="@+id/textView_status"
+		android:layout_width="wrap_content"
+		android:layout_height="30dp"
+		android:background="@drawable/bg_chip"
+		android:gravity="center"
+		android:minWidth="76dp"
+		android:paddingStart="12dp"
+		android:paddingEnd="12dp"
+		android:singleLine="true"
+		android:textColor="@android:color/white"
+		android:textSize="12sp"
+		android:textStyle="bold"
+		tools:backgroundTint="@color/common_green"
+		tools:text="Healthy" />
+
+</LinearLayout>

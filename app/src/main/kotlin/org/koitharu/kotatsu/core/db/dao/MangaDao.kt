@@ -45,6 +45,10 @@ abstract class MangaDao {
 	@Query("SELECT * FROM manga WHERE (title LIKE :query OR alt_title LIKE :query) AND source = :source AND manga_id IN (SELECT manga_id FROM favourites UNION SELECT manga_id FROM history) LIMIT :limit")
 	abstract suspend fun searchByTitle(query: String, source: String, limit: Int): List<MangaWithTags>
 
+	@Transaction
+	@Query("SELECT * FROM manga WHERE manga_id != :id AND (title LIKE :query OR alt_title LIKE :query) LIMIT :limit")
+	abstract suspend fun findMetadataCandidates(id: Long, query: String, limit: Int): List<MangaWithTags>
+
 	@Upsert
 	protected abstract suspend fun upsert(manga: MangaEntity)
 

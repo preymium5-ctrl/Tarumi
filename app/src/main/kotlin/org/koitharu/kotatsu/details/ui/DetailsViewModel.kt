@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -143,7 +144,9 @@ class DetailsViewModel @Inject constructor(
 		.withErrorHandling()
 		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
 
-	val relatedManga: StateFlow<List<MangaListModel>> = manga.mapLatest {
+	val relatedManga: StateFlow<List<MangaListModel>> = manga
+		.distinctUntilChangedBy { it?.let { manga -> RelatedMangaKey(manga.id, manga.source.name, manga.url) } }
+		.mapLatest {
 		if (it != null && settings.isRelatedMangaEnabled) {
 			val related = relatedMangaUseCase(it).orEmpty().let { list ->
 				if (settings.isNsfwContentDisabled) {
@@ -159,7 +162,7 @@ class DetailsViewModel @Inject constructor(
 		} else {
 			emptyList()
 		}
-	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Lazily, emptyList())
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
 
 	val tags = manga.mapLatest {
 		mangaListMapper.mapTags(it?.tags.orEmpty())
@@ -262,4 +265,10 @@ class DetailsViewModel @Inject constructor(
 		}
 		return scrobbler
 	}
+
+	private data class RelatedMangaKey(
+		val id: Long,
+		val source: String,
+		val url: String,
+	)
 }

@@ -21,6 +21,7 @@ enum class ListSortOrder(
 	LAST_READ(R.string.last_read),
 	LONG_AGO_READ(R.string.long_ago_read),
 	UPDATED(R.string.updated),
+	STATUS_GROUP(R.string.status_group),
 	;
 
 	fun isGroupingSupported() = this == LAST_READ || this == NEWEST || this == PROGRESS
@@ -51,6 +52,7 @@ enum class ListSortOrder(
 			LAST_READ,
 			LONG_AGO_READ,
 			UPDATED,
+			STATUS_GROUP,
 		)
 		val SUGGESTIONS: Set<ListSortOrder> = EnumSet.of(RELEVANCE)
 

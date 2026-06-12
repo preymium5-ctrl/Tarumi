@@ -104,6 +104,8 @@ import org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity
 import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserDetailsActivity
 import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeActivity
 import org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeViewModel
+import org.koitharu.kotatsu.settings.sources.health.SourceHealthActivity
+import org.koitharu.kotatsu.settings.sources.quality.MetadataQualityActivity
 import org.koitharu.kotatsu.settings.storage.MangaDirectorySelectDialog
 import org.koitharu.kotatsu.settings.storage.directories.MangaDirectoriesActivity
 import org.koitharu.kotatsu.settings.tracker.categories.TrackerCategoriesConfigSheet
@@ -210,6 +212,10 @@ class AppRouter private constructor(
     }
 
     fun openSourcesCatalog() = startActivity(SourcesCatalogActivity::class.java)
+
+    fun openSourceHealthSystemChecker() = startActivity(SourceHealthActivity::class.java)
+
+    fun openMetadataQualityDashboard() = startActivity(MetadataQualityActivity::class.java)
 
     fun openNsfwBrowserMode() = startActivity(NsfwBrowserModeActivity::class.java)
 

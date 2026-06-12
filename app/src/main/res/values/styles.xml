@@ -92,6 +92,27 @@
 		<item name="android:color">@color/taru_nav_active_indicator</item>
 	</style>
 
+	<style name="Widget.Tarumi.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
+		<item name="itemTextAppearanceActive">@style/TextAppearance.Tarumi.BottomNavigationView.Active</item>
+		<item name="itemTextAppearanceInactive">@style/TextAppearance.Tarumi.BottomNavigationView.Inactive</item>
+		<item name="itemActiveIndicatorStyle">@style/Widget.Tarumi.BottomNavigationView.ActiveIndicator</item>
+		<item name="itemIconSize">20dp</item>
+	</style>
+
+	<style name="TextAppearance.Tarumi.BottomNavigationView.Active" parent="android:TextAppearance">
+		<item name="fontFamily">@font/outfit</item>
+		<item name="android:fontFamily">@font/outfit</item>
+		<item name="android:textSize">12sp</item>
+		<item name="android:textAllCaps">true</item>
+	</style>
+
+	<style name="TextAppearance.Tarumi.BottomNavigationView.Inactive" parent="android:TextAppearance">
+		<item name="fontFamily">@font/outfit</item>
+		<item name="android:fontFamily">@font/outfit</item>
+		<item name="android:textSize">12sp</item>
+		<item name="android:textAllCaps">true</item>
+	</style>
+
 	<style name="Widget.Kotatsu.Button.More" parent="Widget.Material3.Button.TextButton">
 		<item name="android:minWidth">48dp</item>
 	</style>

@@ -600,6 +600,27 @@
     <string name="content_type_other">Other</string>
     <string name="source_summary_pattern" translatable="false">%1$s, %2$s</string>
     <string name="sources_catalog">Sources catalog</string>
+    <string name="source_health_system_checker">Source Health System Checker</string>
+    <string name="source_health_system_checker_summary">Check English scanlation sources, icons, availability, and Cloudflare status.</string>
+    <string name="source_health_working">Working</string>
+    <string name="source_health_slow">Slow</string>
+    <string name="source_health_available">Available</string>
+    <string name="source_health_captcha">Captcha</string>
+    <string name="source_health_blocked">Blocked</string>
+    <string name="source_health_broken">Broken</string>
+    <string name="source_health_missing_details">Missing details</string>
+    <string name="source_health_missing_chapters">Missing chapters</string>
+    <string name="source_health_enabled">Enabled</string>
+    <string name="source_health_disabled">Disabled</string>
+    <string name="source_health_pinned">Pinned</string>
+    <string name="source_health_last_checked_pattern" translatable="false">checked %1$s</string>
+    <string name="source_health_recent_log_pattern" translatable="false">recent items %1$d, failures %2$d, streak %3$d</string>
+    <string name="metadata_quality_dashboard">Metadata Quality Dashboard</string>
+    <string name="metadata_quality_dashboard_summary">Debug missing rating, creator, status, type, description, chapter, and date metadata per English source.</string>
+    <string name="metadata_quality_no_data">No details sampled yet. Open manga details or let recent updates crawl to collect data.</string>
+    <string name="metadata_quality_summary_pattern" translatable="false">Loads %1$d - Missing R:%2$d A:%3$d Art:%4$d S:%5$d T:%6$d D:%7$d Ch:%8$d Date:%9$d - confidence r:%10$s a:%11$s t:%12$s</string>
+    <string name="detected_at_pattern" translatable="false">detected %1$s</string>
+    <string name="new_chapter_notification_line" translatable="false">%1$s - %2$s - %3$s</string>
     <string name="source_enabled">Source enabled</string>
     <string name="no_manga_sources_catalog_text">There are no sources available in this section, or all of it might have been already added.\nStay tuned</string>
     <string name="no_manga_sources_found">No available manga sources found by your query</string>
@@ -612,6 +633,7 @@
     <string name="reader_optimize">Reduce memory consumption (beta)</string>
     <string name="reader_optimize_summary">Reduce offscreen pages quality to use less memory</string>
     <string name="state">State</string>
+    <string name="status_group">Status group</string>
     <string name="error_multiple_genres_not_supported">Filtering by multiple genres is not supported by this manga source</string>
     <string name="error_multiple_states_not_supported">Filtering by multiple states is not supported by this manga source</string>
     <string name="error_search_not_supported">Search is not supported by this manga source</string>

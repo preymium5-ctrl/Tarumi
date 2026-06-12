@@ -22,6 +22,9 @@ import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.parser.MetadataOrigin
+import org.koitharu.kotatsu.core.parser.SourceDiagnosticsStore
+import org.koitharu.kotatsu.core.parser.normalizeDetailsMetadata
 import org.koitharu.kotatsu.core.ui.model.MangaOverride
 import org.koitharu.kotatsu.core.util.ext.sanitize
 import org.koitharu.kotatsu.details.data.MangaDetails
@@ -31,6 +34,7 @@ import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.exception.NotFoundException
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.recoverNotNull
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -43,6 +47,7 @@ class DetailsLoadUseCase @Inject constructor(
     private val recoverUseCase: RecoverMangaUseCase,
     private val imageGetter: Html.ImageGetter,
     private val networkState: NetworkState,
+    private val diagnosticsStore: SourceDiagnosticsStore,
 ) {
 
     operator fun invoke(intent: MangaIntent, force: Boolean): Flow<MangaDetails> = flow {
@@ -137,7 +142,7 @@ class DetailsLoadUseCase @Inject constructor(
                 ),
             )
         }
-        val remoteDetails = remoteDeferred.await().getOrThrow()
+        val remoteDetails = remoteDeferred.await().getOrThrow().normalizeDetailsMetadata()
         val mangaDetails = MangaDetails(
             manga = remoteDetails.normalizeSourceMetadata(),
             localManga = localManga,
@@ -151,13 +156,29 @@ class DetailsLoadUseCase @Inject constructor(
     }
 
     private suspend fun getDetails(seed: Manga, force: Boolean) = runCatchingCancellable {
+        val startedAt = System.currentTimeMillis()
         val repository = mangaRepositoryFactory.create(seed.source)
-        val details = if (repository is CachingMangaRepository) {
+        val parsedDetails = if (repository is CachingMangaRepository) {
             repository.getDetails(seed, if (force) CachePolicy.WRITE_ONLY else CachePolicy.ENABLED)
         } else {
             repository.getDetails(seed)
+        }.normalizeDetailsMetadata().normalizeSourceMetadata()
+        val smartMatch = parsedDetails.smartMatchMissingMetadata()
+        val details = smartMatch.manga
+        diagnosticsStore.recordDetails(
+            manga = details,
+            origin = MetadataOrigin.SOURCE_PARSER,
+            elapsedMs = System.currentTimeMillis() - startedAt,
+        )
+        if (smartMatch.hasAnyChange) {
+            diagnosticsStore.recordSmartMatch(
+                manga = details,
+                hasRating = smartMatch.ratingBorrowed,
+                hasAuthor = smartMatch.authorBorrowed,
+                hasType = smartMatch.typeBorrowed,
+            )
         }
-        details.normalizeSourceMetadata()
+        details
     }.recoverNotNull { e ->
         if (e is NotFoundException) {
             recoverUseCase(seed)
@@ -184,6 +205,57 @@ class DetailsLoadUseCase @Inject constructor(
             else -> authors
         }
         return if (cleanedAuthors == authors) this else copy(authors = cleanedAuthors)
+    }
+
+    private suspend fun Manga.smartMatchMissingMetadata(): SmartMetadataMatch {
+        val needsRating = rating <= 0f
+        val needsAuthor = authors.isEmpty()
+        val needsStatus = state == null
+        val needsType = !hasTypeTag()
+        if (!needsRating && !needsAuthor && !needsStatus && !needsType) {
+            return SmartMetadataMatch(this)
+        }
+        val candidates = mangaDataRepository.findSmartMetadataCandidates(this, SMART_MATCH_LIMIT)
+        if (candidates.isEmpty()) {
+            return SmartMetadataMatch(this)
+        }
+        val ratingSource = if (needsRating) candidates.firstOrNull { it.rating > 0f } else null
+        val authorSource = if (needsAuthor) candidates.firstOrNull { it.authors.isNotEmpty() } else null
+        val statusSource = if (needsStatus) candidates.firstOrNull { it.state != null } else null
+        val typeTag = if (needsType) candidates.firstNotNullOfOrNull { it.findTypeTagFor(source) } else null
+        val matched = copy(
+            rating = ratingSource?.rating ?: rating,
+            authors = authorSource?.authors ?: authors,
+            state = statusSource?.state ?: state,
+            tags = if (typeTag != null) LinkedHashSet<MangaTag>(tags.size + 1).apply {
+                add(typeTag)
+                addAll(tags)
+            } else {
+                tags
+            },
+        )
+        return SmartMetadataMatch(
+            manga = matched,
+            ratingBorrowed = ratingSource != null,
+            authorBorrowed = authorSource != null,
+            statusBorrowed = statusSource != null,
+            typeBorrowed = typeTag != null,
+        )
+    }
+
+    private fun Manga.hasTypeTag(): Boolean = tags.any { tag ->
+        tag.title.equals("Manga", ignoreCase = true) ||
+            tag.title.equals("Manhwa", ignoreCase = true) ||
+            tag.title.equals("Manhua", ignoreCase = true)
+    }
+
+    private fun Manga.findTypeTagFor(targetSource: org.koitharu.kotatsu.parsers.model.MangaSource): MangaTag? {
+        val tag = tags.firstOrNull { candidate ->
+            candidate.title.equals("Manga", ignoreCase = true) ||
+                candidate.title.equals("Manhwa", ignoreCase = true) ||
+                candidate.title.equals("Manhua", ignoreCase = true)
+        } ?: return null
+        return MangaTag(title = tag.title, key = tag.key, source = targetSource)
     }
 
     private fun Manga.normalizeDemonicScansAuthors(): Set<String> {
@@ -285,6 +357,7 @@ class DetailsLoadUseCase @Inject constructor(
 
     private companion object {
         const val ASURA_AUTHOR_MAX_LENGTH = 64
+        const val SMART_MATCH_LIMIT = 8
 
         val ASURA_AUTHOR_METADATA_LABELS = setOf(
             "Rating",
@@ -301,6 +374,22 @@ class DetailsLoadUseCase @Inject constructor(
             "Download",
             "Offline",
             "Newest Chapter",
+            "Safari",
+            "ad blockers",
+            "break part of our website",
+            "disable your ad blockers",
         )
+    }
+
+    private data class SmartMetadataMatch(
+        val manga: Manga,
+        val ratingBorrowed: Boolean = false,
+        val authorBorrowed: Boolean = false,
+        val statusBorrowed: Boolean = false,
+        val typeBorrowed: Boolean = false,
+    ) {
+
+        val hasAnyChange: Boolean
+            get() = ratingBorrowed || authorBorrowed || statusBorrowed || typeBorrowed
     }
 }

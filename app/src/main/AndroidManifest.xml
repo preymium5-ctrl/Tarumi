@@ -286,6 +286,12 @@
 			android:name="org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity"
 			android:label="@string/sources_catalog" />
 		<activity
+			android:name="org.koitharu.kotatsu.settings.sources.health.SourceHealthActivity"
+			android:label="@string/source_health_system_checker" />
+		<activity
+			android:name="org.koitharu.kotatsu.settings.sources.quality.MetadataQualityActivity"
+			android:label="@string/metadata_quality_dashboard" />
+		<activity
 			android:name="org.koitharu.kotatsu.settings.sources.catalog.NsfwBrowserModeActivity"
 			android:label="@string/browser_mode" />
 		<activity

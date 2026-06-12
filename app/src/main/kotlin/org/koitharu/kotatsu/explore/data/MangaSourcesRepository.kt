@@ -68,7 +68,7 @@ class MangaSourcesRepository @Inject constructor(
 				val external = getExternalSources()
 				val list = ArrayList<MangaSourceInfo>(enabled.size + external.size)
 				external.mapTo(list) { MangaSourceInfo(it, isEnabled = true, isPinned = true) }
-				list.addAll(enabled)
+				enabled.filterTo(list) { it.isVisibleInDiscover() }
 				list
 			}
 	}
@@ -80,12 +80,14 @@ class MangaSourcesRepository @Inject constructor(
 			it.source.toMangaSourceOrNull()
 				?.takeIf { x -> x in allMangaSources }
 				?.takeUnless { x -> skipNsfw && x.isNsfw() }
+				?.takeUnless { x -> x.isNsfw() }
 		}
 	}
 
 	suspend fun getTopSources(limit: Int): List<MangaSource> {
 		assimilateNewSources()
 		return dao.findLastUsed(limit).toSources(settings.isNsfwContentDisabled, null)
+			.filter { it.isVisibleInDiscover() }
 	}
 
 	suspend fun getDisabledSources(): Set<MangaSource> {
@@ -188,7 +190,7 @@ class MangaSourcesRepository @Inject constructor(
 		.combine(observeExternalSources()) { enabled, external ->
 			val list = ArrayList<MangaSourceInfo>(enabled.size + external.size)
 			external.mapTo(list) { MangaSourceInfo(it, isEnabled = true, isPinned = true) }
-			list.addAll(enabled)
+			enabled.filterTo(list) { it.isVisibleInDiscover() }
 			list
 		}
 
@@ -201,6 +203,25 @@ class MangaSourcesRepository @Inject constructor(
 			}
 		}
 		result
+	}.onStart { assimilateNewSources() }
+
+	fun observeEnglishSourceHealth(): Flow<List<MangaSourceHealthInfo>> = dao.observeAll().map { entities ->
+		val entityMap = entities.associateBy { it.source }
+		MangaParserSource.entries
+			.asSequence()
+			.filter { it.locale == "en" }
+			.map { source ->
+				val entity = entityMap[source.name]
+				MangaSourceHealthInfo(
+					source = source,
+					isEnabled = settings.isAllSourcesEnabled || entity?.isEnabled == true,
+					isPinned = entity?.isPinned == true,
+					lastUsedAt = entity?.lastUsedAt ?: 0L,
+					cfState = entity?.cfState ?: CloudFlareHelper.PROTECTION_NOT_DETECTED,
+				)
+			}
+			.sortedBy { it.source.getTitle(context) }
+			.toList()
 	}.onStart { assimilateNewSources() }
 
 	suspend fun setSourcesEnabled(sources: Collection<MangaSource>, isEnabled: Boolean): ReversibleHandle {
@@ -320,7 +341,11 @@ class MangaSourcesRepository @Inject constructor(
 
 	private fun MangaSource.shouldEnableByDefault(): Boolean {
 		val source = this as? MangaParserSource ?: return false
-		return source.locale == "en" || source.contentType == ContentType.HENTAI
+		return !source.isNsfw() && source.locale == "en"
+	}
+
+	private fun MangaSourceInfo.isVisibleInDiscover(): Boolean {
+		return !mangaSource.isNsfw()
 	}
 
 	private suspend fun setSourcesPinnedImpl(sources: Collection<MangaSource>, isPinned: Boolean) {
@@ -631,3 +656,11 @@ class MangaSourcesRepository @Inject constructor(
 		)
 	}
 }
+
+data class MangaSourceHealthInfo(
+	val source: MangaParserSource,
+	val isEnabled: Boolean,
+	val isPinned: Boolean,
+	val lastUsedAt: Long,
+	val cfState: Int,
+)

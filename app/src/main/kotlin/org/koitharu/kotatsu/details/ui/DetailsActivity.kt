@@ -66,6 +66,7 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
+import org.koitharu.kotatsu.core.parser.SourceDiagnosticsStore
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.BaseListAdapter
@@ -158,6 +159,9 @@ class DetailsActivity :
 
 	@Inject
 	lateinit var settings: AppSettings
+
+	@Inject
+	lateinit var diagnosticsStore: SourceDiagnosticsStore
 
 	private val viewModel: DetailsViewModel by viewModels()
 	private lateinit var menuProvider: DetailsMenuProvider
@@ -614,6 +618,32 @@ class DetailsActivity :
 				return@launch
 			}
 			stats.rating?.let { viewBinding.textViewRating?.text = it }
+			applySourcePageCreators(stats, manga)
+			diagnosticsStore.recordSourcePageFallback(
+				manga = manga,
+				hasRating = stats.rating != null,
+				hasAuthor = stats.author != null,
+				hasArtist = stats.artist != null,
+			)
+		}
+	}
+
+	private fun applySourcePageCreators(stats: SourcePageStats, manga: Manga) {
+		val currentAuthor = viewBinding.textAuthorValue?.text?.toString()?.trim().orEmpty()
+		val shouldReplaceAuthor = currentAuthor.isBlank() || currentAuthor.equals(getString(R.string.unknown), ignoreCase = true)
+		if (shouldReplaceAuthor && !stats.author.isNullOrBlank()) {
+			viewBinding.textAuthorValue?.text = stats.author
+			if (viewBinding.cardChapters == null) {
+				viewBinding.textViewSubtitle.text = getString(R.string.by_author_pattern, stats.author)
+			}
+			infoBinding.textViewAuthor.textAndVisible = formatSourceAuthorsString(listOfNotNull(stats.author, stats.artist))
+			infoBinding.textViewAuthorLabel.isVisible = infoBinding.textViewAuthor.isVisible
+		}
+		val currentArtist = viewBinding.textArtistValue?.text?.toString()?.trim().orEmpty()
+		val shouldReplaceArtist = currentArtist.isBlank() || currentArtist.equals(getString(R.string.unknown), ignoreCase = true)
+		if (shouldReplaceArtist && !stats.artist.isNullOrBlank() && !stats.artist.equals(stats.author, ignoreCase = true)) {
+			viewBinding.textArtistValue?.text = stats.artist
+			viewBinding.layoutArtistRow?.isVisible = true
 		}
 	}
 
@@ -637,30 +667,144 @@ class DetailsActivity :
 		val document = Jsoup.parse(html, url)
 		val text = document.body()?.text().orEmpty()
 		return SourcePageStats(
-			rating = extractRating(document.selectFirst("[itemprop=ratingValue]")?.textOrContent())
-				?: extractRating(document.selectFirst("meta[itemprop=ratingValue]")?.textOrContent())
-				?: extractRating(document.selectFirst(".rating, .score, .post-rating, .series-rating")?.textOrContent())
-				?: extractRating(RATING_TEXT_REGEX.find(text)?.groupValues?.getOrNull(2))
-				?: extractRating(RATING_JSON_REGEX.find(html)?.groupValues?.getOrNull(1)),
+			rating = findSourceRating(document, html, text),
+			author = findSourceCreator(document, html, text, CREATOR_AUTHOR_LABELS),
+			artist = findSourceCreator(document, html, text, CREATOR_ARTIST_LABELS),
 			follows = extractFollowCount(FOLLOW_TEXT_REGEX.find(text)?.groupValues?.getOrNull(1))
 				?: extractFollowCount(FOLLOW_JSON_REGEX.find(html)?.groupValues?.getOrNull(1)),
 		)
+	}
+
+	private fun findSourceRating(document: org.jsoup.nodes.Document, html: String, text: String): String? {
+		val candidates = ArrayList<String>(24)
+		document.select(
+			"[itemprop=ratingValue], meta[itemprop=ratingValue], " +
+				"[class*=rating], [class*=Rating], [class*=score], [class*=Score], [class*=rate], [class*=Rate], " +
+				"[id*=rating], [id*=score], [data-rating], [aria-label*=rating], [aria-label*=Rating]",
+		).take(32).forEach { element ->
+			element.ratingCandidateTexts(candidates)
+		}
+		RATING_TEXT_REGEX.findAll(text).take(12).forEach { match ->
+			match.groupValues.getOrNull(2)?.let(candidates::add)
+		}
+		RATING_COMPACT_REGEX.findAll(text).take(12).forEach { match ->
+			match.value.let(candidates::add)
+		}
+		RATING_JSON_REGEX.findAll(html).take(16).forEach { match ->
+			match.groupValues.getOrNull(1)?.let(candidates::add)
+		}
+		RATING_JSON_PAIR_REGEX.findAll(html).take(16).forEach { match ->
+			match.groupValues.getOrNull(1)?.let(candidates::add)
+		}
+		return candidates.firstNotNullOfOrNull(::extractRating)
+	}
+
+	private fun findSourceCreator(
+		document: org.jsoup.nodes.Document,
+		html: String,
+		text: String,
+		labels: Set<String>,
+	): String? {
+		val candidates = ArrayList<String>(24)
+		document.select(
+			"[itemprop=author], [rel=author], meta[name=author], meta[property=book:author], " +
+				"[class*=author], [class*=Author], [class*=artist], [class*=Artist], [class*=creator], [class*=Creator]",
+		).take(32).forEach { element ->
+			element.creatorCandidateText()?.let(candidates::add)
+		}
+		document.select("tr, li, dl, div, p").take(800).forEach { element ->
+			val line = element.text().replace(Regex("""\s+"""), " ").trim()
+			if (line.length in 4..160 && labels.any { label -> line.contains(label, ignoreCase = true) }) {
+				candidates += line
+			}
+		}
+		for (label in labels) {
+			CREATOR_JSON_REGEX(label).findAll(html).take(8).forEach { match ->
+				match.groupValues.getOrNull(1)
+					?.ifBlank { match.groupValues.getOrNull(2).orEmpty() }
+					?.takeIf { it.isNotBlank() }
+					?.let(candidates::add)
+			}
+			CREATOR_TEXT_REGEX(label).findAll(text).take(8).forEach { match ->
+				match.groupValues.getOrNull(1)?.let(candidates::add)
+			}
+		}
+		return candidates.firstNotNullOfOrNull { raw ->
+			raw.cleanCreatorCandidate(labels)
+		}
 	}
 
 	private fun org.jsoup.nodes.Element.textOrContent(): String {
 		return attr("content").ifBlank { text() }
 	}
 
+	private fun org.jsoup.nodes.Element.creatorCandidateText(): String? {
+		return attr("content")
+			.ifBlank { attr("title") }
+			.ifBlank { attr("aria-label") }
+			.ifBlank { text() }
+			.replace(Regex("""\s+"""), " ")
+			.trim()
+			.takeIf { it.isNotBlank() }
+	}
+
+	private fun org.jsoup.nodes.Element.ratingCandidateTexts(destination: MutableCollection<String>) {
+		textOrContent().takeIf { it.isNotBlank() }?.let(destination::add)
+		attr("title").takeIf { it.isNotBlank() }?.let(destination::add)
+		attr("aria-label").takeIf { it.isNotBlank() }?.let(destination::add)
+		attr("data-rating").takeIf { it.isNotBlank() }?.let(destination::add)
+		attr("data-score").takeIf { it.isNotBlank() }?.let(destination::add)
+		attr("value").takeIf { it.isNotBlank() }?.let(destination::add)
+	}
+
 	private fun extractRating(raw: String?): String? {
 		val match = raw?.let { RATING_VALUE_REGEX.find(it) } ?: return null
 		val value = match.groupValues.getOrNull(1)?.toFloatOrNull() ?: return null
 		val scale = match.groupValues.getOrNull(2)?.toFloatOrNull()
-		val normalized = when {
-			scale != null && scale > 0f && scale != 10f -> value / scale * 10f
-			value > 10f && value <= 100f -> value / 100f * 10f
+		val displayValue = when {
+			value <= 0f -> return null
+			scale != null && scale > 0f -> value
+			value > 10f && value <= 100f -> value / 10f
 			else -> value
 		}.coerceIn(0f, 10f)
-		return String.format(Locale.US, "%.1f", normalized)
+		return String.format(Locale.US, "%.1f", displayValue)
+	}
+
+	private fun String.cleanCreatorCandidate(labels: Set<String>): String? {
+		var value = replace(Regex("""\s+"""), " ").trim(' ', ':', '-', '•', '|', ',')
+		for (label in labels) {
+			value = value.replace(Regex("""(?i)\b${Regex.escape(label)}\b\s*:?"""), "").trim()
+		}
+		for (stop in CREATOR_STOP_LABELS) {
+			val index = value.indexOf(stop, ignoreCase = true)
+			if (index > 0) {
+				value = value.substring(0, index).trim()
+			}
+		}
+		value = value
+			.split(CREATOR_SEPARATOR_REGEX)
+			.asSequence()
+			.map { it.trim(' ', ':', '-', '•', '|', ',') }
+			.firstOrNull { it.isUsefulCreatorName() }
+			.orEmpty()
+		return value.takeIf { it.isUsefulCreatorName() }
+	}
+
+	private fun String.isUsefulCreatorName(): Boolean {
+		if (length !in 2..72) {
+			return false
+		}
+		val lower = lowercase(Locale.US)
+		if (lower in CREATOR_EMPTY_VALUES) {
+			return false
+		}
+		if (CREATOR_STOP_LABELS.any { lower.contains(it.lowercase(Locale.US)) }) {
+			return false
+		}
+		if (RATING_VALUE_REGEX.containsMatchIn(this) || CHAPTER_CREATOR_JUNK_REGEX.containsMatchIn(this)) {
+			return false
+		}
+		return true
 	}
 
 	private fun ComicType.dotColor(): Int = when (this) {
@@ -882,6 +1026,13 @@ class DetailsActivity :
 		if (authors.isEmpty()) {
 			return null
 		}
+		return formatSourceAuthorsString(authors.toList())
+	}
+
+	private fun formatSourceAuthorsString(authors: List<String>): SpannedString? {
+		if (authors.isEmpty()) {
+			return null
+		}
 		return buildSpannedString {
 			authors.forEach { a ->
 				if (a.isNotEmpty()) {
@@ -924,15 +1075,56 @@ class DetailsActivity :
 
 		private const val FAV_LABEL_LIMIT = 16
 		private val RATING_VALUE_REGEX = Regex(
-			pattern = """([0-9]+(?:\.[0-9]+)?)\s*(?:/|out\s+of)?\s*([0-9]+(?:\.[0-9]+)?)?""",
+			pattern = """([0-9]+(?:\.[0-9]+)?)\s*(?:/|out\s+of|stars?\s*out\s+of)?\s*([0-9]+(?:\.[0-9]+)?)?""",
 			option = RegexOption.IGNORE_CASE,
 		)
 		private val RATING_TEXT_REGEX = Regex(
-			pattern = """\b(rating|score)\b[^\d]{0,24}([0-9]+(?:\.[0-9]+)?(?:\s*/\s*[0-9]+(?:\.[0-9]+)?)?)""",
+			pattern = """\b(rating|score|rated|average|stars?)\b[^\d]{0,48}([0-9]+(?:\.[0-9]+)?(?:\s*(?:/|out\s+of)\s*[0-9]+(?:\.[0-9]+)?)?)""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val RATING_COMPACT_REGEX = Regex(
+			pattern = """[0-9]+(?:\.[0-9]+)?\s*/\s*(?:5|10|100)\b""",
 			option = RegexOption.IGNORE_CASE,
 		)
 		private val RATING_JSON_REGEX = Regex(
-			pattern = """"(?:rating|score|ratingValue)"\s*:\s*"?([0-9]+(?:\.[0-9]+)?(?:\s*/\s*[0-9]+(?:\.[0-9]+)?)?)"?""",
+			pattern = """"(?:rating|score|ratingValue|rating_value|averageRating)"\s*:\s*"?([0-9]+(?:\.[0-9]+)?(?:\s*/\s*[0-9]+(?:\.[0-9]+)?)?)"?""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val RATING_JSON_PAIR_REGEX = Regex(
+			pattern = """"ratingValue"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?[^}]{0,80}"bestRating"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private val CREATOR_AUTHOR_LABELS = setOf("Author", "Writer", "Story", "Creator", "Original Author")
+		private val CREATOR_ARTIST_LABELS = setOf("Artist", "Art", "Illustrator", "Drawing")
+		private val CREATOR_STOP_LABELS = setOf(
+			"Artist",
+			"Author",
+			"Writer",
+			"Story",
+			"Creator",
+			"Rating",
+			"Score",
+			"Status",
+			"Type",
+			"Genre",
+			"Chapter",
+			"Bookmark",
+			"Summary",
+			"Description",
+			"Safari",
+			"ad blockers",
+			"break part of our website",
+			"disable your ad blockers",
+		)
+		private val CREATOR_EMPTY_VALUES = setOf("unknown", "updating", "updated", "n/a", "na", "none", "-")
+		private val CREATOR_SEPARATOR_REGEX = Regex("""\s*(?:,|/|\||&|\band\b)\s*""", RegexOption.IGNORE_CASE)
+		private val CHAPTER_CREATOR_JUNK_REGEX = Regex("""(?i)\b(?:chapter|episode|bookmark|download|premium|show more|comments?)\b""")
+		private fun CREATOR_JSON_REGEX(label: String) = Regex(
+			pattern = """"${Regex.escape(label)}"\s*:\s*(?:"([^"]+)"|\{[^}]*"name"\s*:\s*"([^"]+)")""",
+			option = RegexOption.IGNORE_CASE,
+		)
+		private fun CREATOR_TEXT_REGEX(label: String) = Regex(
+			pattern = """\b${Regex.escape(label)}\b\s*:?\s*([^|•\n]{2,96})""",
 			option = RegexOption.IGNORE_CASE,
 		)
 		private val FOLLOW_TEXT_REGEX = Regex(
@@ -951,6 +1143,8 @@ class DetailsActivity :
 
 	private data class SourcePageStats(
 		val rating: String? = null,
+		val author: String? = null,
+		val artist: String? = null,
 		val follows: String? = null,
 	)
 }
