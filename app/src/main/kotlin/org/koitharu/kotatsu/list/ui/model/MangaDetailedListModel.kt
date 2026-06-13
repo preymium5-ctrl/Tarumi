@@ -24,8 +24,10 @@ data class MangaDetailedListModel(
 	val latestChapterNumber: String? = null,
 	val currentChapterNumber: String? = null,
 	val totalChapters: Int = 0,
+	val totalChapterLabel: String? = null,
 	val canContinue: Boolean = false,
 	val statusTitle: String? = null,
+	val showRemoveAction: Boolean = false,
 ) : MangaListModel() {
 
 	override fun getChangePayload(previousState: ListModel): Any? = when {
@@ -42,8 +44,10 @@ data class MangaDetailedListModel(
 			previousState.latestChapterNumber != latestChapterNumber ||
 			previousState.currentChapterNumber != currentChapterNumber ||
 			previousState.totalChapters != totalChapters ||
+			previousState.totalChapterLabel != totalChapterLabel ||
 			previousState.canContinue != canContinue ||
-			previousState.statusTitle != statusTitle -> PAYLOAD_ANYTHING_CHANGED
+			previousState.statusTitle != statusTitle ||
+			previousState.showRemoveAction != showRemoveAction -> PAYLOAD_ANYTHING_CHANGED
 
 		else -> super.getChangePayload(previousState)
 	}

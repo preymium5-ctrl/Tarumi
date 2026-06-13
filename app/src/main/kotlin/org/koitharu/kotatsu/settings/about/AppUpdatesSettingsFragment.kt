@@ -38,6 +38,7 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 				key = KEY_SHARE_APP
 				title = getString(R.string.share_app)
 				summary = getString(R.string.share_app_summary)
+				setIcon(R.drawable.ic_send)
 				isPersistent = false
 			},
 		)

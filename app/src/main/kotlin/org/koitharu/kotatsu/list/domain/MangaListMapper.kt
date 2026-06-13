@@ -62,11 +62,12 @@ class MangaListMapper @Inject constructor(
 		mode: ListMode,
 		@Flags flags: Int = DEFAULTS,
 		pinnedIds: Set<Long> = emptySet(),
+		showRemoveAction: Boolean = false,
 	) {
 		val options = getOptions(flags)
 		val overrides = dataRepository.getOverrides()
 		manga.mapTo(destination) {
-			toListModelImpl(it, mode, options, overrides[it.id], it.id in pinnedIds)
+			toListModelImpl(it, mode, options, overrides[it.id], it.id in pinnedIds, showRemoveAction)
 		}
 	}
 
@@ -115,6 +116,7 @@ class MangaListMapper @Inject constructor(
 		@Options options: Int,
 		override: MangaOverride?,
 		isPinned: Boolean = false,
+		showRemoveAction: Boolean = false,
 	): MangaDetailedListModel {
 		val counter = getCounter(manga.id, options)
 		val progress = getProgress(manga.id, options)
@@ -134,6 +136,7 @@ class MangaListMapper @Inject constructor(
 		val currentChapterNumber = currentChapter?.numberString()
 			?: currentChapterIndex?.toString()
 			?: progress?.chapters?.takeIf { it > 0 }?.toString()
+		val latestChapterNumber = latestChapter?.numberString()
 		return MangaDetailedListModel(
 			subtitle = manga.altTitles.firstOrNull(),
 			manga = manga,
@@ -149,11 +152,13 @@ class MangaListMapper @Inject constructor(
 			latestChapterAge = latestChapter?.uploadDate?.toInstantOrNull()
 				?.let { calculateTimeAgo(it, showMonths = true)?.format(context) },
 			currentReadAge = history?.updatedAt?.let { calculateTimeAgo(it, showMonths = true)?.format(context) },
-			latestChapterNumber = latestChapter?.numberString(),
+			latestChapterNumber = latestChapterNumber,
 			currentChapterNumber = currentChapterNumber,
 			totalChapters = totalChapters,
+			totalChapterLabel = latestChapterNumber ?: totalChapters.takeIf { it > 0 }?.toString(),
 			canContinue = history != null && (!ReadingProgress.isCompleted(history.percent) || counter > 0),
 			statusTitle = favouritesRepository.getStatusTitle(manga.id),
+			showRemoveAction = showRemoveAction,
 		)
 	}
 
@@ -178,9 +183,10 @@ class MangaListMapper @Inject constructor(
 		@Options options: Int,
 		override: MangaOverride?,
 		isPinned: Boolean = false,
+		showRemoveAction: Boolean = false,
 	): MangaListModel = when (mode) {
 		ListMode.LIST -> toCompactListModel(manga, options, override)
-		ListMode.DETAILED_LIST -> toDetailedListModel(manga, options, override, isPinned)
+		ListMode.DETAILED_LIST -> toDetailedListModel(manga, options, override, isPinned, showRemoveAction)
 		ListMode.GRID -> toGridModel(manga, options, override, isPinned)
 	}
 

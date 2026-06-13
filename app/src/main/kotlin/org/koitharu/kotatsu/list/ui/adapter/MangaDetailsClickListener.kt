@@ -12,5 +12,7 @@ interface MangaDetailsClickListener : OnListItemClickListener<MangaListModel> {
 
 	fun onFavoriteClick(manga: Manga, view: View) = Unit
 
+	fun onRemoveFromFavoritesClick(manga: Manga, view: View) = Unit
+
 	fun onTagClick(manga: Manga, tag: MangaTag, view: View)
 }

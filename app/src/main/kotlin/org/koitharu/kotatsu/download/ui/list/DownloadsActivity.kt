@@ -74,6 +74,11 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		setupBottomNav()
 		viewBinding.buttonMenu.setOnClickListener(::showDownloadsMenu)
 		viewModel.items.observe(this, downloadsAdapter)
+		viewModel.stats.observe(this) { stats ->
+			viewBinding.textDownloadsActive.text = stats.active.toString()
+			viewBinding.textDownloadsChapters.text = stats.chapters.toString()
+			viewBinding.textDownloadsCompleted.text = stats.completed.toString()
+		}
 		viewModel.onActionDone.observeEvent(this, ReversibleActionObserver(viewBinding.recyclerView))
 		viewBinding.buttonNsfw.setOnClickListener {
 			viewModel.setNsfwMode(viewBinding.buttonNsfw.isChecked)

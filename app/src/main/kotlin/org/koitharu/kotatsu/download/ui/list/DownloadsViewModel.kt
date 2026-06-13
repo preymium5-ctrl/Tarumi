@@ -74,6 +74,10 @@ class DownloadsViewModel @Inject constructor(
 		itOrLoading(list, nsfwMode)
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, listOf(LoadingState()))
 
+	val stats = combine(works, isNsfwMode) { list, nsfwMode ->
+		list.orEmpty().filterDownloads(nsfwMode).toStats()
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, DownloadStatsModel.EMPTY)
+
 	val hasPausedWorks = works.map {
 		it?.any { x -> x.canResume } == true
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), false)
@@ -241,6 +245,24 @@ class DownloadsViewModel @Inject constructor(
 		)
 	}
 
+	private fun List<DownloadItemModel>.toStats(): DownloadStatsModel {
+		var active = 0
+		var completed = 0
+		var chapters = 0
+		for (item in this) {
+			when (item.workState) {
+				WorkInfo.State.RUNNING,
+				WorkInfo.State.BLOCKED,
+				WorkInfo.State.ENQUEUED -> active++
+
+				WorkInfo.State.SUCCEEDED -> completed++
+				else -> Unit
+			}
+			chapters += item.chaptersDownloaded.coerceAtLeast(0)
+		}
+		return DownloadStatsModel(active = active, chapters = chapters, completed = completed)
+	}
+
 	private suspend fun WorkInfo.toUiModel(isExpanded: Boolean): DownloadItemModel? {
 		val workData = outputData.takeUnless { it.isEmpty }
 			?: progress.takeUnless { it.isEmpty }
@@ -325,4 +347,14 @@ class DownloadsViewModel @Inject constructor(
 	private suspend fun tryLoad(manga: Manga) = runCatchingCancellable {
 		mangaRepositoryFactory.create(manga.source).getDetails(manga)
 	}.getOrNull()
+}
+
+data class DownloadStatsModel(
+	val active: Int,
+	val chapters: Int,
+	val completed: Int,
+) {
+	companion object {
+		val EMPTY = DownloadStatsModel(active = 0, chapters = 0, completed = 0)
+	}
 }

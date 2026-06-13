@@ -34,6 +34,7 @@ import javax.inject.Inject
 
 private const val NO_ID = 0L
 private const val MAX_LOG_SIZE = 120
+private const val FAILED_TRACK_RETRY_DELAY_MS = 30 * 60 * 1000L
 
 @Reusable
 class TrackingRepository @Inject constructor(
@@ -79,7 +80,8 @@ class TrackingRepository @Inject constructor(
 	}
 
 	suspend fun getTracks(offset: Int, limit: Int): List<MangaTracking> {
-		return db.getTracksDao().findAll(offset = offset, limit = limit)
+		val retryBefore = System.currentTimeMillis() - FAILED_TRACK_RETRY_DELAY_MS
+		return db.getTracksDao().findAll(offset = offset, limit = limit, retryBefore = retryBefore)
 			.filter { track ->
 				// Check if source has disabled chapter updates via ConfigKey
 				val manga = track.manga.toManga(emptySet(), null)

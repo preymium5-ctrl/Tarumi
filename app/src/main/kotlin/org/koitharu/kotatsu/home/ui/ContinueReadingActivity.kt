@@ -109,10 +109,10 @@ private class ContinueReadingAdapter : RecyclerView.Adapter<ContinueReadingAdapt
 
 		private fun MangaWithHistory.progressText(): String {
 			val progress = continueReadingProgress()
-			return if (progress.totalChapters > 0 && progress.currentChapterLabel != null) {
-				"${progress.currentChapterLabel} / ${progress.totalChapters}"
-			} else if (progress.totalChapters > 0) {
-				"- / ${progress.totalChapters}"
+			return if (progress.totalChapterLabel != null && progress.currentChapterLabel != null) {
+				"${progress.currentChapterLabel} / ${progress.totalChapterLabel}"
+			} else if (progress.totalChapterLabel != null) {
+				"- / ${progress.totalChapterLabel}"
 			} else {
 				"0 / 0"
 			}

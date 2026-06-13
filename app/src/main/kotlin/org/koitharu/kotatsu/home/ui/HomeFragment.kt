@@ -473,7 +473,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		val chapterTitle = progress.currentChapterLabel
 			?.let { getString(R.string.chapter_number, it) }
 			?: getString(R.string.unknown)
-		val totalTitle = progress.totalChapters.takeIf { it > 0 }?.toString() ?: getString(R.string.unknown)
+		val totalTitle = progress.totalChapterLabel ?: getString(R.string.unknown)
 		return getString(
 			R.string.continue_reading_meta_pattern,
 			chapterTitle,

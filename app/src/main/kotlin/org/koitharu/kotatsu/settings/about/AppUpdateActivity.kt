@@ -16,6 +16,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.text.buildSpannedString
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import com.google.android.material.snackbar.Snackbar
@@ -63,6 +64,12 @@ class AppUpdateActivity : BaseActivity<ActivityAppUpdateBinding>(), View.OnClick
 		viewModel.nextVersion.observe(this, ::onNextVersionChanged)
 		viewBinding.buttonCancel.setOnClickListener(this)
 		viewBinding.buttonUpdate.setOnClickListener(this)
+		viewBinding.buttonDiscord.setOnClickListener {
+			val inviteUrl = getString(R.string.url_discord_invite)
+			if (!router.openExternalBrowser(inviteUrl, getString(R.string.discord))) {
+				Snackbar.make(viewBinding.scrollView, R.string.operation_not_supported, Snackbar.LENGTH_SHORT).show()
+			}
+		}
 
 		ContextCompat.registerReceiver(
 			this,
@@ -117,18 +124,15 @@ class AppUpdateActivity : BaseActivity<ActivityAppUpdateBinding>(), View.OnClick
 		viewBinding.buttonUpdate.isEnabled = version != null && !viewModel.isLoading.value
 		if (version == null) {
 			viewBinding.textViewContent.setText(R.string.loading_)
+			viewBinding.textViewVersion.text = ""
+			viewBinding.textViewSize.text = ""
 			return
 		}
+		viewBinding.textViewVersion.text = getString(R.string.new_version_s, version.name)
+		viewBinding.textViewSize.text = getString(R.string.size_s, FileSize.BYTES.format(this@AppUpdateActivity, version.apkSize))
 		val markwon = Markwon.create(this)
 		val message = withContext(Dispatchers.Default) {
-			buildSpannedString {
-				append(getString(R.string.new_version_s, version.name))
-				appendLine()
-				append(getString(R.string.size_s, FileSize.BYTES.format(this@AppUpdateActivity, version.apkSize)))
-				appendLine()
-				appendLine()
-				append(markwon.toMarkdown(version.description))
-			}
+			markwon.toMarkdown(version.description)
 		}
 		markwon.setParsedMarkdown(viewBinding.textViewContent, message)
 	}
@@ -159,10 +163,14 @@ class AppUpdateActivity : BaseActivity<ActivityAppUpdateBinding>(), View.OnClick
 	private fun onProgressChanged(value: Pair<Boolean, Float>) {
 		val (isLoading, downloadProgress) = value
 		val indicator = viewBinding.progressBar
-		indicator.showOrHide(isLoading)
+		viewBinding.cardProgress.isVisible = isLoading
 		indicator.isIndeterminate = downloadProgress <= 0f
 		if (downloadProgress > 0f) {
 			indicator.setProgressCompat((indicator.max * downloadProgress).toInt(), true)
+			val percent = (downloadProgress * 100).toInt()
+			viewBinding.textViewProgressPercent.text = "$percent%"
+		} else {
+			viewBinding.textViewProgressPercent.text = ""
 		}
 		viewBinding.buttonUpdate.isEnabled = !isLoading && viewModel.nextVersion.value != null
 	}

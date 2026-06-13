@@ -9,6 +9,7 @@ data class ContinueReadingProgress(
 	val currentChapterLabel: String?,
 	val currentChapterPosition: Int?,
 	val totalChapters: Int,
+	val totalChapterLabel: String?,
 	val percent: Int,
 )
 
@@ -25,9 +26,13 @@ fun MangaWithHistory.continueReadingProgress(): ContinueReadingProgress {
 			.takeIf { it >= 0 }
 			?.plus(1)
 	}
-	val actualTotal = manga.chaptersCount()
 	val branchTotal = branchChapters.size
-	val total = maxOf(history.chaptersCount, actualTotal, branchTotal)
+	val sourceTotal = branchTotal.takeIf { it > 0 } ?: manga.chaptersCount()
+	val latestChapterLabel = (branchChapters.ifEmpty { chapters })
+		.maxWithOrNull(compareBy<MangaChapter> { it.number }.thenBy { it.uploadDate })
+		?.numberString()
+		?.takeIf { it.isNotBlank() }
+	val total = sourceTotal.takeIf { it > 0 } ?: history.chaptersCount
 	val fallbackPosition = history.percent
 		.takeIf { total > 0 && it > 0f }
 		?.let { (it * total).toInt().coerceIn(1, total) }
@@ -38,6 +43,7 @@ fun MangaWithHistory.continueReadingProgress(): ContinueReadingProgress {
 			?: fallbackPosition?.toString(),
 		currentChapterPosition = currentPosition ?: fallbackPosition,
 		totalChapters = total,
+		totalChapterLabel = latestChapterLabel ?: total.takeIf { it > 0 }?.toString(),
 		percent = (history.percent * 100f).toInt().coerceIn(0, 100),
 	)
 }

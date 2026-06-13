@@ -14,8 +14,12 @@ import org.koitharu.kotatsu.list.domain.ListFilterOption
 abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 
 	@Transaction
-	@Query("SELECT * FROM tracks ORDER BY last_check_time ASC LIMIT :limit OFFSET :offset")
-	abstract suspend fun findAll(offset: Int, limit: Int): List<TrackWithManga>
+	@Query(
+		"SELECT * FROM tracks ORDER BY " +
+			"CASE WHEN last_result = 3 AND last_check_time <= :retryBefore THEN 0 ELSE 1 END ASC, " +
+			"last_check_time ASC LIMIT :limit OFFSET :offset",
+	)
+	abstract suspend fun findAll(offset: Int, limit: Int, retryBefore: Long): List<TrackWithManga>
 
 	@Transaction
 	@Query("SELECT * FROM tracks ORDER BY last_check_time DESC")

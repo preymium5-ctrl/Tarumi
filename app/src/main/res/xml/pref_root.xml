@@ -29,6 +29,7 @@
     <Preference
         android:icon="@drawable/ic_storage"
         android:key="local_storage"
+        android:summary="@string/local_storage_summary"
         android:title="@string/local_storage" />
 
     <PreferenceScreen
@@ -52,6 +53,7 @@
     <Preference
         android:icon="@drawable/ic_ladder_stats"
         android:key="reading_stats"
+        android:summary="@string/reading_stats_summary"
         android:title="@string/reading_stats" />
 
     <PreferenceScreen

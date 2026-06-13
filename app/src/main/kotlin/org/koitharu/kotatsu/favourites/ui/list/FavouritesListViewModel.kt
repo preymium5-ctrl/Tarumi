@@ -158,7 +158,14 @@ class FavouritesListViewModel @Inject constructor(
 		scheduleChapterBackfill(this)
 		val pinnedIds = repository.getPinnedIds(categoryId)
 		val result = ArrayList<ListModel>(size + 1)
-		mangaListMapper.toListModelList(result, this, mode, MangaListMapper.NO_FAVORITE, pinnedIds)
+		mangaListMapper.toListModelList(
+			destination = result,
+			manga = this,
+			mode = mode,
+			flags = MangaListMapper.NO_FAVORITE,
+			pinnedIds = pinnedIds,
+			showRemoveAction = true,
+		)
 		return result
 	}
 

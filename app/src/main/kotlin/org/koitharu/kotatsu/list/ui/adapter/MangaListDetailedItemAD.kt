@@ -25,8 +25,8 @@ fun mangaListDetailedItemAD(
 			?: item.latestChapterTitle?.let { "Latest $it" }
 			?: "Latest unknown"
 		binding.textViewCurrentChapter.text = when {
-			item.currentChapterNumber != null && item.totalChapters > 0 ->
-				"Current ${item.currentChapterNumber} / ${item.totalChapters}"
+			item.currentChapterNumber != null && item.totalChapterLabel != null ->
+				"Current ${item.currentChapterNumber} / ${item.totalChapterLabel}"
 			item.currentChapterNumber != null -> "Current ${item.currentChapterNumber}"
 			item.currentChapterTitle != null -> "Current ${item.currentChapterTitle}"
 			else -> "Not started"
@@ -36,10 +36,14 @@ fun mangaListDetailedItemAD(
 		binding.textViewStatus.setOnClickListener { view ->
 			clickListener.onFavoriteClick(item.manga, view)
 		}
+		binding.buttonRemoveBookmark.isVisible = item.showRemoveAction
+		binding.buttonRemoveBookmark.setOnClickListener { view ->
+			clickListener.onRemoveFromFavoritesClick(item.manga, view)
+		}
 		binding.buttonContinueReading.isVisible = true
 		binding.buttonContinueReading.text = when {
-			item.currentChapterNumber != null && item.totalChapters > 0 ->
-				"${item.currentChapterNumber} / ${item.totalChapters}"
+			item.currentChapterNumber != null && item.totalChapterLabel != null ->
+				"${item.currentChapterNumber} / ${item.totalChapterLabel}"
 			item.currentChapterNumber != null -> item.currentChapterNumber
 			else -> "Start"
 		}

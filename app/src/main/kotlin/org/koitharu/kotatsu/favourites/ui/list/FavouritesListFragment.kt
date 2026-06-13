@@ -60,6 +60,17 @@ class FavouritesListFragment : MangaListFragment(), PopupMenu.OnMenuItemClickLis
 		menu.show()
 	}
 
+	override fun onRemoveFromFavoritesClick(manga: Manga, view: View) {
+		MaterialAlertDialogBuilder(view.context)
+			.setTitle(R.string.remove_from_bookmark_title)
+			.setMessage(getString(R.string.remove_from_bookmark_message, manga.title))
+			.setNegativeButton(android.R.string.cancel, null)
+			.setPositiveButton(R.string.remove) { _, _ ->
+				viewModel.removeFromFavourites(setOf(manga.id))
+			}
+			.show()
+	}
+
 	override fun onMenuItemClick(item: MenuItem): Boolean {
 		val order = ListSortOrder.FAVORITES.sortedByOrdinal().getOrNull(item.order) ?: return false
 		viewModel.setSortOrder(order)

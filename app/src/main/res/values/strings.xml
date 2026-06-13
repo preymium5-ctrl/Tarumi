@@ -50,6 +50,7 @@
     <string name="reader_percent_chapter_pattern">Ch. %1$d/%2$d - %3$d%%</string>
     <string name="reader_meta_pattern">%1$d PAGES LOADED - PORTRAIT FIT - TARUMI</string>
     <string name="local_storage">Local storage</string>
+    <string name="local_storage_summary">Open downloaded and imported manga saved on this device.</string>
     <string name="favourites">Favorites</string>
     <string name="history">History</string>
     <string name="error_occurred">An error occurred</string>
@@ -92,6 +93,9 @@
     <string name="downloads">Downloads</string>
 	<string name="downloads_subtitle">Downloaded chapters and saved offline comics</string>
 	<string name="show_nsfw_downloads">NSFW downloads</string>
+	<string name="downloads_metric_active">Active</string>
+	<string name="downloads_metric_chapters">Chapters</string>
+	<string name="downloads_metric_completed">Completed</string>
     <string name="by_name">Name</string>
     <string name="popular">Popular</string>
     <string name="updated">Updated</string>
@@ -147,7 +151,7 @@
     <string name="notification_read_chapter">Read Chapter</string>
     <string name="notification_new_count">%1$d new</string>
     <string name="notifications_empty_title">No notifications yet</string>
-    <string name="notifications_empty_summary">New chapters from saved comics will appear here.</string>
+    <string name="notifications_empty_summary">New chapter logs from saved comics will appear here. Pull to check now; if sources time out or cannot be reached, open Check for new chapters > Checking log to see the failed sources.</string>
     <string name="all_types">All types</string>
     <string name="mark_all_as_read">Mark all as read</string>
     <string name="enabled_d_of_d" tools:ignore="PluralsCandidate">%1$d of %2$d on</string>
@@ -205,7 +209,8 @@
     <string name="share_app_summary">Share the latest Tarumi APK link through social media or messaging apps.</string>
     <string name="share_app_text">Download the latest Tarumi app: %1$s</string>
     <string name="update_tutorial_title">New Tarumi update available</string>
-    <string name="update_tutorial_message">Tarumi %1$s is available now. Open Check app updates to download the latest version, read what changed, and keep your app up to date.</string>
+    <string name="update_tutorial_message">Tarumi %1$s is available now. Open Check app updates to download the latest version, read what changed, and keep your app up to date.\n\nJoin our Discord server to report errors or bugs, request new features, and help the Tarumi community grow.</string>
+    <string name="join">Join</string>
     <string name="open_settings">Open Settings</string>
     <string name="support_me" translatable="false">Support me</string>
     <string name="support_tarumi_title" translatable="false">Support Tarumi</string>
@@ -394,6 +399,8 @@
     <string name="available">Available</string>
     <string name="memory_usage_pattern" translatable="false">%1$s - %2$s</string>
     <string name="removed_from_favourites">Removed from favorites</string>
+    <string name="remove_from_bookmark_title">Remove from bookmark?</string>
+    <string name="remove_from_bookmark_message">Remove \"%1$s\" from your bookmark library?</string>
     <string name="options">Options</string>
     <string name="not_found_404">Content not found or removed</string>
     <string name="download_summary_pattern" translatable="false">%1$s Â· %2$s</string>
@@ -708,6 +715,7 @@
     <string name="single_cbz_file">Single CBZ file</string>
     <string name="multiple_cbz_files">Multiple CBZ files</string>
     <string name="reading_stats">Reading statistics</string>
+    <string name="reading_stats_summary">View your reading progress, completed chapters, and genre activity.</string>
     <string name="ask_ai">Ask AI</string>
     <string name="ask_ai_title">Ask AI</string>
     <string name="ask_ai_subtitle">Chat with Tarumi\'s librarian and get source-backed comic recommendations.</string>
@@ -907,6 +915,7 @@
     <string name="content_type_artist_cg">Artist CG</string>
     <string name="content_type_game_cg">Game CG</string>
     <string name="debug">Debug</string>
+    <string name="debug_summary">Developer tools and logs for checking app behavior.</string>
     <string name="source_code">Source code</string>
     <string name="user_manual">User manual</string>
     <string name="telegram_group">Discord group</string>

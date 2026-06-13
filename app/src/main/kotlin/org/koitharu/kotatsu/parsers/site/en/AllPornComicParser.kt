@@ -20,15 +20,6 @@ class AllPornComicParser(
 ) : MangaParser by delegate {
 
 	override suspend fun getList(offset: Int, order: SortOrder, filter: MangaListFilter): List<Manga> {
-		val p = offset + 1
-		val urlBuilder = StringBuilder("https://allporncomic.com/page/$p/?s=")
-		urlBuilder.append(URLEncoder.encode(filter.query.orEmpty(), "UTF-8"))
-		urlBuilder.append("&post_type=wp-manga")
-
-		for (tag in filter.tags) {
-			urlBuilder.append("&genre[]=").append(URLEncoder.encode(tag.key, "UTF-8"))
-		}
-
 		val sortValue = when (order) {
 			SortOrder.UPDATED -> "latest"
 			SortOrder.POPULARITY -> "views"
@@ -37,9 +28,8 @@ class AllPornComicParser(
 			SortOrder.ALPHABETICAL -> "alphabet"
 			else -> "latest"
 		}
-		urlBuilder.append("&m_orderby=").append(sortValue)
 
-		val url = urlBuilder.toString()
+		val url = buildListUrl(normalizePage(offset), sortValue, filter)
 		val request = Request.Builder()
 			.url(url)
 			.header("User-Agent", context.getDefaultUserAgent())
@@ -126,6 +116,48 @@ class AllPornComicParser(
 		return mangaList
 	}
 
+	private fun buildListUrl(page: Int, sortValue: String, filter: MangaListFilter): String {
+		val query = filter.query.orEmpty()
+		if (query.isBlank() && filter.tags.size == 1) {
+			val slug = filter.tags.first().allPornGenreSlug()
+			val path = if (page <= 1) {
+				"/porncomic-cat/$slug/"
+			} else {
+				"/porncomic-cat/$slug/page/$page/"
+			}
+			return "https://allporncomic.com$path?m_orderby=$sortValue"
+		}
+		val urlBuilder = StringBuilder("https://allporncomic.com/page/$page/?s=")
+		urlBuilder.append(URLEncoder.encode(query, "UTF-8"))
+		urlBuilder.append("&post_type=wp-manga")
+		for (tag in filter.tags) {
+			urlBuilder.append("&genre[]=").append(URLEncoder.encode(tag.allPornGenreSlug(), "UTF-8"))
+		}
+		urlBuilder.append("&m_orderby=").append(sortValue)
+		return urlBuilder.toString()
+	}
+
+	private fun normalizePage(offset: Int): Int = when {
+		offset <= 0 -> 1
+		offset < SITE_PAGE_SIZE -> offset + 1
+		else -> (offset / SITE_PAGE_SIZE) + 1
+	}
+
+	private fun MangaTag.allPornGenreSlug(): String {
+		val normalizedKey = key
+			.trim()
+			.trim('/')
+			.substringAfterLast("porncomic-cat/")
+			.substringBefore('/')
+		if (normalizedKey.isNotBlank()) {
+			return normalizedKey
+		}
+		return title
+			.lowercase()
+			.replace(Regex("""[^a-z0-9]+"""), "-")
+			.trim('-')
+	}
+
 	private fun src(element: Element): String {
 		val srcAttr = element.attr("data-src").trim()
 		if (srcAttr.isNotEmpty()) return srcAttr
@@ -154,5 +186,9 @@ class AllPornComicParser(
 			hash = char.code.toLong() + 31L * hash
 		}
 		return hash
+	}
+
+	private companion object {
+		const val SITE_PAGE_SIZE = 20
 	}
 }

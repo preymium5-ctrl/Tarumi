@@ -23,10 +23,24 @@
 		android:maxLines="2"
 		android:textColor="@color/taru_text_primary"
 		android:textSize="19sp"
-		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintEnd_toStartOf="@id/button_remove_bookmark"
 		app:layout_constraintStart_toStartOf="parent"
 		app:layout_constraintTop_toTopOf="parent"
 		tools:text="Chronicles of the Lazy Sovereign" />
+
+	<ImageButton
+		android:id="@+id/button_remove_bookmark"
+		android:layout_width="34dp"
+		android:layout_height="34dp"
+		android:background="@drawable/bg_taru_library_action"
+		android:contentDescription="@string/remove"
+		android:padding="8dp"
+		android:scaleType="center"
+		android:src="@drawable/ic_remove_x"
+		android:visibility="gone"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		tools:visibility="visible" />
 
 	<org.koitharu.kotatsu.image.ui.CoverImageView
 		android:id="@+id/imageView_cover"
@@ -58,7 +72,7 @@
 		android:textSize="14sp"
 		app:drawableStartCompat="@drawable/ic_open_book"
 		app:drawableTint="@color/taru_text_secondary"
-		app:layout_constraintEnd_toStartOf="@id/textView_rate"
+		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toEndOf="@id/imageView_cover"
 		app:layout_constraintTop_toTopOf="@id/imageView_cover"
 		tools:text="5mo ago" />
@@ -78,25 +92,10 @@
 		android:textSize="14sp"
 		app:drawableStartCompat="@drawable/ic_history"
 		app:drawableTint="@color/taru_text_secondary"
-		app:layout_constraintEnd_toStartOf="@id/textView_rate"
+		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="@id/textView_author"
 		app:layout_constraintTop_toBottomOf="@id/textView_author"
 		tools:text="10h ago" />
-
-	<TextView
-		android:id="@+id/textView_rate"
-		android:layout_width="wrap_content"
-		android:layout_height="30dp"
-		android:drawablePadding="5dp"
-		android:fontFamily="sans-serif"
-		android:gravity="center"
-		android:text="Rate"
-		android:textColor="@color/taru_text_soft"
-		android:textSize="14sp"
-		app:drawableEndCompat="@drawable/ic_star_small"
-		app:drawableTint="@color/taru_text_soft"
-		app:layout_constraintEnd_toEndOf="parent"
-		app:layout_constraintTop_toTopOf="@id/textView_current_chapter" />
 
 	<TextView
 		android:id="@+id/textView_status"

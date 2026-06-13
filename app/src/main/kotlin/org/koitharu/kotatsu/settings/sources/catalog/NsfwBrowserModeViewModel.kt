@@ -193,7 +193,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	): BrowserPageResult {
 		val previousSignature = pageSignatures[page - 1]
 		val filter = if (selectedTags.isNotEmpty()) {
-			MangaListFilter(tags = setOf(selectedTags.first()))
+			MangaListFilter(tags = selectedTags.toSet())
 		} else if (query.isBlank()) {
 			MangaListFilter.EMPTY
 		} else {
@@ -215,7 +215,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			val result = BrowserPageResult(
 				items = window,
 				signature = window.mapTo(LinkedHashSet()) { it.url.ifEmpty { it.id.toString() } },
-				hasNext = hasNextFromWholeList || raw.size >= PAGE_SIZE,
+				hasNext = hasNextFromWholeList || raw.size >= PAGE_SIZE || window.isNotEmpty(),
 			)
 			if (fallback == null && result.signature != previousSignature) {
 				fallback = result

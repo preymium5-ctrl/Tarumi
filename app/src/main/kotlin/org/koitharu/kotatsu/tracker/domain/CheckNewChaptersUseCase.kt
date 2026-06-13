@@ -6,6 +6,7 @@ import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
+import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.util.MultiMutex
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
@@ -28,6 +29,7 @@ class CheckNewChaptersUseCase @Inject constructor(
 	private val historyRepository: HistoryRepository,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val localMangaRepository: LocalMangaRepository,
+	private val mangaDataRepository: MangaDataRepository,
 ) {
 
 	private val mutex = MultiMutex<Long>()
@@ -107,8 +109,18 @@ class CheckNewChaptersUseCase @Inject constructor(
 			},
 		)
 
-		manga.chapters.isNullOrEmpty() -> fetchDetails(manga)
+		manga.chapters.isNullOrEmpty() -> fetchDetailsWithCacheFallback(manga)
 		else -> manga
+	}
+
+	private suspend fun fetchDetailsWithCacheFallback(manga: Manga): Manga {
+		val cached = mangaDataRepository.findMangaById(manga.id, withChapters = true)
+			?.takeIf { !it.chapters.isNullOrEmpty() }
+		return runCatchingCancellable {
+			fetchDetails(manga)
+		}.getOrElse { error ->
+			cached ?: throw error
+		}
 	}
 
 	private suspend fun fetchDetails(manga: Manga): Manga {

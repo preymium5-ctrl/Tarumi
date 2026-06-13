@@ -477,6 +477,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 				.setTitle(R.string.update_tutorial_title)
 				.setMessage(getString(R.string.update_tutorial_message, versionName))
 				.setNegativeButton(R.string.got_it, null)
+				.setNeutralButton(R.string.join) { _, _ ->
+					router.openExternalBrowser(getString(R.string.url_discord_invite), getString(R.string.discord))
+				}
 				.setPositiveButton(R.string.check_app_updates) { _, _ ->
 					router.openAppUpdate()
 				}

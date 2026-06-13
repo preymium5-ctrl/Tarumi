@@ -1,5 +1,7 @@
 package org.koitharu.kotatsu.download.ui.list
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.View
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -101,6 +103,7 @@ fun downloadItemAD(
 			WorkInfo.State.ENQUEUED,
 			WorkInfo.State.BLOCKED -> {
 				binding.textViewStatus.setText(R.string.queued)
+				binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(STATE_QUEUED)
 				binding.progressBar.isIndeterminate = false
 				binding.progressBar.isVisible = false
 				binding.progressBar.isEnabled = true
@@ -117,6 +120,9 @@ fun downloadItemAD(
 				binding.textViewStatus.setText(
 					if (item.isPaused) R.string.paused else R.string.manga_downloading_,
 				)
+				binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(
+					if (item.isPaused) STATE_PAUSED else STATE_ACTIVE,
+				)
 				binding.progressBar.isIndeterminate = item.isIndeterminate
 				binding.progressBar.isVisible = true
 				binding.progressBar.max = item.max
@@ -131,7 +137,8 @@ fun downloadItemAD(
 				}
 				binding.buttonCancel.isVisible = true
 				binding.buttonResume.isVisible = item.isPaused
-				binding.buttonResume.setText(if (item.error == null) R.string.resume else R.string.retry)
+				binding.buttonResume.text = ""
+				binding.buttonResume.setContentDescriptionAndTooltip(if (item.error == null) R.string.resume else R.string.retry)
 				binding.buttonSkip.isVisible = item.isPaused && item.error != null
 				binding.buttonSkipAll.isVisible = item.isPaused && item.error != null
 				binding.buttonPause.isVisible = item.canPause
@@ -139,6 +146,7 @@ fun downloadItemAD(
 
 			WorkInfo.State.SUCCEEDED -> {
 				binding.textViewStatus.setText(R.string.download_complete)
+				binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(STATE_DONE)
 				binding.progressBar.isIndeterminate = false
 				binding.progressBar.isVisible = false
 				binding.progressBar.isEnabled = true
@@ -162,6 +170,7 @@ fun downloadItemAD(
 
 			WorkInfo.State.FAILED -> {
 				binding.textViewStatus.setText(R.string.error_occurred)
+				binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(STATE_ERROR)
 				binding.progressBar.isIndeterminate = false
 				binding.progressBar.isVisible = false
 				binding.progressBar.isEnabled = true
@@ -176,6 +185,7 @@ fun downloadItemAD(
 
 			WorkInfo.State.CANCELLED -> {
 				binding.textViewStatus.setText(R.string.canceled)
+				binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(STATE_CANCELLED)
 				binding.progressBar.isIndeterminate = false
 				binding.progressBar.isVisible = false
 				binding.progressBar.isEnabled = true
@@ -190,3 +200,10 @@ fun downloadItemAD(
 		}
 	}
 }
+
+private val STATE_ACTIVE = Color.parseColor("#3D7DDB")
+private val STATE_PAUSED = Color.parseColor("#7B6BC5")
+private val STATE_QUEUED = Color.parseColor("#68758A")
+private val STATE_DONE = Color.parseColor("#16854C")
+private val STATE_ERROR = Color.parseColor("#D32F2F")
+private val STATE_CANCELLED = Color.parseColor("#8B96A8")
