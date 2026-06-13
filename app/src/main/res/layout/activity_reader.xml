@@ -278,134 +278,167 @@
 		android:layout_gravity="bottom"
 		android:layout_marginHorizontal="16dp"
 		android:layout_marginBottom="16dp"
-		android:orientation="horizontal"
-		android:gravity="center_vertical"
+		android:orientation="vertical"
 		android:elevation="10dp"
 		android:visibility="gone"
 		tools:visibility="visible">
 
-		<!-- Play Button (compact 40dp size) -->
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/customButtonPlay"
-			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="40dp"
-			android:layout_height="40dp"
-			android:insetLeft="0dp"
-			android:insetRight="0dp"
-			android:insetTop="0dp"
-			android:insetBottom="0dp"
-			android:minWidth="0dp"
-			android:minHeight="0dp"
-			android:padding="10dp"
-			app:backgroundTint="#E0121212"
-			app:strokeWidth="0dp"
-			app:cornerRadius="10dp"
-			app:icon="@drawable/ic_play"
-			app:iconTint="#FFFFFF"
-			app:iconPadding="0dp"
-			app:iconSize="20dp" />
-
-		<!-- Previous Chapter Button (compact 40dp size) -->
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/custom_button_prev_chapter"
-			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="40dp"
-			android:layout_height="40dp"
-			android:layout_marginStart="8dp"
-			android:insetLeft="0dp"
-			android:insetRight="0dp"
-			android:insetTop="0dp"
-			android:insetBottom="0dp"
-			android:minWidth="0dp"
-			android:minHeight="0dp"
-			android:padding="10dp"
-			app:backgroundTint="#E0121212"
-			app:strokeWidth="0dp"
-			app:cornerRadius="10dp"
-			app:icon="@drawable/ic_reader_back"
-			app:iconTint="#FFFFFF"
-			app:iconPadding="0dp"
-			app:iconSize="20dp" />
-
-		<!-- Progress Text Capsule (Chapter Title and Progress arranged vertically, 40dp height) -->
 		<LinearLayout
-			android:id="@+id/custom_reader_bottom_progress_capsule"
-			android:layout_width="0dp"
-			android:layout_height="40dp"
-			android:layout_weight="1"
-			android:layout_marginStart="8dp"
-			android:background="@drawable/bg_reader_button_dark"
-			android:gravity="center"
-			android:orientation="vertical"
-			android:paddingHorizontal="16dp"
-			android:clickable="true"
-			android:focusable="true">
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical">
 
-			<TextView
-				android:id="@+id/textView_reader_chapter_title_custom"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:textColor="#FFFFFF"
-				android:textSize="12sp"
-				android:fontFamily="@font/outfit"
-				android:ellipsize="end"
-				android:maxLines="1"
-				tools:text="Fall of the Demon King" />
+			<!-- Play Button (compact 40dp size) -->
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/customButtonPlay"
+				style="?materialIconButtonOutlinedStyle"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:insetLeft="0dp"
+				android:insetRight="0dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:padding="10dp"
+				app:backgroundTint="#E0121212"
+				app:strokeWidth="0dp"
+				app:cornerRadius="10dp"
+				app:icon="@drawable/ic_play"
+				app:iconTint="#FFFFFF"
+				app:iconPadding="0dp"
+				app:iconSize="20dp" />
 
-			<TextView
-				android:id="@+id/textView_reader_page_progress_custom"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="2dp"
-				android:textColor="#A0A0A0"
-				android:textSize="10sp"
-				android:fontFamily="@font/outfit"
-				tools:text="Episode 198 / 199" />
+			<!-- Previous Chapter Button (compact 40dp size) -->
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/custom_button_prev_chapter"
+				style="?materialIconButtonOutlinedStyle"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:layout_marginStart="8dp"
+				android:insetLeft="0dp"
+				android:insetRight="0dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:padding="10dp"
+				app:backgroundTint="#E0121212"
+				app:strokeWidth="0dp"
+				app:cornerRadius="10dp"
+				app:icon="@drawable/ic_reader_back"
+				app:iconTint="#FFFFFF"
+				app:iconPadding="0dp"
+				app:iconSize="20dp" />
+
+			<!-- Progress Text Capsule (Chapter Title and Progress arranged vertically, 40dp height) -->
+			<LinearLayout
+				android:id="@+id/custom_reader_bottom_progress_capsule"
+				android:layout_width="0dp"
+				android:layout_height="40dp"
+				android:layout_weight="1"
+				android:layout_marginStart="8dp"
+				android:background="@drawable/bg_reader_button_dark"
+				android:gravity="center"
+				android:orientation="vertical"
+				android:paddingHorizontal="16dp"
+				android:clickable="true"
+				android:focusable="true">
+
+				<TextView
+					android:id="@+id/textView_reader_chapter_title_custom"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:textColor="#FFFFFF"
+					android:textSize="12sp"
+					android:fontFamily="@font/outfit"
+					android:ellipsize="end"
+					android:maxLines="1"
+					tools:text="Fall of the Demon King" />
+
+				<TextView
+					android:id="@+id/textView_reader_page_progress_custom"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="2dp"
+					android:textColor="#A0A0A0"
+					android:textSize="10sp"
+					android:fontFamily="@font/outfit"
+					tools:text="Episode 198 / 199" />
+			</LinearLayout>
+
+			<!-- Next Chapter Button (compact 40dp size) -->
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/custom_button_next_chapter"
+				style="?materialIconButtonOutlinedStyle"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:layout_marginStart="8dp"
+				android:insetLeft="0dp"
+				android:insetRight="0dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:padding="10dp"
+				app:backgroundTint="#E0121212"
+				app:strokeWidth="0dp"
+				app:cornerRadius="10dp"
+				app:icon="@drawable/ic_arrow_forward"
+				app:iconTint="#FFFFFF"
+				app:iconPadding="0dp"
+				app:iconSize="20dp" />
+
+			<!-- Settings Button (compact 40dp size) -->
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/custom_button_settings"
+				style="?materialIconButtonOutlinedStyle"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:layout_marginStart="8dp"
+				android:insetLeft="0dp"
+				android:insetRight="0dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:padding="10dp"
+				app:backgroundTint="#E0121212"
+				app:strokeWidth="0dp"
+				app:cornerRadius="10dp"
+				app:icon="@drawable/ic_reader_settings_slider"
+				app:iconTint="#FFFFFF"
+				app:iconPadding="0dp"
+				app:iconSize="20dp" />
 		</LinearLayout>
 
-		<!-- Next Chapter Button (compact 40dp size) -->
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/custom_button_next_chapter"
-			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="40dp"
-			android:layout_height="40dp"
-			android:layout_marginStart="8dp"
-			android:insetLeft="0dp"
-			android:insetRight="0dp"
-			android:insetTop="0dp"
-			android:insetBottom="0dp"
-			android:minWidth="0dp"
-			android:minHeight="0dp"
-			android:padding="10dp"
-			app:backgroundTint="#E0121212"
-			app:strokeWidth="0dp"
-			app:cornerRadius="10dp"
-			app:icon="@drawable/ic_arrow_forward"
-			app:iconTint="#FFFFFF"
-			app:iconPadding="0dp"
-			app:iconSize="20dp" />
+		<!-- Custom Scroll Advance Layout matching the premium dark theme design -->
+		<LinearLayout
+			android:id="@+id/layout_custom_scroll_advance"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="8dp"
+			android:visibility="gone"
+			tools:visibility="visible">
 
-		<!-- Settings Button (compact 40dp size) -->
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/custom_button_settings"
-			style="?materialIconButtonOutlinedStyle"
-			android:layout_width="40dp"
-			android:layout_height="40dp"
-			android:layout_marginStart="8dp"
-			android:insetLeft="0dp"
-			android:insetRight="0dp"
-			android:insetTop="0dp"
-			android:insetBottom="0dp"
-			android:minWidth="0dp"
-			android:minHeight="0dp"
-			android:padding="10dp"
-			app:backgroundTint="#E0121212"
-			app:strokeWidth="0dp"
-			app:cornerRadius="10dp"
-			app:icon="@drawable/ic_reader_settings_slider"
-			app:iconTint="#FFFFFF"
-			app:iconPadding="0dp"
-			app:iconSize="20dp" />
+			<com.google.android.material.slider.Slider
+				android:id="@+id/custom_slider"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:stepSize="1.0"
+				android:valueFrom="0"
+				app:haloColor="#20FFFFFF"
+				app:labelBehavior="gone"
+				app:thumbColor="#FFFFFF"
+				app:tickVisible="false"
+				app:trackColorActive="#FFFFFF"
+				app:trackColorInactive="#40FFFFFF"
+				tools:value="50"
+				tools:valueTo="100" />
+		</LinearLayout>
 	</LinearLayout>
 
 	<!-- 4. Bottom Right Stack (Scroll to Top floating above Settings) -->

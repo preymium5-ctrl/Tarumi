@@ -18,6 +18,7 @@ import java.util.Locale
 
 fun chapterListItemAD(
 	clickListener: OnListItemClickListener<ChapterListItem>,
+	onDownloadClick: (ChapterListItem) -> Unit,
 ) = adapterDelegateViewBinding<ChapterListItem, ListModel, ItemChapterBinding>(
 	viewBinding = { inflater, parent -> ItemChapterBinding.inflate(inflater, parent, false) },
 	on = { item, _, _ -> item is ChapterListItem && !item.isGrid },
@@ -69,6 +70,9 @@ fun chapterListItemAD(
 			}
 		}
 		binding.textViewNew.isVisible = item.isNew && item.isUnread
+		binding.imageViewPlay.setOnClickListener {
+			onDownloadClick(item)
+		}
 		binding.imageViewBookmarked.isVisible = item.isBookmarked
 		binding.imageViewDownloaded.isVisible = item.isDownloaded
 	}

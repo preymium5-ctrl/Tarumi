@@ -12,13 +12,14 @@ import org.koitharu.kotatsu.list.ui.model.ListModel
 
 class ChaptersAdapter(
 	onItemClickListener: OnListItemClickListener<ChapterListItem>,
+	onDownloadClickListener: (ChapterListItem) -> Unit,
 ) : BaseListAdapter<ListModel>(), FastScroller.SectionIndexer {
 
 	private var hasVolumes = false
 
 	init {
 		addDelegate(ListItemType.HEADER, listHeaderAD(null))
-		addDelegate(ListItemType.CHAPTER_LIST, chapterListItemAD(onItemClickListener))
+		addDelegate(ListItemType.CHAPTER_LIST, chapterListItemAD(onItemClickListener, onDownloadClickListener))
 		addDelegate(ListItemType.CHAPTER_GRID, chapterGridItemAD(onItemClickListener))
 	}
 

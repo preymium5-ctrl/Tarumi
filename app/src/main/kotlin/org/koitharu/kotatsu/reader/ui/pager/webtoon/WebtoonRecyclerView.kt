@@ -211,7 +211,7 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 			}
 			val newFirstPos = lm.findFirstVisibleItemPosition()
 			val newLastPos = lm.findLastVisibleItemPosition()
-			if (newFirstPos != firstPos || newLastPos != lastPos) {
+			if (newFirstPos != firstPos || newLastPos != lastPos || dy != 0) {
 				firstPos = newFirstPos
 				lastPos = newLastPos
 				if (newFirstPos != NO_POSITION && newLastPos != NO_POSITION) {

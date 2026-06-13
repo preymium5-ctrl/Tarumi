@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -113,6 +114,9 @@ class ReaderViewModel @Inject constructor(
     private var stateChangeJob: Job? = null
     private var visibleReadingStates: List<ReaderState> = emptyList()
 
+    @Volatile
+    private var customScrollProgress: Float? = null
+
     init {
         mangaDetails.value = intent.manga?.let { MangaDetails(it) }
     }
@@ -189,17 +193,20 @@ class ReaderViewModel @Inject constructor(
 
     val isMangaNsfw = manga.map { it?.contentRating == ContentRating.ADULT }
 
-    val isBookmarkAdded = readingState.flatMapLatest { state ->
-        val manga = mangaDetails.value?.toManga()
-        if (state == null || manga == null) {
-            flowOf(false)
-        } else {
-            bookmarksRepository.observeBookmark(manga, state.chapterId, state.page)
-                .map {
-                    it != null && it.chapterId == state.chapterId && it.page == state.page
-                }
-        }
-    }.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
+    val isBookmarkAdded = readingState
+        .map { it?.chapterId to it?.page }
+        .distinctUntilChanged()
+        .flatMapLatest { (chapterId, page) ->
+            val manga = mangaDetails.value?.toManga()
+            if (chapterId == null || page == null || manga == null) {
+                flowOf(false)
+            } else {
+                bookmarksRepository.observeBookmark(manga, chapterId, page)
+                    .map {
+                        it != null && it.chapterId == chapterId && it.page == page
+                    }
+            }
+        }.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
 
     init {
         initIncognitoMode()
@@ -233,6 +240,7 @@ class ReaderViewModel @Inject constructor(
 
     fun switchMode(newMode: ReaderMode) {
         launchJob {
+            customScrollProgress = null
             val manga = checkNotNull(getMangaOrNull())
             dataRepository.saveReaderMode(
                 manga = manga,
@@ -257,7 +265,7 @@ class ReaderViewModel @Inject constructor(
         historyUpdateUseCase.invokeAsync(
             manga = getMangaOrNull() ?: return,
             readerState = readerState,
-            percent = computePercent(readerState.chapterId, readerState.page, loadedPagesCount(readerState.chapterId)),
+            percent = getPercent(readerState.chapterId, readerState.page, loadedPagesCount(readerState.chapterId)),
         )
     }
 
@@ -307,6 +315,7 @@ class ReaderViewModel @Inject constructor(
         val prevJob = loadingJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
+            customScrollProgress = null
             content.value = ReaderContent(emptyList(), null)
             chaptersLoader.loadSingleChapter(id)
             val newState = ReaderState(id, page, 0)
@@ -319,6 +328,7 @@ class ReaderViewModel @Inject constructor(
         val prevJob = loadingJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
+            customScrollProgress = null
             val prevState = readingState.requireValue()
             val newChapterId = if (delta != 0) {
                 val allChapters = mangaDetails.requireValue().allChapters
@@ -344,7 +354,14 @@ class ReaderViewModel @Inject constructor(
     }
 
     @MainThread
-    fun onCurrentPageChanged(lowerPos: Int, upperPos: Int, selectedPos: Int = (lowerPos + upperPos) / 2, scroll: Int = 0) {
+    fun onCurrentPageChanged(
+        lowerPos: Int,
+        upperPos: Int,
+        selectedPos: Int = (lowerPos + upperPos) / 2,
+        scroll: Int = 0,
+        scrollProgress: Float? = null
+    ) {
+        customScrollProgress = scrollProgress
         val prevJob = stateChangeJob
         val pages = content.value.pages // capture immediately
         stateChangeJob = launchJob(Dispatchers.Default) {
@@ -405,7 +422,7 @@ class ReaderViewModel @Inject constructor(
                     scroll = state.scroll,
                     imageUrl = page.preview.ifNullOrEmpty { page.url },
                     createdAt = Instant.now(),
-                    percent = computePercent(state.chapterId, state.page, loadedPagesCount(state.chapterId)),
+                    percent = getPercent(state.chapterId, state.page, loadedPagesCount(state.chapterId)),
                 )
                 bookmarksRepository.addBookmark(bookmark)
                 onShowToast.call(R.string.bookmark_added)
@@ -459,7 +476,7 @@ class ReaderViewModel @Inject constructor(
                         // save state
                         if (!isIncognitoMode.firstNotNull()) {
                             readingState.value?.let {
-                                val percent = computePercent(it.chapterId, it.page, loadedPagesCount(it.chapterId))
+                                val percent = getPercent(it.chapterId, it.page, loadedPagesCount(it.chapterId))
                                 historyUpdateUseCase(manga, it, percent)
                             }
                         }
@@ -535,7 +552,7 @@ class ReaderViewModel @Inject constructor(
             chaptersTotal = m.chapters[chapter.branch].sizeOrZero(),
             totalPages = totalPages,
             currentPage = state.page.coerceAtMost(totalPages - 1),
-            percent = computePercent(state.chapterId, state.page, totalPages),
+            percent = getPercent(state.chapterId, state.page, totalPages),
             incognito = isIncognitoMode.value == true,
         )
         uiState.value = newState
@@ -592,6 +609,12 @@ class ReaderViewModel @Inject constructor(
             return 1f
         }
         return (pageIndex / (pagesCount - 1).toFloat()).coerceIn(0f, 1f)
+    }
+
+    private fun getPercent(chapterId: Long, pageIndex: Int, pagesCountOverride: Int? = null): Float {
+        return customScrollProgress?.let {
+            if (it >= 0.95f) 1f else it
+        } ?: computePercent(chapterId, pageIndex, pagesCountOverride)
     }
 
     private fun loadedPagesCount(chapterId: Long): Int? {

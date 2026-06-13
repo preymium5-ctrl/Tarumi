@@ -194,7 +194,9 @@
 			android:text="vertical layout - scroll advance"
 			android:textColor="@color/taru_text_secondary"
 			android:textSize="12sp"
-			tools:ignore="HardcodedText" />
+			android:visibility="gone"
+			tools:ignore="HardcodedText"
+			tools:visibility="visible" />
 
 		<TextView
 			android:id="@+id/textView_reader_meta"

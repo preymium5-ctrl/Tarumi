@@ -56,10 +56,12 @@ import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import javax.inject.Inject
+import kotlin.random.Random
 
 private const val FILTER_MIN_INTERVAL = 250L
 private const val EXPANDED_SOURCE_PAGE_SIZE = 50
 private const val EXPANDED_ROUTE_MAX_OFFSET = 220
+private const val RANDOMIZED_SOURCE_ROTATION_MS = 8L * 60L * 60L * 1000L
 private val EXPANDED_CATALOG_SOURCE_NAMES = setOf(
 	"WEBTOONS_EN",
 	"ASURASCANS",
@@ -82,9 +84,14 @@ private val EXPANDED_CATALOG_SOURCE_NAMES = setOf(
 	"MANGABALL_EN",
 	"DEMONICSCANS",
 	"BEEHENTAI",
+	"ALLPORN_COMIC",
 	"PORNCOMIC18",
 	"HENTAI3Z",
 	"HENTAI3ZCC",
+)
+private val RANDOMIZED_DEFAULT_SOURCE_NAMES = setOf(
+	"ALLPORN_COMIC",
+	"PORNCOMIC18",
 )
 private val EXPANDED_QUERY_SEEDS = listOf(
 	"a", "e", "i", "o", "u", "s", "t", "r", "n", "m",
@@ -289,6 +296,7 @@ open class RemoteListViewModel @Inject constructor(
 			resetExpandedSession()
 			expandedSessionKey = key
 			expandedRoutes = createExpandedRoutes(filterState.listFilter, filterState.sortOrder)
+			expandedRouteOffset = expandedRoutes.firstOrNull()?.startOffset ?: 0
 		}
 		return fetchExpandedBatch()
 	}
@@ -303,7 +311,7 @@ open class RemoteListViewModel @Inject constructor(
 	private suspend fun createExpandedRoutes(baseFilter: MangaListFilter, order: SortOrder): List<ExpandedRoute> {
 		val filterOptions = repository.getFilterOptions()
 		val tags = filterOptions.availableTags.distinctBy { it.key }
-		return buildList {
+		val routes = buildList {
 			for (sortOrder in expandedSortOrders(order)) {
 				add(ExpandedRoute(filter = baseFilter, order = sortOrder))
 			}
@@ -316,6 +324,7 @@ open class RemoteListViewModel @Inject constructor(
 				add(ExpandedRoute(filter = baseFilter.copy(query = query), order = SortOrder.RELEVANCE, maxOffset = 80))
 			}
 		}
+		return routes.randomizeForSource(baseFilter)
 	}
 
 	private suspend fun fetchExpandedBatch(): List<Manga> {
@@ -353,7 +362,7 @@ open class RemoteListViewModel @Inject constructor(
 
 	private fun nextExpandedRoute() {
 		expandedRouteIndex++
-		expandedRouteOffset = 0
+		expandedRouteOffset = expandedRoutes.getOrNull(expandedRouteIndex)?.startOffset ?: 0
 	}
 
 	private fun resetExpandedSession() {
@@ -372,10 +381,32 @@ open class RemoteListViewModel @Inject constructor(
 		SortOrder.ALPHABETICAL,
 	).distinct()
 
+	private fun List<ExpandedRoute>.randomizeForSource(baseFilter: MangaListFilter): List<ExpandedRoute> {
+		if (source.name !in RANDOMIZED_DEFAULT_SOURCE_NAMES || !baseFilter.isEmptyDefaultBrowse()) {
+			return this
+		}
+		val random = Random(source.name.hashCode() * 31L + currentRandomizedSourcePeriod())
+		return shuffled(random).map { route ->
+			route.copy(startOffset = random.nextInt(0, 6) * EXPANDED_SOURCE_PAGE_SIZE)
+		}
+	}
+
+	private fun MangaListFilter.isEmptyDefaultBrowse(): Boolean {
+		return query.isNullOrEmpty() &&
+			author.isNullOrEmpty() &&
+			tags.isEmpty() &&
+			tagsExclude.isEmpty()
+	}
+
+	private fun currentRandomizedSourcePeriod(): Long {
+		return System.currentTimeMillis() / RANDOMIZED_SOURCE_ROTATION_MS
+	}
+
 	private data class ExpandedRoute(
 		val filter: MangaListFilter,
 		val order: SortOrder,
 		val maxOffset: Int = EXPANDED_ROUTE_MAX_OFFSET,
+		val startOffset: Int = 0,
 	)
 
 	private data class ExpandedSessionKey(

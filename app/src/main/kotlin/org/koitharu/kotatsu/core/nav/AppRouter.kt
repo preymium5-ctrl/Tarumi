@@ -460,25 +460,7 @@ class AppRouter private constructor(
             }
             return
         }
-        buildAlertDialog(contextOrNull() ?: return) {
-            setIcon(context.getThemeDrawable(appcompatR.attr.actionModeShareDrawable))
-            setTitle(R.string.share)
-            setItems(
-                arrayOf(
-                    context.getString(R.string.link_to_manga_in_app),
-                    context.getString(R.string.link_to_manga_on_s, manga.source.getTitle(context)),
-                ),
-            ) { _, which ->
-                val link = when (which) {
-                    0 -> manga.appUrl.toString()
-                    1 -> manga.publicUrl
-                    else -> return@setItems
-                }
-                shareLink(link, manga.title)
-            }
-            setNegativeButton(android.R.string.cancel, null)
-            setCancelable(true)
-        }.show()
+        shareLink(manga.publicUrl, manga.title)
     }
 
     fun showErrorDialog(error: Throwable, url: String? = null) {

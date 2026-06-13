@@ -49,6 +49,8 @@ class WebtoonHolder(
 
 	fun getScrollY() = binding.ssiv.getScroll()
 
+	fun getScrollRange() = binding.ssiv.getScrollRange()
+
 	fun restoreScroll(scroll: Int) {
 		if (binding.ssiv.isReady) {
 			binding.ssiv.scrollTo(scroll)

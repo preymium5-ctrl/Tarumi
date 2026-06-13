@@ -534,12 +534,12 @@
 						android:layout_weight="1.5"
 						android:layout_marginStart="12dp"
 						android:text="First Chapter"
-						android:textColor="?attr/colorOnSurface"
+						android:textColor="@color/taru_on_accent"
 						android:textSize="14sp"
-						app:backgroundTint="?attr/colorSurfaceContainerHigh"
+						app:backgroundTint="@color/taru_accent"
 						app:cornerRadius="28dp"
 						app:icon="@drawable/ic_eye"
-						app:iconTint="?attr/colorOnSurface"
+						app:iconTint="@color/taru_on_accent"
 						tools:ignore="HardcodedText" />
 				</LinearLayout>
 

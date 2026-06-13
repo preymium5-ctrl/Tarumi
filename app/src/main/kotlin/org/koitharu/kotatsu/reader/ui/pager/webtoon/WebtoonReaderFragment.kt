@@ -47,6 +47,7 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 	private var recyclerLifecycleDispatcher: RecyclerViewLifecycleDispatcher? = null
 	private var canGoPrev = true
 	private var canGoNext = true
+	private var currentPages: List<ReaderPage> = emptyList()
 
 	override fun onCreateViewBinding(
 		inflater: LayoutInflater,
@@ -97,6 +98,7 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 	override fun onDestroyView() {
 		recyclerLifecycleDispatcher = null
 		requireViewBinding().recyclerView.adapter = null
+		currentPages = emptyList()
 		super.onDestroyView()
 	}
 
@@ -139,10 +141,28 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 				?: ((firstVisiblePosition + lastVisiblePosition) / 2)
 		}
 		val scroll = (recyclerView.findViewHolderForAdapterPosition(selectedPosition) as? WebtoonHolder)?.getScrollY() ?: 0
-		viewModel.onCurrentPageChanged(firstVisiblePosition, lastVisiblePosition, selectedPosition, scroll)
+		val progress = calculateScrollProgress(selectedPosition, scroll)
+		viewModel.onCurrentPageChanged(firstVisiblePosition, lastVisiblePosition, selectedPosition, scroll, progress)
+	}
+
+	private fun calculateScrollProgress(position: Int, scroll: Int): Float? {
+		val pages = currentPages
+		if (pages.isEmpty()) return null
+		val adapter = viewBinding?.recyclerView?.adapter as? BaseReaderAdapter<*>
+		val page = adapter?.getItemOrNull(position) ?: return null
+		val holder = viewBinding?.recyclerView?.findViewHolderForAdapterPosition(position) as? WebtoonHolder
+		val scrollRange = holder?.getScrollRange() ?: 0
+		val ratio = if (scrollRange > 0) scroll.toFloat() / scrollRange.toFloat() else 0f
+		val chapterPages = pages.filter { it.chapterId == page.chapterId }
+		val totalPagesCount = chapterPages.size
+		if (totalPagesCount > 0) {
+			return ((page.index.toFloat() + ratio) / totalPagesCount.toFloat()).coerceIn(0f, 1f)
+		}
+		return null
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
+		currentPages = pages
 		val setItems = launch {
 			requireAdapter().setItems(pages)
 			yield()
@@ -163,7 +183,8 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 							?.restoreScroll(pendingState.scroll)
 					}
 				}
-				viewModel.onCurrentPageChanged(position, position, position, pendingState.scroll)
+				val progress = calculateScrollProgress(position, pendingState.scroll)
+				viewModel.onCurrentPageChanged(position, position, position, pendingState.scroll, progress)
 			} else {
 				Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
 					.show()

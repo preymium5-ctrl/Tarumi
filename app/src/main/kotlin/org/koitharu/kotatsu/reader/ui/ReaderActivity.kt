@@ -28,6 +28,7 @@ import androidx.transition.TransitionManager
 import androidx.transition.TransitionSet
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
+import com.google.android.material.slider.Slider
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,9 @@ import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
+import android.content.SharedPreferences
+import kotlin.math.roundToInt
+import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
@@ -89,7 +93,8 @@ class ReaderActivity :
     IdlingDetector.Callback,
     ZoomControl.ZoomControlListener,
     View.OnClickListener,
-    ScrollTimerControlView.OnVisibilityChangeListener {
+    ScrollTimerControlView.OnVisibilityChangeListener,
+    SharedPreferences.OnSharedPreferenceChangeListener {
 
     @Inject
     lateinit var settings: AppSettings
@@ -152,6 +157,31 @@ class ReaderActivity :
         viewBinding.customButtonScrollToTop?.setOnClickListener(this)
         viewBinding.customButtonSettings?.setOnClickListener(this)
         viewBinding.customReaderBottomProgressCapsule?.setOnClickListener(this)
+
+        var isCustomSliderChanged = false
+        var isCustomSliderTracking = false
+        viewBinding.customSlider?.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {
+                isCustomSliderTracking = true
+                isCustomSliderChanged = false
+            }
+
+            override fun onStopTrackingTouch(slider: Slider) {
+                isCustomSliderTracking = false
+                if (isCustomSliderChanged) {
+                    switchPageTo(slider.value.toInt())
+                }
+            }
+        })
+        viewBinding.customSlider?.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                if (isCustomSliderTracking) {
+                    isCustomSliderChanged = true
+                } else {
+                    switchPageTo(value.toInt())
+                }
+            }
+        }
 
         idlingDetector.bindToLifecycle(this)
         screenOrientationHelper.applySettings()
@@ -286,6 +316,7 @@ class ReaderActivity :
 
         // Apply initial double-mode considering foldable setting
         applyDoubleModeAuto()
+        updateCustomScrollAdvance()
     }
 
     override fun getParentActivityIntent(): Intent? {
@@ -310,7 +341,13 @@ class ReaderActivity :
         viewModel.onPause()
     }
 
+    override fun onStart() {
+        super.onStart()
+        settings.subscribe(this)
+    }
+
     override fun onStop() {
+        settings.unsubscribe(this)
         super.onStop()
         viewModel.onStop()
     }
@@ -729,6 +766,7 @@ class ReaderActivity :
             chaptersTotal = uiState.chaptersTotal,
             currentPage = uiState.currentPage + 1,
             totalPages = uiState.totalPages,
+            percent = uiState.percent,
         )
         if (
             settings.isReaderChapterToastEnabled &&
@@ -749,6 +787,7 @@ class ReaderActivity :
         viewBinding.actionsView.isNextEnabled = uiState.hasNextChapter()
         viewBinding.actionsView.isPrevEnabled = uiState.hasPreviousChapter()
         updateEndChapterActions(uiState)
+        updateCustomScrollAdvance()
 
         // Custom UI updates
         viewBinding.textViewReaderTitleCustom?.text = uiState.mangaName
@@ -865,6 +904,31 @@ class ReaderActivity :
     }
 
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (key == AppSettings.KEY_READER_SCROLL_ADVANCE) {
+            updateCustomScrollAdvance()
+        }
+    }
+
+    private fun updateCustomScrollAdvance() {
+        val isEnabled = settings.isScrollAdvanceEnabled
+        viewBinding.layoutCustomScrollAdvance?.isVisible = isEnabled
+        
+        if (isEnabled) {
+            val uiState = viewModel.uiState.value ?: return
+            
+            if (uiState.isSliderAvailable()) {
+                viewBinding.customSlider?.valueTo = (uiState.totalPages - 1).toFloat()
+                viewBinding.customSlider?.setValueRounded(uiState.currentPage.toFloat())
+                viewBinding.customSlider?.isEnabled = true
+            } else {
+                viewBinding.customSlider?.valueTo = 1f
+                viewBinding.customSlider?.setValueRounded(0f)
+                viewBinding.customSlider?.isEnabled = false
+            }
+        }
+    }
 
     companion object {
 

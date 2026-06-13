@@ -160,10 +160,10 @@
 				android:layout_width="36dp"
 				android:layout_height="36dp"
 				android:layout_marginStart="10dp"
-				android:contentDescription="@string/read"
+				android:contentDescription="@string/download"
 				android:padding="8dp"
 				android:background="@drawable/bg_circle_button"
-				app:srcCompat="@drawable/ic_play"
+				app:srcCompat="@drawable/ic_download"
 				app:tint="@color/taru_accent" />
 		</LinearLayout>
 	</LinearLayout>

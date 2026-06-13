@@ -170,7 +170,8 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
 		when (key) {
-			AppSettings.KEY_READER_CONTROLS -> updateControlsVisibility()
+			AppSettings.KEY_READER_CONTROLS,
+			AppSettings.KEY_READER_SCROLL_ADVANCE -> updateControlsVisibility()
 			AppSettings.KEY_PAGES_TAB,
 			AppSettings.KEY_DETAILS_TAB,
 			AppSettings.KEY_DETAILS_LAST_TAB -> updatePagesSheetButton()
@@ -192,6 +193,7 @@ class ReaderActionsView @JvmOverloads constructor(
 		chaptersTotal: Int,
 		currentPage: Int,
 		totalPages: Int,
+		percent: Float? = null,
 	) {
 		binding.textViewReaderChapter.text = chapterTitle
 		binding.textViewReaderProgress.text = context.getString(
@@ -199,7 +201,9 @@ class ReaderActionsView @JvmOverloads constructor(
 			chapterNumber,
 			chaptersTotal,
 		)
-		val chapterPercent = if (totalPages <= 1) {
+		val chapterPercent = if (percent != null) {
+			(percent * 100f).roundToInt().coerceIn(0, 100)
+		} else if (totalPages <= 1) {
 			100
 		} else {
 			val currentPageZeroBased = (currentPage - 1).coerceAtLeast(0)
@@ -229,6 +233,7 @@ class ReaderActionsView @JvmOverloads constructor(
 		binding.buttonTimer.isVisible = ReaderControl.TIMER in controls
 		binding.buttonBookmark.isVisible = ReaderControl.BOOKMARK in controls
 		binding.slider.isVisible = true
+		binding.textViewReaderLayout.isVisible = settings.isScrollAdvanceEnabled
 		adjustLayoutParams()
 	}
 

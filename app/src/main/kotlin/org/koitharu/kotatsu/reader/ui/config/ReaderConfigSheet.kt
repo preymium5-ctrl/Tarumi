@@ -89,6 +89,7 @@ class ReaderConfigSheet :
         binding.buttonReversed.isChecked = mode == ReaderMode.REVERSED
         binding.buttonWebtoon.isChecked = mode == ReaderMode.WEBTOON
         binding.buttonVertical.isChecked = mode == ReaderMode.VERTICAL
+        binding.switchScrollAdvance.isChecked = settings.isScrollAdvanceEnabled
         binding.switchDoubleReader.isChecked = settings.isReaderDoubleOnLandscape
         binding.switchDoubleReader.isEnabled = mode == ReaderMode.STANDARD || mode == ReaderMode.REVERSED
         binding.switchDoubleFoldable.isChecked = settings.isReaderDoubleOnFoldable
@@ -111,6 +112,7 @@ class ReaderConfigSheet :
         binding.switchDoubleReader.setOnCheckedChangeListener(this)
         binding.switchDoubleFoldable.setOnCheckedChangeListener(this)
         binding.switchDoubleCoverPage.setOnCheckedChangeListener(this)
+        binding.switchScrollAdvance.setOnCheckedChangeListener(this)
         binding.sliderDoubleSensitivity.addOnChangeListener(this)
 
         viewModel.isBookmarkAdded.observe(viewLifecycleOwner) {
@@ -199,6 +201,10 @@ class ReaderConfigSheet :
             R.id.switch_double_cover_page -> {
                 settings.isReaderDoubleCoverPage = isChecked
                 findParentCallback(Callback::class.java)?.onDoubleModeChanged(settings.isReaderDoubleOnLandscape)
+            }
+
+            R.id.switch_scroll_advance -> {
+                settings.isScrollAdvanceEnabled = isChecked
             }
         }
     }

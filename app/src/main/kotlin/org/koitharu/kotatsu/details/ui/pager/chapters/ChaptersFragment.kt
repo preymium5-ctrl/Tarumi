@@ -21,6 +21,8 @@ import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.dismissParentDialog
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseFragment
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
+import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.list.ListSelectionController
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.util.PagerNestedScrollHelper
@@ -67,7 +69,9 @@ class ChaptersFragment :
 
 	override fun onViewBindingCreated(binding: FragmentChaptersBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
-		chaptersAdapter = ChaptersAdapter(this)
+		chaptersAdapter = ChaptersAdapter(this) { item ->
+			onDownloadClick(item)
+		}
 		selectionController = ListSelectionController(
 			appCompatDelegate = checkNotNull(findAppCompatDelegate()),
 			decoration = ChaptersSelectionDecoration(binding.root.context),
@@ -131,6 +135,32 @@ class ChaptersFragment :
 					.state(viewModel.getReaderStateForChapter(item.chapter.id))
 					.build(),
 			)
+		}
+	}
+
+	private fun onDownloadClick(item: ChapterListItem) {
+		if (viewModel.isAutoDownloadChapterEnabled) {
+			router.askForDownloadOverMeteredNetwork { allow ->
+				viewModel.download(setOf(item.chapter.id), allow)
+			}
+		} else {
+			var dontAskAgain = false
+			buildAlertDialog(requireContext()) {
+				setTitle(R.string.download)
+				setMessage(R.string.download_chapter_confirm)
+				setCheckbox(R.string.dont_ask_again, false) { _, isChecked ->
+					dontAskAgain = isChecked
+				}
+				setPositiveButton(R.string.download) { _, _ ->
+					if (dontAskAgain) {
+						viewModel.isAutoDownloadChapterEnabled = true
+					}
+					router.askForDownloadOverMeteredNetwork { allow ->
+						viewModel.download(setOf(item.chapter.id), allow)
+					}
+				}
+				setNegativeButton(android.R.string.cancel, null)
+			}.show()
 		}
 	}
 

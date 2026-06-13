@@ -2,9 +2,27 @@
 
 	<!--AlertDialog-->
 
+	<style name="TextAppearance.Kotatsu.AlertDialog.Title" parent="TextAppearance.Material3.TitleLarge">
+		<item name="fontFamily">@font/outfit</item>
+		<item name="android:fontFamily">@font/outfit</item>
+	</style>
+
+	<style name="TextAppearance.Kotatsu.AlertDialog.Body" parent="TextAppearance.Material3.BodyMedium">
+		<item name="fontFamily">@font/outfit</item>
+		<item name="android:fontFamily">@font/outfit</item>
+	</style>
+
+	<style name="TextAppearance.Kotatsu.AlertDialog.Button" parent="TextAppearance.Material3.LabelLarge">
+		<item name="fontFamily">@font/outfit</item>
+		<item name="android:fontFamily">@font/outfit</item>
+	</style>
+
 	<style name="ThemeOverlay.Kotatsu.AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
 		<item name="alertDialogStyle">@style/AlertDialog.Kotatsu</item>
 		<item name="dialogCornerRadius">@dimen/m3_alert_dialog_corner_size</item>
+		<item name="textAppearanceTitleLarge">@style/TextAppearance.Kotatsu.AlertDialog.Title</item>
+		<item name="textAppearanceBodyMedium">@style/TextAppearance.Kotatsu.AlertDialog.Body</item>
+		<item name="textAppearanceLabelLarge">@style/TextAppearance.Kotatsu.AlertDialog.Button</item>
 	</style>
 
 	<style name="AlertDialog.Kotatsu" parent="MaterialAlertDialog.Material3">

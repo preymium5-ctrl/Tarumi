@@ -189,6 +189,12 @@ abstract class ChaptersPagesViewModel(
 		}
 	}
 
+	var isAutoDownloadChapterEnabled: Boolean
+		get() = settings.isAutoDownloadChapterEnabled
+		set(value) {
+			settings.isAutoDownloadChapterEnabled = value
+		}
+
 	fun setChaptersReversed(newValue: Boolean) {
 		settings.isChaptersReverse = newValue
 	}
