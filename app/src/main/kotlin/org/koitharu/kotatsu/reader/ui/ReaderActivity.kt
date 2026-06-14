@@ -628,7 +628,12 @@ class ReaderActivity :
             rightMargin = systemBars.right + marginNormal
         }
         viewBinding.customReaderBottomRightStack?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-            bottomMargin = systemBars.bottom + marginNormal + (48 * resources.displayMetrics.density).toInt()
+            val extraMargin = if (::settings.isInitialized && settings.isScrollAdvanceEnabled) {
+                (104 * resources.displayMetrics.density).toInt() // 48dp base + 56dp scroll advance height
+            } else {
+                (48 * resources.displayMetrics.density).toInt() // 48dp base
+            }
+            bottomMargin = systemBars.bottom + marginNormal + extraMargin
             rightMargin = systemBars.right + marginNormal
         }
         val innerInsets = Insets.of(
@@ -928,6 +933,7 @@ class ReaderActivity :
                 viewBinding.customSlider?.isEnabled = false
             }
         }
+        viewBinding.root.requestApplyInsets()
     }
 
     companion object {
