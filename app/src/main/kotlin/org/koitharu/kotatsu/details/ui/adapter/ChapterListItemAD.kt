@@ -70,6 +70,7 @@ fun chapterListItemAD(
 			}
 		}
 		binding.textViewNew.isVisible = item.isNew && item.isUnread
+		binding.imageViewPlay.isVisible = !item.isDownloaded
 		binding.imageViewPlay.setOnClickListener {
 			onDownloadClick(item)
 		}
