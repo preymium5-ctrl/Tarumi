@@ -55,6 +55,7 @@ import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.history.domain.HistoryUpdateUseCase
 import org.koitharu.kotatsu.list.domain.ReadingProgress.Companion.PROGRESS_NONE
 import org.koitharu.kotatsu.local.data.LocalStorageChanges
+import org.koitharu.kotatsu.core.cache.MemoryContentCache
 import org.koitharu.kotatsu.local.domain.DeleteLocalMangaUseCase
 import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.model.ContentRating
@@ -97,6 +98,7 @@ class ReaderViewModel @Inject constructor(
     deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
     downloadScheduler: DownloadWorker.Scheduler,
     readerSettingsProducerFactory: ReaderSettings.Producer.Factory,
+    private val contentCache: MemoryContentCache,
 ) : ChaptersPagesViewModel(
     settings = settings,
     interactor = interactor,
@@ -222,6 +224,19 @@ class ReaderViewModel @Inject constructor(
     fun reload() {
         loadingJob?.cancel()
         loadImpl()
+    }
+
+    fun refreshCurrentChapter() {
+        val prevJob = loadingJob
+        loadingJob = launchLoadingJob(Dispatchers.Default + EventExceptionHandler(onLoadingError)) {
+            prevJob?.cancelAndJoin()
+            val state = readingState.value ?: return@launchLoadingJob
+            val manga = getMangaOrNull() ?: return@launchLoadingJob
+            contentCache.clear(manga.source)
+            chaptersLoader.loadSingleChapter(state.chapterId)
+            content.value = ReaderContent(chaptersLoader.snapshot(), state)
+            notifyStateChanged()
+        }
     }
 
     fun onPause() {

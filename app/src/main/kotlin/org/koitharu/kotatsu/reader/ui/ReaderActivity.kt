@@ -49,6 +49,16 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
+import org.koitharu.kotatsu.core.util.ext.toFileNameSafe
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+import android.content.ContentValues
+import android.provider.MediaStore
 import kotlin.math.roundToInt
 import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -151,6 +161,8 @@ class ReaderActivity :
         viewBinding.customButtonBack?.setOnClickListener(this)
         viewBinding.customButtonHome?.setOnClickListener(this)
         viewBinding.customButtonDownload?.setOnClickListener(this)
+        viewBinding.customButtonRefresh?.setOnClickListener(this)
+        viewBinding.customButtonScreenshot?.setOnClickListener(this)
         viewBinding.customButtonPlay?.setOnClickListener(this)
         viewBinding.customButtonPrevChapter?.setOnClickListener(this)
         viewBinding.customButtonNextChapter?.setOnClickListener(this)
@@ -317,6 +329,7 @@ class ReaderActivity :
         // Apply initial double-mode considering foldable setting
         applyDoubleModeAuto()
         updateCustomScrollAdvance()
+        updateScreenshotButtonVisibility()
     }
 
     override fun getParentActivityIntent(): Intent? {
@@ -391,6 +404,8 @@ class ReaderActivity :
                 startActivity(intent)
             }
             R.id.custom_button_download -> showDownloadOptionsDialog()
+            R.id.custom_button_refresh -> refreshCurrentChapter()
+            R.id.custom_button_screenshot -> toggleLongScreenshotSession()
             R.id.customButtonPlay -> scrollTimer.setActive(!scrollTimer.isActive.value)
             R.id.custom_button_prev_chapter -> switchChapterBy(-1)
             R.id.custom_button_next_chapter -> switchChapterBy(1)
@@ -914,6 +929,9 @@ class ReaderActivity :
         if (key == AppSettings.KEY_READER_SCROLL_ADVANCE) {
             updateCustomScrollAdvance()
         }
+        if (key == AppSettings.KEY_READER_LONG_SCREENSHOT) {
+            updateScreenshotButtonVisibility()
+        }
     }
 
     private fun updateCustomScrollAdvance() {
@@ -934,6 +952,209 @@ class ReaderActivity :
             }
         }
         viewBinding.root.requestApplyInsets()
+    }
+
+    private fun updateScreenshotButtonVisibility() {
+        viewBinding.customButtonScreenshot?.isVisible = settings.isReaderLongScreenshotEnabled
+    }
+
+    private fun refreshCurrentChapter() {
+        viewModel.refreshCurrentChapter()
+    }
+
+    // Screenshot Session State
+    private var isScreenshotSessionActive = false
+    private val screenshotSegments = mutableListOf<Bitmap>()
+    private var screenshotMaxScrollY = 0
+    private var activeScrollListener: RecyclerView.OnScrollListener? = null
+    private var activePageCallback: ViewPager2.OnPageChangeCallback? = null
+
+    private fun toggleLongScreenshotSession() {
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+            ?: findViewById<ViewPager2>(R.id.pager)?.getChildAt(0) as? RecyclerView
+        
+        if (recyclerView == null) {
+            Snackbar.make(viewBinding.root, "No active reader view found", Snackbar.LENGTH_LONG).show()
+            return
+        }
+
+        if (!isScreenshotSessionActive) {
+            // Start Session
+            screenshotSegments.clear()
+            isScreenshotSessionActive = true
+            viewBinding.layoutLongScreenshotOverlay?.isVisible = true
+            viewBinding.customButtonScreenshot?.setIconResource(R.drawable.ic_check)
+            
+            // Capture initial viewport
+            val w = recyclerView.width
+            val h = recyclerView.height
+            if (w > 0 && h > 0) {
+                val initialBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                recyclerView.draw(Canvas(initialBitmap))
+                screenshotSegments.add(initialBitmap)
+            }
+
+            // Track vertical scrolling (for Webtoon/Vertical modes)
+            screenshotMaxScrollY = recyclerView.computeVerticalScrollOffset()
+            val scrollListener = object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                    val currentScrollY = rv.computeVerticalScrollOffset()
+                    if (currentScrollY > screenshotMaxScrollY) {
+                        val diff = currentScrollY - screenshotMaxScrollY
+                        val viewWidth = rv.width
+                        val viewHeight = rv.height
+                        if (viewWidth > 0 && viewHeight > 0) {
+                            val dyCoerced = minOf(diff, viewHeight)
+                            if (dyCoerced > 0) {
+                                val viewport = Bitmap.createBitmap(viewWidth, viewHeight, Bitmap.Config.ARGB_8888)
+                                rv.draw(Canvas(viewport))
+                                try {
+                                    val segment = Bitmap.createBitmap(viewport, 0, viewHeight - dyCoerced, viewWidth, dyCoerced)
+                                    screenshotSegments.add(segment)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                        screenshotMaxScrollY = currentScrollY
+                    }
+                }
+            }
+            recyclerView.addOnScrollListener(scrollListener)
+            activeScrollListener = scrollListener
+
+            // Track page changes (for ViewPager2/standard/reversed pager modes)
+            val viewPager = findViewById<ViewPager2>(R.id.pager)
+            if (viewPager != null) {
+                val pageCallback = object : ViewPager2.OnPageChangeCallback() {
+                    private var lastPage = viewPager.currentItem
+                    override fun onPageSelected(position: Int) {
+                        if (position != lastPage) {
+                            val rv = viewPager.getChildAt(0) as? RecyclerView
+                            if (rv != null) {
+                                val viewWidth = rv.width
+                                val viewHeight = rv.height
+                                if (viewWidth > 0 && viewHeight > 0) {
+                                    val pageBitmap = Bitmap.createBitmap(viewWidth, viewHeight, Bitmap.Config.ARGB_8888)
+                                    rv.draw(Canvas(pageBitmap))
+                                    screenshotSegments.add(pageBitmap)
+                                }
+                            }
+                            lastPage = position
+                        }
+                    }
+                }
+                viewPager.registerOnPageChangeCallback(pageCallback)
+                activePageCallback = pageCallback
+            }
+            
+            Snackbar.make(viewBinding.root, "Scroll down to capture or click checkmark to finish", Snackbar.LENGTH_LONG).show()
+        } else {
+            // End Session & Save
+            isScreenshotSessionActive = false
+            viewBinding.layoutLongScreenshotOverlay?.isVisible = false
+            viewBinding.customButtonScreenshot?.setIconResource(R.drawable.ic_screenshot)
+
+            // Detach Listeners
+            activeScrollListener?.let {
+                recyclerView.removeOnScrollListener(it)
+                activeScrollListener = null
+            }
+            val viewPager = findViewById<ViewPager2>(R.id.pager)
+            activePageCallback?.let {
+                viewPager?.unregisterOnPageChangeCallback(it)
+                activePageCallback = null
+            }
+
+            // Stitch segments
+            lifecycleScope.launch(Dispatchers.Default) {
+                if (screenshotSegments.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Snackbar.make(viewBinding.root, "No content captured", Snackbar.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                var totalWidth = 0
+                var totalHeight = 0
+                for (seg in screenshotSegments) {
+                    totalWidth = maxOf(totalWidth, seg.width)
+                    totalHeight += seg.height
+                }
+
+                if (totalWidth <= 0 || totalHeight <= 0) {
+                    withContext(Dispatchers.Main) {
+                        Snackbar.make(viewBinding.root, "Capture dimensions are invalid", Snackbar.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                val stitchedBitmap = try {
+                    Bitmap.createBitmap(totalWidth, totalHeight, Bitmap.Config.ARGB_8888)
+                } catch (e: OutOfMemoryError) {
+                    withContext(Dispatchers.Main) {
+                        Snackbar.make(viewBinding.root, "Failed: image size exceeds available memory", Snackbar.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                val canvas = Canvas(stitchedBitmap)
+                var currentY = 0f
+                for (seg in screenshotSegments) {
+                    canvas.drawBitmap(seg, 0f, currentY, null)
+                    currentY += seg.height
+                    seg.recycle()
+                }
+                screenshotSegments.clear()
+
+                val manga = viewModel.getMangaOrNull()
+                val chapter = viewModel.getCurrentState()?.let { cs ->
+                    viewModel.mangaDetails.value?.allChapters?.find { it.id == cs.chapterId }
+                }
+                
+                saveBitmap(stitchedBitmap, manga?.title ?: "Manga", chapter?.numberString())
+                stitchedBitmap.recycle()
+            }
+        }
+    }
+
+    private suspend fun saveBitmap(bitmap: Bitmap, mangaTitle: String, chapterNumber: String?) = withContext(Dispatchers.IO) {
+        val dateStr = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.getDefault()).format(Date())
+        val proposedName = "${mangaTitle.toFileNameSafe().take(12)}-${chapterNumber ?: "chapter"}-long_screenshot_$dateStr.png"
+        
+        val saveDir = settings.getPagesSaveDir(this@ReaderActivity)
+        val destinationUri = if (saveDir != null) {
+            val destFile = saveDir.createFile("image/png", proposedName.substringBeforeLast('.'))
+            destFile?.uri
+        } else {
+            val resolver = contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, proposedName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/Tarumi")
+                }
+            }
+            resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        }
+        
+        withContext(Dispatchers.Main) {
+            if (destinationUri != null) {
+                try {
+                    withContext(Dispatchers.IO) {
+                        contentResolver.openOutputStream(destinationUri)?.use { out ->
+                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        }
+                    }
+                    Snackbar.make(viewBinding.root, "Screenshot saved successfully", Snackbar.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Snackbar.make(viewBinding.root, "Failed to write screenshot data", Snackbar.LENGTH_LONG).show()
+                }
+            } else {
+                Snackbar.make(viewBinding.root, "Failed to create destination file", Snackbar.LENGTH_LONG).show()
+            }
+        }
     }
 
     companion object {

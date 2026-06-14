@@ -268,6 +268,29 @@
 			app:iconTint="#FFFFFF"
 			app:iconPadding="0dp"
 			app:iconSize="20dp" />
+
+		<!-- Refresh Button under Download Button (compact 40dp size) -->
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/custom_button_refresh"
+			style="?materialIconButtonOutlinedStyle"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:layout_below="@id/custom_button_download"
+			android:layout_marginTop="6dp"
+			android:insetLeft="0dp"
+			android:insetRight="0dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:minWidth="0dp"
+			android:minHeight="0dp"
+			android:padding="10dp"
+			app:backgroundTint="#E0121212"
+			app:strokeWidth="0dp"
+			app:cornerRadius="10dp"
+			app:icon="@drawable/ic_sync"
+			app:iconTint="#FFFFFF"
+			app:iconPadding="0dp"
+			app:iconSize="20dp" />
 	</RelativeLayout>
 
 	<!-- 3. Bottom Progress Bar with Play, Prev, Capsule, Next, Settings aligned horizontally -->
@@ -454,6 +477,30 @@
 		android:visibility="gone"
 		tools:visibility="visible">
 
+		<!-- Screenshot Button (compact 40dp size) -->
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/custom_button_screenshot"
+			style="?materialIconButtonOutlinedStyle"
+			android:layout_width="40dp"
+			android:layout_height="40dp"
+			android:layout_marginBottom="6dp"
+			android:insetLeft="0dp"
+			android:insetRight="0dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:minWidth="0dp"
+			android:minHeight="0dp"
+			android:padding="10dp"
+			app:backgroundTint="#E0121212"
+			app:strokeWidth="0dp"
+			app:cornerRadius="10dp"
+			app:icon="@drawable/ic_screenshot"
+			app:iconTint="#FFFFFF"
+			app:iconPadding="0dp"
+			app:iconSize="20dp"
+			android:visibility="gone"
+			tools:visibility="visible" />
+
 		<!-- Arrow Up Button (compact 40dp size) -->
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/custom_button_scroll_to_top"
@@ -526,5 +573,42 @@
 			android:textAppearance="?attr/textAppearanceTitleMedium" />
 
 	</LinearLayout>
+
+	<!-- Long Screenshot Overlay -->
+	<FrameLayout
+		android:id="@+id/layout_long_screenshot_overlay"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="#80FF0000"
+		android:clickable="false"
+		android:focusable="false"
+		android:visibility="gone"
+		android:elevation="9dp">
+
+		<!-- Floating Instruction Capsule -->
+		<LinearLayout
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="top|center_horizontal"
+			android:layout_marginTop="80dp"
+			android:background="@drawable/bg_reader_button_dark"
+			android:paddingHorizontal="16dp"
+			android:paddingVertical="8dp"
+			android:elevation="10dp"
+			android:clickable="false"
+			android:focusable="false">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:text="Please scroll down for long screenshot or click the check icon if you done doing screenshot"
+				android:textColor="#FFFFFF"
+				android:textSize="12sp"
+				android:fontFamily="@font/outfit"
+				android:gravity="center"
+				android:clickable="false"
+				android:focusable="false" />
+		</LinearLayout>
+	</FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

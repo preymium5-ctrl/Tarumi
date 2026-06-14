@@ -155,6 +155,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_READER_SCROLL_ADVANCE, false)
 		set(value) = prefs.edit { putBoolean(KEY_READER_SCROLL_ADVANCE, value) }
 
+	var isReaderLongScreenshotEnabled: Boolean
+		get() = prefs.getBoolean(KEY_READER_LONG_SCREENSHOT, false)
+		set(value) = prefs.edit { putBoolean(KEY_READER_LONG_SCREENSHOT, value) }
+
 	var isAutoDownloadChapterEnabled: Boolean
 		get() = prefs.getBoolean(KEY_AUTO_DOWNLOAD_CHAPTER, false)
 		set(value) = prefs.edit { putBoolean(KEY_AUTO_DOWNLOAD_CHAPTER, value) }
@@ -819,6 +823,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_LOCAL_STORAGE = "local_storage"
 		const val KEY_READER_DOUBLE_PAGES = "reader_double_pages"
 		const val KEY_READER_SCROLL_ADVANCE = "reader_scroll_advance"
+		const val KEY_READER_LONG_SCREENSHOT = "reader_long_screenshot"
 		const val KEY_AUTO_DOWNLOAD_CHAPTER = "auto_download_chapter"
 		const val KEY_READER_DOUBLE_PAGES_SENSITIVITY = "reader_double_pages_sensitivity_2"
 		const val KEY_READER_DOUBLE_FOLDABLE = "reader_double_foldable"

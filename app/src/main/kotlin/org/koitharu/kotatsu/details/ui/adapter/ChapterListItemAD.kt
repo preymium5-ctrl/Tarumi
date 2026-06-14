@@ -26,10 +26,12 @@ fun chapterListItemAD(
 
 	AdapterDelegateClickListenerAdapter(this, clickListener).attach(itemView)
 
-	bind {
-		binding.textViewTitle.text = item.getTitle(context.resources)
-		binding.textViewDate.text = item.formattedDate()
-		binding.textViewSource.text = "${item.chapter.source.getTitle(context).uppercase(Locale.getDefault())} | EN"
+	bind { payloads ->
+		if (payloads.isEmpty()) {
+			binding.textViewTitle.text = item.getTitle(context.resources)
+			binding.textViewDate.text = item.formattedDate()
+			binding.textViewSource.text = "${item.chapter.source.getTitle(context).uppercase(Locale.getDefault())} | EN"
+		}
 		val currentProgress = item.progressPercent.takeIf { item.isCurrent && it >= 0f }?.coerceIn(0f, 1f)
 		val read = currentProgress == 1f
 		binding.progressChapter.progress = when {

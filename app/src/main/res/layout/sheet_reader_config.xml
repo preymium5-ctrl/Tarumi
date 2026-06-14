@@ -347,6 +347,31 @@
                     android:fontFamily="@font/outfit" />
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Long Screenshot Switch Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_long_screenshot"
+                style="?materialCardViewFilledStyle"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="@color/taru_surface_button"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp">
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_long_screenshot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingHorizontal="16dp"
+                    android:text="Long Screenshot"
+                    android:textColor="@color/taru_text_primary"
+                    android:textSize="16sp"
+                    android:drawablePadding="12dp"
+                    android:drawableTint="@color/taru_text_secondary"
+                    app:drawableStartCompat="@drawable/ic_screenshot"
+                    android:fontFamily="@font/outfit" />
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Scroll Sensitivity Slider Header -->
             <TextView
                 android:id="@+id/text_double_sensitivity"
