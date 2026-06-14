@@ -25,7 +25,19 @@ fun Manga.detectComicType(): ComicType {
 		for (chapter in chapters.orEmpty()) {
 			chapter.title?.let(::add)
 		}
-		description?.let(::add)
+		val cleanedDesc = description?.let { desc ->
+			if (source == MangaParserSource.DEMONICSCANS) {
+				val marker = Regex("""\bThe\s+Summary\s+is\b[:\s]*""", RegexOption.IGNORE_CASE).find(desc)
+				if (marker != null) {
+					desc.substring(marker.range.last + 1).trim()
+				} else {
+					desc
+				}
+			} else {
+				desc
+			}
+		}
+		cleanedDesc?.let(::add)
 	}.map { it.lowercase() }
 
 	val hasManhuaLabel = labels.any {
@@ -35,7 +47,6 @@ fun Manga.detectComicType(): ComicType {
 		it.contains("manhwa") ||
 			it.contains("webtoon") ||
 			it.contains("asura") ||
-			it.contains("demonicscans") ||
 			it.contains("stonescape") ||
 			it.contains("manhuafast")
 	}

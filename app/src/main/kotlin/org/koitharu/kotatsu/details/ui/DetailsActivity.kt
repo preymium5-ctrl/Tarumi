@@ -315,7 +315,8 @@ class DetailsActivity :
 	}
 
 	override fun onAuthorClick(author: String) {
-		router.showAuthorDialog(author, viewModel.getMangaOrNull()?.source ?: return)
+		val source = viewModel.getMangaOrNull()?.source ?: return
+		router.openList(source, org.koitharu.kotatsu.parsers.model.MangaListFilter(author = author), null)
 	}
 
 	override fun onChipClick(chip: Chip, data: Any?) {
@@ -485,8 +486,10 @@ class DetailsActivity :
 		val comicType = manga.detectComicType()
 		with(viewBinding) {
 			textViewTitle.text = manga.title
-			textAuthorValue?.text = authorName ?: getString(R.string.unknown)
-			textArtistValue?.text = artistName
+			textAuthorValue?.text = authorName?.let { formatSourceAuthorsString(listOf(it)) } ?: getString(R.string.unknown)
+			textAuthorValue?.movementMethod = LinkMovementMethodCompat.getInstance()
+			textArtistValue?.text = artistName?.let { formatSourceAuthorsString(listOf(it)) }
+			textArtistValue?.movementMethod = LinkMovementMethodCompat.getInstance()
 			layoutArtistRow?.isVisible = artistName != null
 			if (cardChapters != null) {
 				// Landscape alt titles
@@ -632,7 +635,8 @@ class DetailsActivity :
 		val currentAuthor = viewBinding.textAuthorValue?.text?.toString()?.trim().orEmpty()
 		val shouldReplaceAuthor = currentAuthor.isBlank() || currentAuthor.equals(getString(R.string.unknown), ignoreCase = true)
 		if (shouldReplaceAuthor && !stats.author.isNullOrBlank()) {
-			viewBinding.textAuthorValue?.text = stats.author
+			viewBinding.textAuthorValue?.text = formatSourceAuthorsString(listOf(stats.author))
+			viewBinding.textAuthorValue?.movementMethod = LinkMovementMethodCompat.getInstance()
 			if (viewBinding.cardChapters == null) {
 				viewBinding.textViewSubtitle.text = getString(R.string.by_author_pattern, stats.author)
 			}
@@ -642,7 +646,8 @@ class DetailsActivity :
 		val currentArtist = viewBinding.textArtistValue?.text?.toString()?.trim().orEmpty()
 		val shouldReplaceArtist = currentArtist.isBlank() || currentArtist.equals(getString(R.string.unknown), ignoreCase = true)
 		if (shouldReplaceArtist && !stats.artist.isNullOrBlank() && !stats.artist.equals(stats.author, ignoreCase = true)) {
-			viewBinding.textArtistValue?.text = stats.artist
+			viewBinding.textArtistValue?.text = formatSourceAuthorsString(listOf(stats.artist))
+			viewBinding.textArtistValue?.movementMethod = LinkMovementMethodCompat.getInstance()
 			viewBinding.layoutArtistRow?.isVisible = true
 		}
 	}
