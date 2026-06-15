@@ -1,6 +1,8 @@
 package org.koitharu.kotatsu.ai.ui
 
 import android.content.Context
+import android.net.Uri
+import android.util.Base64
 import androidx.core.content.edit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -86,6 +88,34 @@ class AskAiViewModel @Inject constructor(
 		_state.update { it.copy(includeNsfw = enabled) }
 	}
 
+	fun selectImage(uri: Uri) {
+		launchJob(Dispatchers.IO) {
+			try {
+				context.contentResolver.openInputStream(uri)?.use { stream ->
+					val bytes = stream.readBytes()
+					val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+					_state.update {
+						it.copy(
+							selectedImageUri = uri.toString(),
+							selectedImageBase64 = base64,
+						)
+					}
+				}
+			} catch (e: Exception) {
+				e.printStackTraceDebug()
+			}
+		}
+	}
+
+	fun clearSelectedImage() {
+		_state.update {
+			it.copy(
+				selectedImageUri = null,
+				selectedImageBase64 = null,
+			)
+		}
+	}
+
 	fun downloadLocalModel() {
 		launchJob(Dispatchers.IO) {
 			localAiLibrarianEngine.downloadModel()
@@ -96,12 +126,29 @@ class AskAiViewModel @Inject constructor(
 
 	fun ask(query: String) {
 		val normalized = query.trim()
-		if (normalized.isEmpty()) {
+		val imageBase64 = _state.value.selectedImageBase64
+		val imageUri = _state.value.selectedImageUri
+		if (normalized.isEmpty() && imageBase64 == null) {
 			return
+		}
+		val finalQuery = if (normalized.isEmpty() && imageBase64 != null) {
+			"What comic is this? Identify the title of this comic."
+		} else {
+			normalized
 		}
 		searchJob?.cancel()
 		val includeNsfw = _state.value.includeNsfw
-		appendMessages(AskAiMessage(role = AskAiRole.USER, text = normalized, includeNsfw = includeNsfw))
+		appendMessages(
+			AskAiMessage(
+				role = AskAiRole.USER,
+				text = finalQuery,
+				query = finalQuery,
+				includeNsfw = includeNsfw,
+				imageUri = imageUri,
+				imageBase64 = imageBase64,
+			)
+		)
+		clearSelectedImage()
 		_state.update { it.copy(isLoading = true) }
 		searchJob = launchJob(Dispatchers.Default) {
 			try {
@@ -112,7 +159,7 @@ class AskAiViewModel @Inject constructor(
 					streamAssistantReply(
 						message = AskAiMessage(
 							role = AskAiRole.ASSISTANT,
-							query = normalized,
+							query = finalQuery,
 							includeNsfw = includeNsfw,
 						),
 						finalText = context.getString(
@@ -122,11 +169,68 @@ class AskAiViewModel @Inject constructor(
 					)
 					return@launchJob
 				}
+
+				if (imageBase64 != null) {
+					// Vision flow! Identify the comic title.
+					val visionQuery = """
+						$finalQuery
+						
+						Identify the title of the comic in this image.
+						Important: At the very end of your response, write exactly "[TITLE: <the identified comic title>]" (for example, "[TITLE: Solo Leveling]"). If you cannot identify the comic, write "[TITLE: Unknown]".
+					""".trimIndent()
+
+					val reply = if (hasCloudAsk) {
+						cloudAiLibrarianEngine.generateVisionReply(
+							query = visionQuery,
+							imageBase64 = imageBase64,
+							includeNsfw = includeNsfw,
+						)
+					} else {
+						null
+					} ?: "I could not analyze the image. Please make sure the image format is supported."
+
+					// Scan for title tag
+					val titleRegex = Regex("""\[TITLE:\s*(.+?)\]""")
+					val match = titleRegex.find(reply)
+					val identifiedTitle = match?.groupValues?.getOrNull(1)?.trim()?.removeSuffix("]")?.trim()
+					val cleanedReply = reply.replace(titleRegex, "").trim()
+
+					// Search sources for the identified title
+					val results = if (!identifiedTitle.isNullOrBlank() && !identifiedTitle.equals("Unknown", ignoreCase = true)) {
+						val sources = if (includeNsfw) {
+							NSFW_SOURCE_NAMES.resolveSources()
+						} else {
+							SAFE_SOURCE_NAMES.resolveSources()
+						}
+						val searchResults = searchSources(sources, identifiedTitle).take(5)
+						loadDetails(searchResults)
+					} else {
+						emptyList()
+					}
+
+					appendMessages(
+						AskAiMessage(
+							role = AskAiRole.ASSISTANT,
+							query = finalQuery,
+							includeNsfw = includeNsfw,
+							results = results,
+							resultCards = results.map { it.toResultCard() },
+						),
+						persist = false,
+					)
+					streamLastAssistantReply(
+						finalText = cleanedReply,
+						results = results,
+						resultCards = results.map { it.toResultCard() },
+					)
+					return@launchJob
+				}
+
 				val messagesBeforeCurrent = _state.value.messages.dropLast(1)
-				val useReadingHistory = shouldUseReadingHistory(normalized)
+				val useReadingHistory = shouldUseReadingHistory(finalQuery)
 				val historyContext = if (useReadingHistory) buildReadingContext(includeNsfw) else ""
 				val conversationContext = buildConversationContext(messagesBeforeCurrent, includeNsfw)
-				val requestedIntent = parseRecommendationIntent(normalized)
+				val requestedIntent = parseRecommendationIntent(finalQuery)
 				val previousRecommendation = if (requestedIntent.isMoreRequest) {
 					messagesBeforeCurrent.lastOrNull { message ->
 						message.role == AskAiRole.ASSISTANT &&
@@ -139,10 +243,18 @@ class AskAiViewModel @Inject constructor(
 				val effectiveQuery = if (requestedIntent.isMoreRequest && previousRecommendation?.query?.isNotBlank() == true) {
 					previousRecommendation.query
 				} else {
-					normalized
+					finalQuery
 				}
-				val intent = if (effectiveQuery == normalized) {
-					requestedIntent
+
+				// Smart classification check using Grok 4.3 pre-flight call
+				val isRec = if (hasCloudAsk) {
+					cloudAiLibrarianEngine.classifyIntent(finalQuery) == "RECOMMENDATION"
+				} else {
+					requestedIntent.isRecommendationRequest
+				}
+
+				val intent = if (effectiveQuery == finalQuery) {
+					requestedIntent.copy(isRecommendationRequest = isRec)
 				} else {
 					parseRecommendationIntent(effectiveQuery).copy(
 						requestedLimit = requestedIntent.requestedLimit,
@@ -150,24 +262,25 @@ class AskAiViewModel @Inject constructor(
 						isRecommendationRequest = true,
 					)
 				}
+
 				if (!intent.isRecommendationRequest) {
 					val reply = localAiLibrarianEngine.generateConversationReply(
-						query = normalized,
+						query = finalQuery,
 						includeNsfw = includeNsfw,
 						libraryContext = historyContext,
 						conversationContext = conversationContext,
 					)
 						?: (if (hasCloudAsk) cloudAiLibrarianEngine.generateConversationReply(
-							query = normalized,
+							query = finalQuery,
 							includeNsfw = includeNsfw,
 							libraryContext = historyContext,
 							conversationContext = conversationContext,
 						) else null)
-						?: buildConversationFallback(normalized, includeNsfw)
+						?: buildConversationFallback(finalQuery, includeNsfw)
 					streamAssistantReply(
 						message = AskAiMessage(
 							role = AskAiRole.ASSISTANT,
-							query = normalized,
+							query = finalQuery,
 							includeNsfw = includeNsfw,
 						),
 						finalText = reply,
@@ -220,10 +333,10 @@ class AskAiViewModel @Inject constructor(
 					)
 				}.orEmpty()
 				val reply = if (results.isEmpty()) {
-					buildTimedSearchFallback(normalized, effectiveQuery, includeNsfw, intent, previousRecommendation != null)
+					buildTimedSearchFallback(finalQuery, effectiveQuery, includeNsfw, intent, previousRecommendation != null)
 				} else {
 					buildRecommendationReply(
-						query = normalized,
+						query = finalQuery,
 						effectiveQuery = effectiveQuery,
 						includeNsfw = includeNsfw,
 						results = results,
@@ -253,7 +366,7 @@ class AskAiViewModel @Inject constructor(
 				streamAssistantReply(
 					message = AskAiMessage(
 						role = AskAiRole.ASSISTANT,
-						query = normalized,
+						query = finalQuery,
 						includeNsfw = includeNsfw,
 					),
 					finalText = "Tarumi hit a search problem before I could finish. Try a shorter tag, title, or genre and I will crawl the sources again.",
@@ -920,6 +1033,7 @@ class AskAiViewModel @Inject constructor(
 						createdAt = it.createdAt,
 						resultCards = it.resultCards,
 						results = it.resultCards.mapNotNull { card -> card.toManga() },
+						imageUri = it.imageUri,
 					)
 				}
 				.toList()
@@ -943,6 +1057,7 @@ class AskAiViewModel @Inject constructor(
 					includeNsfw = it.includeNsfw,
 					resultCards = it.resultCards.ifEmpty { it.results.map { manga -> manga.toResultCard() } },
 					createdAt = it.createdAt,
+					imageUri = it.imageUri,
 				)
 			}
 			.filter { it.createdAt >= cutoff }
@@ -1730,6 +1845,8 @@ data class AskAiState(
 	val isLimitOverrideEnabled: Boolean = false,
 	val tokenResetAtMillis: Long = System.currentTimeMillis() + 24L * 60L * 60L * 1000L,
 	val messages: List<AskAiMessage> = emptyList(),
+	val selectedImageUri: String? = null,
+	val selectedImageBase64: String? = null,
 )
 
 data class AskAiMessage(
@@ -1741,6 +1858,8 @@ data class AskAiMessage(
 	val resultCards: List<AskAiResultCard> = emptyList(),
 	val isStreaming: Boolean = false,
 	val createdAt: Long = System.currentTimeMillis(),
+	val imageUri: String? = null,
+	val imageBase64: String? = null,
 )
 
 @Serializable
@@ -1757,6 +1876,7 @@ private data class StoredAskAiMessage(
 	val includeNsfw: Boolean = false,
 	val resultCards: List<AskAiResultCard> = emptyList(),
 	val createdAt: Long,
+	val imageUri: String? = null,
 )
 
 @Serializable

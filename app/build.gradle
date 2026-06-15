@@ -48,6 +48,7 @@ android {
 			"\"" + (value ?: '').replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 		}
 		buildConfigField 'String', 'AI_GROQ_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_groq_api_key', ''))
+		buildConfigField 'String', 'AI_GROK_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_grok_api_key', ''))
 		buildConfigField 'String', 'AI_OPENROUTER_GEMINI_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_openrouter_gemini_api_key', ''))
 		buildConfigField 'String', 'AI_OPENROUTER_NEMOTRON_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_openrouter_nemotron_api_key', ''))
 		buildConfigField 'String', 'AI_GROQ_MODEL', quoteBuildConfig(localProperties.getProperty('ai_groq_model', 'llama-3.1-8b-instant'))

@@ -44,6 +44,15 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 
 	private val viewModel by viewModels<AskAiViewModel>()
 
+	private val pickImageLauncher = registerForActivityResult(
+		androidx.activity.result.contract.ActivityResultContracts.GetContent()
+	) { uri: android.net.Uri? ->
+		if (uri != null) {
+			viewModel.selectImage(uri)
+		}
+	}
+
+
 	override fun onCreateViewBinding(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
@@ -55,6 +64,12 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			requireActivity().onBackPressedDispatcher.onBackPressed()
 		}
 		binding.buttonAsk.setOnClickListener { submit() }
+		binding.buttonUploadImage.setOnClickListener {
+			pickImageLauncher.launch("image/*")
+		}
+		binding.buttonDeleteImage.setOnClickListener {
+			viewModel.clearSelectedImage()
+		}
 		binding.buttonClearChat.setOnClickListener { viewModel.clearConversation() }
 		binding.buttonComposerToggle.setOnClickListener {
 			viewModel.setComposerExpanded(!viewModel.state.value.isComposerExpanded)
@@ -100,7 +115,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 	private fun submit() {
 		val binding = viewBinding ?: return
 		val query = binding.editQuery.text?.toString().orEmpty()
-		if (query.isBlank()) {
+		if (query.isBlank() && viewModel.state.value.selectedImageBase64 == null) {
 			return
 		}
 		binding.editQuery.text?.clear()
@@ -120,6 +135,12 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 
 	private fun renderState(state: AskAiState) {
 		val binding = viewBinding ?: return
+		binding.imagePreviewContainer.isVisible = state.selectedImageUri != null
+		if (state.selectedImageUri != null) {
+			binding.imagePreview.setImageURI(android.net.Uri.parse(state.selectedImageUri))
+		} else {
+			binding.imagePreview.setImageDrawable(null)
+		}
 		binding.progress.isVisible = false
 		binding.thinkingRow.isVisible = false
 		binding.tokenProgress.isVisible = state.isComposerExpanded && !state.isLimitOverrideEnabled
@@ -206,7 +227,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		container.removeAllViews()
 		for ((index, message) in messages.withIndex()) {
 			when (message.role) {
-				AskAiRole.USER -> addUserBubble(container, message.text, index)
+				AskAiRole.USER -> addUserBubble(container, message, index)
 				AskAiRole.ASSISTANT -> addAssistantMessage(container, message, index)
 			}
 		}
@@ -215,24 +236,58 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		}
 	}
 
-	private fun addUserBubble(container: LinearLayout, text: String, index: Int) {
-		val view = TextView(container.context).apply {
+	private fun addUserBubble(container: LinearLayout, message: AskAiMessage, index: Int) {
+		val context = container.context
+		val bubbleLayout = LinearLayout(context).apply {
+			orientation = LinearLayout.VERTICAL
 			setBackgroundResource(R.drawable.bg_taru_page_active)
-			setTextColor(ContextCompat.getColor(context, android.R.color.white))
-			textSize = 15f
-			typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
-			setPadding(16.dp(this), 12.dp(this), 16.dp(this), 12.dp(this))
-			maxWidth = 292.dp(this)
-			this.text = text
+			setPadding(12.dp(this), 12.dp(this), 12.dp(this), 12.dp(this))
 		}
+
+		if (!message.imageUri.isNullOrBlank()) {
+			val card = com.google.android.material.card.MaterialCardView(context).apply {
+				radius = 8.dp(this).toFloat()
+				strokeWidth = 0
+				cardElevation = 0f
+			}
+			val imageView = ImageView(context).apply {
+				scaleType = ImageView.ScaleType.CENTER_CROP
+				runCatching {
+					setImageURI(android.net.Uri.parse(message.imageUri))
+				}
+			}
+			card.addView(imageView, ViewGroup.LayoutParams(180.dp(card), 180.dp(card)))
+			bubbleLayout.addView(card, LinearLayout.LayoutParams(180.dp(container), 180.dp(container)).apply {
+				if (message.text.isNotBlank()) {
+					bottomMargin = 8.dp(container)
+				}
+			})
+		}
+
+		if (message.text.isNotBlank()) {
+			val textView = TextView(context).apply {
+				setTextColor(ContextCompat.getColor(context, android.R.color.white))
+				textSize = 15f
+				typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+				text = message.text
+			}
+			bubbleLayout.addView(textView, LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.WRAP_CONTENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT,
+			))
+		}
+
 		container.addView(
-			view,
+			bubbleLayout,
 			LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 			).apply {
 				gravity = Gravity.END
 				topMargin = if (index == 0) 0 else 12.dp(container)
+				if (message.imageUri.isNullOrBlank()) {
+					bubbleLayout.setPadding(16.dp(container), 12.dp(container), 16.dp(container), 12.dp(container))
+				}
 			},
 		)
 	}

@@ -45,25 +45,11 @@ class CloudAiLibrarianEngine @Inject constructor(
 		val prompt = buildPrompt(query, includeNsfw, results, libraryContext, conversationContext)
 		val providers = listOf(
 			AiProvider(
-				name = "Groq",
-				url = "https://api.groq.com/openai/v1/chat/completions",
-				apiKey = BuildConfig.AI_GROQ_API_KEY,
-				model = BuildConfig.AI_GROQ_MODEL,
-			),
-			AiProvider(
-				name = "OpenRouter Gemini",
-				url = "https://openrouter.ai/api/v1/chat/completions",
-				apiKey = BuildConfig.AI_OPENROUTER_GEMINI_API_KEY,
-				model = BuildConfig.AI_OPENROUTER_GEMINI_MODEL,
-				isOpenRouter = true,
-			),
-			AiProvider(
-				name = "OpenRouter Nemotron",
-				url = "https://openrouter.ai/api/v1/chat/completions",
-				apiKey = BuildConfig.AI_OPENROUTER_NEMOTRON_API_KEY,
-				model = BuildConfig.AI_OPENROUTER_NEMOTRON_MODEL,
-				isOpenRouter = true,
-			),
+				name = "Grok 4.3",
+				url = "https://newapi.makelove.cloud/v1/chat/completions",
+				apiKey = BuildConfig.AI_GROK_API_KEY,
+				model = "grok-4.3",
+			)
 		)
 		for (provider in providers) {
 			if (provider.apiKey.isBlank()) {
@@ -90,25 +76,11 @@ class CloudAiLibrarianEngine @Inject constructor(
 		val prompt = buildConversationPrompt(query, includeNsfw, libraryContext, conversationContext)
 		val providers = listOf(
 			AiProvider(
-				name = "Groq",
-				url = "https://api.groq.com/openai/v1/chat/completions",
-				apiKey = BuildConfig.AI_GROQ_API_KEY,
-				model = BuildConfig.AI_GROQ_MODEL,
-			),
-			AiProvider(
-				name = "OpenRouter Gemini",
-				url = "https://openrouter.ai/api/v1/chat/completions",
-				apiKey = BuildConfig.AI_OPENROUTER_GEMINI_API_KEY,
-				model = BuildConfig.AI_OPENROUTER_GEMINI_MODEL,
-				isOpenRouter = true,
-			),
-			AiProvider(
-				name = "OpenRouter Nemotron",
-				url = "https://openrouter.ai/api/v1/chat/completions",
-				apiKey = BuildConfig.AI_OPENROUTER_NEMOTRON_API_KEY,
-				model = BuildConfig.AI_OPENROUTER_NEMOTRON_MODEL,
-				isOpenRouter = true,
-			),
+				name = "Grok 4.3",
+				url = "https://newapi.makelove.cloud/v1/chat/completions",
+				apiKey = BuildConfig.AI_GROK_API_KEY,
+				model = "grok-4.3",
+			)
 		)
 		for (provider in providers) {
 			if (provider.apiKey.isBlank()) {
@@ -124,6 +96,56 @@ class CloudAiLibrarianEngine @Inject constructor(
 			}
 		}
 		null
+	}
+
+	suspend fun classifyIntent(
+		query: String,
+	): String = withContext(Dispatchers.IO) {
+		val provider = AiProvider(
+			name = "Grok 4.3",
+			url = "https://newapi.makelove.cloud/v1/chat/completions",
+			apiKey = BuildConfig.AI_GROK_API_KEY,
+			model = "grok-4.3",
+		)
+		if (provider.apiKey.isBlank()) {
+			return@withContext "CONVERSATION"
+		}
+		val prompt = """
+			Analyze the user's message and determine if they are asking to search or recommend a list of comics, manga, manhwa, or manhua.
+			Respond with exactly one word: "RECOMMENDATION" or "CONVERSATION". Do not include any punctuation or extra text.
+			
+			User message: "$query"
+		""".trimIndent()
+		val reply = runCatchingCancellable {
+			provider.request(prompt)
+		}.getOrNull()
+		
+		if (reply?.trim()?.uppercase() == "RECOMMENDATION") {
+			"RECOMMENDATION"
+		} else {
+			"CONVERSATION"
+		}
+	}
+
+	suspend fun generateVisionReply(
+		query: String,
+		imageBase64: String,
+		includeNsfw: Boolean,
+	): String? = withContext(Dispatchers.IO) {
+		val provider = AiProvider(
+			name = "Grok 4.3",
+			url = "https://newapi.makelove.cloud/v1/chat/completions",
+			apiKey = BuildConfig.AI_GROK_API_KEY,
+			model = "grok-4.3",
+		)
+		if (provider.apiKey.isBlank()) {
+			return@withContext null
+		}
+		runCatchingCancellable {
+			provider.requestVision(query, imageBase64)
+		}.onFailure {
+			it.printStackTraceDebug()
+		}.getOrNull()
 	}
 
 	private fun AiProvider.request(prompt: String): String? {
@@ -158,6 +180,70 @@ class CloudAiLibrarianEngine @Inject constructor(
 			}
 			.post(body.toRequestBody(JSON_MEDIA_TYPE))
 			.build()
+		okHttpClient.newCall(request).execute().use { response ->
+			if (!response.isSuccessful) {
+				return null
+			}
+			val responseBody = response.body.string()
+			val root = json.parseToJsonElement(responseBody).jsonObject
+			return root["choices"]
+				?.jsonArray
+				?.firstOrNull()
+				?.jsonObject
+				?.get("message")
+				?.jsonObject
+				?.get("content")
+				?.jsonPrimitive
+				?.contentOrNull
+				?.trim()
+				?.takeIf { it.isNotEmpty() }
+		}
+	}
+
+	private fun AiProvider.requestVision(prompt: String, imageBase64: String): String? {
+		val prefix = if (imageBase64.startsWith("data:image")) "" else "data:image/png;base64,"
+		val fullBase64 = prefix + imageBase64
+
+		val body = buildJsonObject {
+			put("model", JsonPrimitive(model))
+			put("messages", buildJsonArray {
+				add(
+					buildJsonObject {
+						put("role", JsonPrimitive("system"))
+						put("content", JsonPrimitive("You are Tarumi AI, a capable conversational assistant and source-backed comics librarian. Reply in plain text only."))
+					},
+				)
+				add(
+					buildJsonObject {
+						put("role", JsonPrimitive("user"))
+						put("content", buildJsonArray {
+							add(
+								buildJsonObject {
+									put("type", JsonPrimitive("input_image"))
+									put("image_url", JsonPrimitive(fullBase64))
+								}
+							)
+							add(
+								buildJsonObject {
+									put("type", JsonPrimitive("input_text"))
+									put("text", JsonPrimitive(prompt))
+								}
+							)
+						})
+					},
+				)
+			})
+			put("temperature", JsonPrimitive(0.7))
+			put("max_tokens", JsonPrimitive(700))
+		}.toString()
+
+		val request = Request.Builder()
+			.url(url)
+			.header("Authorization", "Bearer $apiKey")
+			.header("Content-Type", "application/json")
+			.post(body.toRequestBody(JSON_MEDIA_TYPE))
+			.build()
+
 		okHttpClient.newCall(request).execute().use { response ->
 			if (!response.isSuccessful) {
 				return null
