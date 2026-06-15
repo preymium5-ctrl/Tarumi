@@ -671,6 +671,16 @@ class DetailsActivity :
 		}
 		val document = Jsoup.parse(html, url)
 		val text = document.body()?.text().orEmpty()
+		if (url.contains("demonicscans", ignoreCase = true)) {
+			return SourcePageStats(
+				rating = findSourceRating(document, html, text),
+				author = findDemonicScansStatValue(document, "Author")
+					?.cleanCreatorCandidate(CREATOR_AUTHOR_LABELS),
+				artist = null,
+				follows = extractFollowCount(FOLLOW_TEXT_REGEX.find(text)?.groupValues?.getOrNull(1))
+					?: extractFollowCount(FOLLOW_JSON_REGEX.find(html)?.groupValues?.getOrNull(1)),
+			)
+		}
 		return SourcePageStats(
 			rating = findSourceRating(document, html, text),
 			author = findSourceCreator(document, html, text, CREATOR_AUTHOR_LABELS),
@@ -678,6 +688,16 @@ class DetailsActivity :
 			follows = extractFollowCount(FOLLOW_TEXT_REGEX.find(text)?.groupValues?.getOrNull(1))
 				?: extractFollowCount(FOLLOW_JSON_REGEX.find(html)?.groupValues?.getOrNull(1)),
 		)
+	}
+
+	private fun findDemonicScansStatValue(document: org.jsoup.nodes.Document, label: String): String? {
+		document.select("#manga-info-stats .flex, #manga-info-stats div").forEach { row ->
+			val items = row.select("li")
+			if (items.size >= 2 && items[0].text().equals(label, ignoreCase = true)) {
+				return items[1].text().replace(Regex("""\s+"""), " ").trim().takeIf { it.isNotBlank() }
+			}
+		}
+		return null
 	}
 
 	private fun findSourceRating(document: org.jsoup.nodes.Document, html: String, text: String): String? {

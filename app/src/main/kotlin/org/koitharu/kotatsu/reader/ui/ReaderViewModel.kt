@@ -233,6 +233,7 @@ class ReaderViewModel @Inject constructor(
             val state = readingState.value ?: return@launchLoadingJob
             val manga = getMangaOrNull() ?: return@launchLoadingJob
             contentCache.clear(manga.source)
+            pageLoader.invalidate(clearCache = false)
             chaptersLoader.loadSingleChapter(state.chapterId)
             content.value = ReaderContent(chaptersLoader.snapshot(), state)
             notifyStateChanged()

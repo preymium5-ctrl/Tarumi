@@ -92,6 +92,11 @@ class ReaderInfoBarView @JvmOverloads constructor(
 			paint.strokeWidth = getDimension(R.styleable.ReaderInfoBarView_android_strokeWidth, 2f)
 			paint.textSize = getDimension(R.styleable.ReaderInfoBarView_android_textSize, 12f)
 		}
+		try {
+			paint.typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
+		} catch (e: Exception) {
+			// ignore fallback
+		}
 		val insetStart = getSystemUiDimensionOffset("status_bar_padding_start").coerceAtLeast(0)
 		val insetEnd = getSystemUiDimensionOffset("status_bar_padding_end").coerceAtLeast(0)
 		val isRtl = layoutDirection == LAYOUT_DIRECTION_RTL
@@ -208,7 +213,7 @@ class ReaderInfoBarView @JvmOverloads constructor(
 			val percent = (state.percent * 100f).toInt().coerceIn(0, 100)
 			val chapter = state.chapterNumber.coerceAtLeast(1)
 			val chaptersTotal = state.chaptersTotal.coerceAtLeast(chapter)
-			"$percent% - $chapter/$chaptersTotal chapters"
+			"$percent%  •  Ch. $chapter/$chaptersTotal"
 		} else {
 			""
 		}

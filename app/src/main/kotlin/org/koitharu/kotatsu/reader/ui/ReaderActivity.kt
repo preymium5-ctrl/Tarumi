@@ -767,7 +767,6 @@ class ReaderActivity :
             viewBinding.textViewReaderTitleCustom?.text = getString(R.string.loading_)
             viewBinding.textViewReaderChapterTitleCustom?.text = getString(R.string.loading_)
             viewBinding.textViewReaderChapterTitleCustom?.isVisible = true
-            viewBinding.textViewReaderPageProgressCustom?.isVisible = false
             viewBinding.customButtonPrevChapter?.isEnabled = false
             viewBinding.customButtonPrevChapter?.alpha = 0.36f
             viewBinding.customButtonNextChapter?.isEnabled = false
@@ -827,12 +826,6 @@ class ReaderActivity :
         if (chapterName.isNotEmpty()) {
             viewBinding.textViewReaderChapterTitleCustom?.text = chapterName
             viewBinding.textViewReaderChapterTitleCustom?.isVisible = true
-            viewBinding.textViewReaderPageProgressCustom?.text = if (uiState.chaptersTotal > 0) {
-                "$displayPrefix / ${uiState.chaptersTotal}"
-            } else {
-                displayPrefix
-            }
-            viewBinding.textViewReaderPageProgressCustom?.isVisible = true
         } else {
             viewBinding.textViewReaderChapterTitleCustom?.text = if (uiState.chaptersTotal > 0) {
                 "$displayPrefix / ${uiState.chaptersTotal}"
@@ -840,7 +833,6 @@ class ReaderActivity :
                 displayPrefix
             }
             viewBinding.textViewReaderChapterTitleCustom?.isVisible = true
-            viewBinding.textViewReaderPageProgressCustom?.isVisible = false
         }
 
         val hasPrev = uiState.hasPreviousChapter()
@@ -965,7 +957,10 @@ class ReaderActivity :
     // Screenshot Session State
     private var isScreenshotSessionActive = false
     private val screenshotSegments = mutableListOf<Bitmap>()
-    private var screenshotMaxScrollY = 0
+    private var screenshotAccumulatedDy = 0
+    private var screenshotCurrentScrollOffset = 0
+    private var screenshotMaxScrollOffset = 0
+    private var activeScreenshotRecyclerView: RecyclerView? = null
     private var activeScrollListener: RecyclerView.OnScrollListener? = null
     private var activePageCallback: ViewPager2.OnPageChangeCallback? = null
 
@@ -980,43 +975,40 @@ class ReaderActivity :
 
         if (!isScreenshotSessionActive) {
             // Start Session
-            screenshotSegments.clear()
+            recycleScreenshotSegments()
             isScreenshotSessionActive = true
+            activeScreenshotRecyclerView = recyclerView
+            screenshotAccumulatedDy = 0
+            screenshotCurrentScrollOffset = 0
+            screenshotMaxScrollOffset = 0
             viewBinding.layoutLongScreenshotOverlay?.isVisible = true
             viewBinding.customButtonScreenshot?.setIconResource(R.drawable.ic_check)
             
-            // Capture initial viewport
-            val w = recyclerView.width
-            val h = recyclerView.height
-            if (w > 0 && h > 0) {
-                val initialBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                recyclerView.draw(Canvas(initialBitmap))
-                screenshotSegments.add(initialBitmap)
+            // Forward touches
+            val touchTarget = findViewById<ViewPager2>(R.id.pager) ?: recyclerView
+            viewBinding.layoutLongScreenshotOverlay?.setOnTouchListener { _, event ->
+                touchTarget.dispatchTouchEvent(event)
+                true
             }
 
+            // Capture initial viewport
+            captureCurrentViewport(recyclerView)?.let(screenshotSegments::add)
+
             // Track vertical scrolling (for Webtoon/Vertical modes)
-            screenshotMaxScrollY = recyclerView.computeVerticalScrollOffset()
             val scrollListener = object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                    val currentScrollY = rv.computeVerticalScrollOffset()
-                    if (currentScrollY > screenshotMaxScrollY) {
-                        val diff = currentScrollY - screenshotMaxScrollY
-                        val viewWidth = rv.width
-                        val viewHeight = rv.height
-                        if (viewWidth > 0 && viewHeight > 0) {
-                            val dyCoerced = minOf(diff, viewHeight)
-                            if (dyCoerced > 0) {
-                                val viewport = Bitmap.createBitmap(viewWidth, viewHeight, Bitmap.Config.ARGB_8888)
-                                rv.draw(Canvas(viewport))
-                                try {
-                                    val segment = Bitmap.createBitmap(viewport, 0, viewHeight - dyCoerced, viewWidth, dyCoerced)
-                                    screenshotSegments.add(segment)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
+                    if (dy > 0) {
+                        screenshotCurrentScrollOffset += dy
+                        if (screenshotCurrentScrollOffset > screenshotMaxScrollOffset) {
+                            val diff = screenshotCurrentScrollOffset - screenshotMaxScrollOffset
+                            screenshotAccumulatedDy += diff
+                            screenshotMaxScrollOffset = screenshotCurrentScrollOffset
                         }
-                        screenshotMaxScrollY = currentScrollY
+                        if (screenshotAccumulatedDy >= LONG_SCREENSHOT_MIN_SEGMENT_PX) {
+                            captureScrolledSegment(rv, force = false)
+                        }
+                    } else if (dy < 0) {
+                        screenshotCurrentScrollOffset += dy
                     }
                 }
             }
@@ -1029,16 +1021,10 @@ class ReaderActivity :
                 val pageCallback = object : ViewPager2.OnPageChangeCallback() {
                     private var lastPage = viewPager.currentItem
                     override fun onPageSelected(position: Int) {
-                        if (position != lastPage) {
-                            val rv = viewPager.getChildAt(0) as? RecyclerView
-                            if (rv != null) {
-                                val viewWidth = rv.width
-                                val viewHeight = rv.height
-                                if (viewWidth > 0 && viewHeight > 0) {
-                                    val pageBitmap = Bitmap.createBitmap(viewWidth, viewHeight, Bitmap.Config.ARGB_8888)
-                                    rv.draw(Canvas(pageBitmap))
-                                    screenshotSegments.add(pageBitmap)
-                                }
+                        if (position != lastPage && isScreenshotSessionActive) {
+                            viewPager.post {
+                                val rv = viewPager.getChildAt(0) as? RecyclerView ?: return@post
+                                captureCurrentViewport(rv)?.let(screenshotSegments::add)
                             }
                             lastPage = position
                         }
@@ -1051,8 +1037,10 @@ class ReaderActivity :
             Snackbar.make(viewBinding.root, "Scroll down to capture or click checkmark to finish", Snackbar.LENGTH_LONG).show()
         } else {
             // End Session & Save
+            captureScrolledSegment(recyclerView, force = true)
             isScreenshotSessionActive = false
             viewBinding.layoutLongScreenshotOverlay?.isVisible = false
+            viewBinding.layoutLongScreenshotOverlay?.setOnTouchListener(null)
             viewBinding.customButtonScreenshot?.setIconResource(R.drawable.ic_screenshot)
 
             // Detach Listeners
@@ -1065,6 +1053,7 @@ class ReaderActivity :
                 viewPager?.unregisterOnPageChangeCallback(it)
                 activePageCallback = null
             }
+            activeScreenshotRecyclerView = null
 
             // Stitch segments
             lifecycleScope.launch(Dispatchers.Default) {
@@ -1083,6 +1072,7 @@ class ReaderActivity :
                 }
 
                 if (totalWidth <= 0 || totalHeight <= 0) {
+                    recycleScreenshotSegments()
                     withContext(Dispatchers.Main) {
                         Snackbar.make(viewBinding.root, "Capture dimensions are invalid", Snackbar.LENGTH_LONG).show()
                     }
@@ -1092,6 +1082,7 @@ class ReaderActivity :
                 val stitchedBitmap = try {
                     Bitmap.createBitmap(totalWidth, totalHeight, Bitmap.Config.ARGB_8888)
                 } catch (e: OutOfMemoryError) {
+                    recycleScreenshotSegments()
                     withContext(Dispatchers.Main) {
                         Snackbar.make(viewBinding.root, "Failed: image size exceeds available memory", Snackbar.LENGTH_LONG).show()
                     }
@@ -1103,9 +1094,8 @@ class ReaderActivity :
                 for (seg in screenshotSegments) {
                     canvas.drawBitmap(seg, 0f, currentY, null)
                     currentY += seg.height
-                    seg.recycle()
                 }
-                screenshotSegments.clear()
+                recycleScreenshotSegments()
 
                 val manga = viewModel.getMangaOrNull()
                 val chapter = viewModel.getCurrentState()?.let { cs ->
@@ -1116,6 +1106,50 @@ class ReaderActivity :
                 stitchedBitmap.recycle()
             }
         }
+    }
+
+    private fun captureCurrentViewport(recyclerView: RecyclerView): Bitmap? {
+        val viewWidth = recyclerView.width
+        val viewHeight = recyclerView.height
+        if (viewWidth <= 0 || viewHeight <= 0) {
+            return null
+        }
+        return try {
+            Bitmap.createBitmap(viewWidth, viewHeight, Bitmap.Config.ARGB_8888).also {
+                recyclerView.draw(Canvas(it))
+            }
+        } catch (e: OutOfMemoryError) {
+            null
+        }
+    }
+
+    private fun captureScrolledSegment(recyclerView: RecyclerView, force: Boolean) {
+        val diff = screenshotAccumulatedDy
+        if (diff <= 0 || (!force && diff < LONG_SCREENSHOT_MIN_SEGMENT_PX)) {
+            return
+        }
+        val viewport = captureCurrentViewport(recyclerView) ?: return
+        val sliceHeight = minOf(diff, viewport.height)
+        if (sliceHeight <= 0) {
+            viewport.recycle()
+            return
+        }
+        val segment = try {
+            Bitmap.createBitmap(viewport, 0, viewport.height - sliceHeight, viewport.width, sliceHeight)
+        } catch (e: IllegalArgumentException) {
+            null
+        } finally {
+            viewport.recycle()
+        }
+        if (segment != null) {
+            screenshotSegments.add(segment)
+            screenshotAccumulatedDy -= sliceHeight
+        }
+    }
+
+    private fun recycleScreenshotSegments() {
+        screenshotSegments.forEach { it.recycle() }
+        screenshotSegments.clear()
     }
 
     private suspend fun saveBitmap(bitmap: Bitmap, mangaTitle: String, chapterNumber: String?) = withContext(Dispatchers.IO) {
@@ -1160,5 +1194,6 @@ class ReaderActivity :
     companion object {
 
         private const val TOAST_DURATION = 2000L
+        private const val LONG_SCREENSHOT_MIN_SEGMENT_PX = 48
     }
 }

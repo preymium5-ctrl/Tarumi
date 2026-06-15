@@ -208,8 +208,9 @@ class DetailsLoadUseCase @Inject constructor(
     }
 
     private suspend fun Manga.smartMatchMissingMetadata(): SmartMetadataMatch {
+        val isDemonicScans = source.name == MangaParserSource.DEMONICSCANS.name
         val needsRating = rating <= 0f
-        val needsAuthor = authors.isEmpty()
+        val needsAuthor = authors.isEmpty() && !isDemonicScans
         val needsStatus = state == null
         val needsType = !hasTypeTag()
         if (!needsRating && !needsAuthor && !needsStatus && !needsType) {
@@ -259,8 +260,9 @@ class DetailsLoadUseCase @Inject constructor(
     }
 
     private fun Manga.normalizeDemonicScansAuthors(): Set<String> {
+        val titleValue = title
         return authors
-            .filterNot { it.equals("updating", ignoreCase = true) || it.equals("updated", ignoreCase = true) }
+            .filter { it.isUsefulDemonicScansCreator(titleValue) }
             .ifEmpty {
                 tags
                     .filter { tag ->
@@ -268,9 +270,21 @@ class DetailsLoadUseCase @Inject constructor(
                             tag.key.contains("artist", ignoreCase = true)
                     }
                     .map { it.title }
-                    .filter { it.isNotBlank() }
+                    .filter { it.isUsefulDemonicScansCreator(titleValue) }
             }
             .toSet()
+    }
+
+    private fun String.isUsefulDemonicScansCreator(title: String): Boolean {
+        val normalized = replace(Regex("""\s+"""), " ").trim()
+        if (normalized.length !in 2..64) {
+            return false
+        }
+        if (normalized.equals(title, ignoreCase = true)) {
+            return false
+        }
+        val lower = normalized.lowercase()
+        return DEMONIC_CREATOR_JUNK.none { lower.contains(it) }
     }
 
     private fun Manga.normalizeAsuraAuthors(): Set<String> {
@@ -378,6 +392,25 @@ class DetailsLoadUseCase @Inject constructor(
             "ad blockers",
             "break part of our website",
             "disable your ad blockers",
+        )
+
+        val DEMONIC_CREATOR_JUNK = setOf(
+            "unknown",
+            "updating",
+            "updated",
+            "n/a",
+            "author",
+            "artist",
+            "rating",
+            "status",
+            "chapter",
+            "bookmark",
+            "comment",
+            "demonic scans",
+            "demonicscans",
+            "demon king",
+            "greater demon",
+            "lesser demon",
         )
     }
 

@@ -850,7 +850,7 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_CACHE_VERSION = 9
 		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
-		const val SMART_RECOMMENDATION_ROTATION_MS = 2L * 24L * 60L * 60L * 1000L
+		const val SMART_RECOMMENDATION_ROTATION_MS = 24L * 60L * 60L * 1000L
 		const val WEEBCENTRAL_HOME_URL = "https://weebcentral.com/"
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }

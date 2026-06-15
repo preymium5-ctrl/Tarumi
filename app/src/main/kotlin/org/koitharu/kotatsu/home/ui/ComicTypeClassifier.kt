@@ -15,8 +15,8 @@ fun Manga.detectComicType(): ComicType {
 	val sourceType = (source as? MangaParserSource)?.contentType
 	val labels = buildList {
 		for (tag in tags) {
-			add(tag.title)
-			add(tag.key)
+			add(tag.title.cleanDemonicTypeNoise(source))
+			add(tag.key.cleanDemonicTypeNoise(source))
 		}
 		if (source != MangaParserSource.WEEBCENTRAL) {
 			add(source.name)
@@ -37,7 +37,7 @@ fun Manga.detectComicType(): ComicType {
 				desc
 			}
 		}
-		cleanedDesc?.let(::add)
+		cleanedDesc?.cleanDemonicTypeNoise(source)?.let(::add)
 	}.map { it.lowercase() }
 
 	val hasManhuaLabel = labels.any {
@@ -65,10 +65,19 @@ fun Manga.detectComicType(): ComicType {
 		hasManhuaLabel -> ComicType.MANHUA
 		hasManhwaLabel -> ComicType.MANHWA
 		hasMangaLabel -> ComicType.MANGA
+		source == MangaParserSource.DEMONICSCANS -> ComicType.MANHWA
 		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHUA -> ComicType.MANHUA
 		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHWA -> ComicType.MANHWA
 		source != MangaParserSource.WEEBCENTRAL &&
 			(sourceType == ContentType.MANGA || sourceType == ContentType.ONE_SHOT || sourceType == ContentType.DOUJINSHI) -> ComicType.MANGA
 		else -> ComicType.COMIC
+	}
+}
+
+private fun String.cleanDemonicTypeNoise(source: org.koitharu.kotatsu.parsers.model.MangaSource): String {
+	return if (source == MangaParserSource.DEMONICSCANS) {
+		replace(Regex("""(?i)\bManga\s*/\s*Manhwa\s*/\s*Manhua\b"""), " ")
+	} else {
+		this
 	}
 }

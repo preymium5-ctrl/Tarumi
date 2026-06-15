@@ -1097,6 +1097,7 @@
 	<string name="manage_preset_sources">Manage sources</string>
 	<string name="default_sources">Default</string>
     <string name="trending_title">Trending</string>
+    <string name="featured_manhwa">Featured Manhwa</string>
     <string name="see_more">See more</string>
     <string name="see_all">See all</string>
     <string name="manhua_recommendation">Manhua Recommendation</string>

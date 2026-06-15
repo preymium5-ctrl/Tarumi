@@ -186,6 +186,9 @@ private fun Manga.inferComicType(description: String?): ComicTypeHint? {
 
 private fun Manga.inferComicTypeFromSource(): ComicTypeHint? {
 	val parserSource = source as? MangaParserSource ?: return null
+	if (parserSource == MangaParserSource.DEMONICSCANS) {
+		return ComicTypeHint.MANHWA
+	}
 	return when (parserSource.contentType) {
 		ContentType.MANHUA -> ComicTypeHint.MANHUA
 		ContentType.MANHWA -> ComicTypeHint.MANHWA
@@ -199,12 +202,21 @@ private fun Manga.inferComicTypeFromSource(): ComicTypeHint? {
 private fun Manga.metadataLabels(description: String? = this.description): List<String> = buildList {
 	add(title)
 	add(source.name)
-	description?.let(::add)
+	val cleanDescription = if (source == MangaParserSource.DEMONICSCANS) {
+		description?.removeDemonicGenericTypeText()
+	} else {
+		description
+	}
+	cleanDescription?.let(::add)
 	for (tag in tags) {
-		add(tag.title)
-		add(tag.key)
+		add(tag.title.removeDemonicGenericTypeText())
+		add(tag.key.removeDemonicGenericTypeText())
 	}
 }.map { it.lowercase(Locale.ENGLISH) }
+
+private fun String.removeDemonicGenericTypeText(): String {
+	return replace(DEMONIC_GENERIC_TYPE_REGEX, " ")
+}
 
 private fun MangaTag.isTypeTag(): Boolean {
 	val normalized = title.normalizedSourceKey()
@@ -229,6 +241,7 @@ private const val CLEAN_DESCRIPTION_LINE_LIMIT = 8
 private val PERSON_SEPARATOR_REGEX = Regex("""\s*(?:,|/|\||&|\band\b)\s*""", RegexOption.IGNORE_CASE)
 private val CHAPTER_LINE_REGEX = Regex("""(?i)^\s*(?:chapter|episode)\s+\d+(?:\.\d+)?\b.*""")
 private val RATING_LINE_REGEX = Regex("""(?i)^\s*(?:rating|score)\s+[0-9]+(?:\.[0-9]+)?.*""")
+private val DEMONIC_GENERIC_TYPE_REGEX = Regex("""(?i)\bManga\s*/\s*Manhwa\s*/\s*Manhua\b""")
 
 private val EMPTY_PERSON_VALUES = setOf(
 	"unknown",
@@ -299,4 +312,5 @@ private val SOURCE_TYPE_DEFAULTS = mapOf(
 	"mangafireen" to ComicTypeHint.MANGA,
 	"mangafire" to ComicTypeHint.MANGA,
 	"manhuafast" to ComicTypeHint.MANHUA,
+	"demonicscans" to ComicTypeHint.MANHWA,
 )

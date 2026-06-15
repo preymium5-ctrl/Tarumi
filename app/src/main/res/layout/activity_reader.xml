@@ -379,16 +379,6 @@
 					android:ellipsize="end"
 					android:maxLines="1"
 					tools:text="Fall of the Demon King" />
-
-				<TextView
-					android:id="@+id/textView_reader_page_progress_custom"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="2dp"
-					android:textColor="#A0A0A0"
-					android:textSize="10sp"
-					android:fontFamily="@font/outfit"
-					tools:text="Episode 198 / 199" />
 			</LinearLayout>
 
 			<!-- Next Chapter Button (compact 40dp size) -->
