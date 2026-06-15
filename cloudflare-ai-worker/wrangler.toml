@@ -1,0 +1,7 @@
+name = "tarumi-ai-worker"
+main = "src/index.ts"
+compatibility_date = "2026-06-15"
+
+[vars]
+AI_API_BASE_URL = "https://api.openai.com/v1/chat/completions"
+AI_MODEL = "gpt-4.1-mini"

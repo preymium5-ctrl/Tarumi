@@ -847,7 +847,7 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_DETAILS_DELAY_MS = 60L
 		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
 		const val RECENT_CACHE_TTL_MS = 6L * 60L * 60L * 1000L
-		const val RECENT_CACHE_VERSION = 9
+		const val RECENT_CACHE_VERSION = 10
 		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val SMART_RECOMMENDATION_ROTATION_MS = 24L * 60L * 60L * 1000L
@@ -885,13 +885,10 @@ class HomeViewModel @Inject constructor(
 			MangaParserSource.AQUAMANGA,
 		)
 
-		val SMART_RECOMMENDATION_SOURCES = (
-			MANHUA_RECOMMENDATION_SOURCES +
-				MANGA_RECOMMENDATION_SOURCES +
-				listOf(
-					MangaParserSource.WEEBCENTRAL,
-					MangaParserSource.FLAMECOMICS,
-				)
-			).distinct()
+		val SMART_RECOMMENDATION_SOURCES = listOf(
+			MangaParserSource.MANGAFREAK,
+			MangaParserSource.WHALEMANGA,
+			MangaParserSource.AQUAMANGA,
+		)
 	}
 }

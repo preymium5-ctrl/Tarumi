@@ -135,10 +135,12 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 
 	private fun renderState(state: AskAiState) {
 		val binding = viewBinding ?: return
-		binding.imagePreviewContainer.isVisible = state.selectedImageUri != null
-		if (state.selectedImageUri != null) {
-			binding.imagePreview.setImageURI(android.net.Uri.parse(state.selectedImageUri))
+		val previewUriString = state.selectedImageUri
+		if (canReadUri(previewUriString)) {
+			binding.imagePreviewContainer.isVisible = true
+			binding.imagePreview.setImageURI(android.net.Uri.parse(previewUriString))
 		} else {
+			binding.imagePreviewContainer.isVisible = false
 			binding.imagePreview.setImageDrawable(null)
 		}
 		binding.progress.isVisible = false
@@ -175,7 +177,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			binding.switchNsfw.isChecked = state.includeNsfw
 		}
 		renderLocalModelStatus(state.localModelStatus)
-		renderMessages(binding.messagesList, state.messages, state.isLoading, state.includeNsfw)
+		renderMessages(binding.messagesList, state.messages, state.isLoading, state.includeNsfw, state.searchStatus)
 		binding.messagesScroll.post { binding.messagesScroll.fullScroll(View.FOCUS_DOWN) }
 	}
 
@@ -223,6 +225,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		messages: List<AskAiMessage>,
 		isLoading: Boolean,
 		includeNsfw: Boolean,
+		searchStatus: String? = null,
 	) {
 		container.removeAllViews()
 		for ((index, message) in messages.withIndex()) {
@@ -232,7 +235,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			}
 		}
 		if (isLoading && messages.lastOrNull()?.isStreaming != true) {
-			addTypingBubble(container, includeNsfw, messages.size)
+			addTypingBubble(container, includeNsfw, messages.size, searchStatus)
 		}
 	}
 
@@ -244,7 +247,8 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			setPadding(12.dp(this), 12.dp(this), 12.dp(this), 12.dp(this))
 		}
 
-		if (!message.imageUri.isNullOrBlank()) {
+		val imageUriString = message.imageUri
+		if (canReadUri(imageUriString)) {
 			val card = com.google.android.material.card.MaterialCardView(context).apply {
 				radius = 8.dp(this).toFloat()
 				strokeWidth = 0
@@ -252,9 +256,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			}
 			val imageView = ImageView(context).apply {
 				scaleType = ImageView.ScaleType.CENTER_CROP
-				runCatching {
-					setImageURI(android.net.Uri.parse(message.imageUri))
-				}
+				setImageURI(android.net.Uri.parse(imageUriString))
 			}
 			card.addView(imageView, ViewGroup.LayoutParams(180.dp(card), 180.dp(card)))
 			bubbleLayout.addView(card, LinearLayout.LayoutParams(180.dp(container), 180.dp(container)).apply {
@@ -328,6 +330,22 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 			),
 		)
+		val imageUriString = message.imageUri
+		if (canReadUri(imageUriString)) {
+			val card = com.google.android.material.card.MaterialCardView(container.context).apply {
+				radius = 8.dp(this).toFloat()
+				strokeWidth = 0
+				cardElevation = 0f
+			}
+			val imageView = ImageView(container.context).apply {
+				scaleType = ImageView.ScaleType.CENTER_CROP
+				setImageURI(android.net.Uri.parse(imageUriString))
+			}
+			card.addView(imageView, ViewGroup.LayoutParams(180.dp(card), 180.dp(card)))
+			messageColumn.addView(card, LinearLayout.LayoutParams(180.dp(container), 180.dp(container)).apply {
+				topMargin = 8.dp(container)
+			})
+		}
 		row.addView(
 			messageColumn,
 			LinearLayout.LayoutParams(
@@ -351,7 +369,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		}
 	}
 
-	private fun addTypingBubble(container: LinearLayout, includeNsfw: Boolean, index: Int) {
+	private fun addTypingBubble(container: LinearLayout, includeNsfw: Boolean, index: Int, searchStatus: String? = null) {
 		val row = LinearLayout(container.context).apply {
 			gravity = Gravity.TOP
 			orientation = LinearLayout.HORIZONTAL
@@ -369,6 +387,9 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 				marginEnd = 10.dp(container)
 			},
 		)
+		val messageColumn = LinearLayout(container.context).apply {
+			orientation = LinearLayout.VERTICAL
+		}
 		val bubble = LinearLayout(container.context).apply {
 			setBackgroundResource(R.drawable.bg_taru_home_feature)
 			gravity = Gravity.CENTER_VERTICAL
@@ -396,11 +417,37 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 				},
 			)
 		}
-		row.addView(
+		messageColumn.addView(
 			bubble,
 			LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT,
+			),
+		)
+		if (!searchStatus.isNullOrBlank()) {
+			val statusLabel = TextView(container.context).apply {
+				text = searchStatus
+				setTextColor(ContextCompat.getColor(context, R.color.taru_accent))
+				textSize = 12f
+				typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.ITALIC)
+				setPadding(18.dp(this), 4.dp(this), 18.dp(this), 0)
+				alpha = 0f
+			}
+			statusLabel.animate().alpha(1f).setDuration(300).start()
+			messageColumn.addView(
+				statusLabel,
+				LinearLayout.LayoutParams(
+					LinearLayout.LayoutParams.WRAP_CONTENT,
+					LinearLayout.LayoutParams.WRAP_CONTENT,
+				),
+			)
+		}
+		row.addView(
+			messageColumn,
+			LinearLayout.LayoutParams(
+				0,
+				LinearLayout.LayoutParams.WRAP_CONTENT,
+				1f,
 			),
 		)
 		container.addView(
@@ -583,6 +630,18 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 				repeatCount = ValueAnimator.INFINITE
 				start()
 			}
+		}
+	}
+
+	private fun canReadUri(uriString: String?): Boolean {
+		if (uriString.isNullOrBlank()) return false
+		val context = context ?: return false
+		val uri = android.net.Uri.parse(uriString)
+		return try {
+			context.contentResolver.openInputStream(uri)?.use { }
+			true
+		} catch (e: Exception) {
+			false
 		}
 	}
 }

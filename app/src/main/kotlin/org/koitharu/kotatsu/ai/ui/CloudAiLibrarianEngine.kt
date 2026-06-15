@@ -45,14 +45,14 @@ class CloudAiLibrarianEngine @Inject constructor(
 		val prompt = buildPrompt(query, includeNsfw, results, libraryContext, conversationContext)
 		val providers = listOf(
 			AiProvider(
-				name = "Grok 4.3",
-				url = "https://newapi.makelove.cloud/v1/chat/completions",
-				apiKey = BuildConfig.AI_GROK_API_KEY,
-				model = "grok-4.3",
+				name = "Cloudflare AI proxy",
+				url = BuildConfig.AI_CLOUD_PROXY_URL,
+				clientToken = BuildConfig.AI_CLOUD_PROXY_CLIENT_TOKEN,
+				model = BuildConfig.AI_CLOUD_PROXY_MODEL,
 			)
 		)
 		for (provider in providers) {
-			if (provider.apiKey.isBlank()) {
+			if (provider.url.isBlank()) {
 				continue
 			}
 			val reply = runCatchingCancellable {
@@ -76,14 +76,14 @@ class CloudAiLibrarianEngine @Inject constructor(
 		val prompt = buildConversationPrompt(query, includeNsfw, libraryContext, conversationContext)
 		val providers = listOf(
 			AiProvider(
-				name = "Grok 4.3",
-				url = "https://newapi.makelove.cloud/v1/chat/completions",
-				apiKey = BuildConfig.AI_GROK_API_KEY,
-				model = "grok-4.3",
+				name = "Cloudflare AI proxy",
+				url = BuildConfig.AI_CLOUD_PROXY_URL,
+				clientToken = BuildConfig.AI_CLOUD_PROXY_CLIENT_TOKEN,
+				model = BuildConfig.AI_CLOUD_PROXY_MODEL,
 			)
 		)
 		for (provider in providers) {
-			if (provider.apiKey.isBlank()) {
+			if (provider.url.isBlank()) {
 				continue
 			}
 			val reply = runCatchingCancellable {
@@ -102,24 +102,26 @@ class CloudAiLibrarianEngine @Inject constructor(
 		query: String,
 	): String = withContext(Dispatchers.IO) {
 		val provider = AiProvider(
-			name = "Grok 4.3",
-			url = "https://newapi.makelove.cloud/v1/chat/completions",
-			apiKey = BuildConfig.AI_GROK_API_KEY,
-			model = "grok-4.3",
+			name = "Cloudflare AI proxy",
+			url = BuildConfig.AI_CLOUD_PROXY_URL,
+			clientToken = BuildConfig.AI_CLOUD_PROXY_CLIENT_TOKEN,
+			model = BuildConfig.AI_CLOUD_PROXY_MODEL,
 		)
-		if (provider.apiKey.isBlank()) {
+		if (provider.url.isBlank()) {
 			return@withContext "CONVERSATION"
 		}
 		val prompt = """
-			Analyze the user's message and determine if they are asking to search or recommend a list of comics, manga, manhwa, or manhua.
+			Analyze the user's message and determine their intent:
+			- If they are asking for recommendations, list of titles, suggestions of what to read, or similar series, return "RECOMMENDATION".
+			- If they are asking general questions about characters, plots, authors, lore, or having a general conversation (even if they mention a comic title), return "CONVERSATION".
 			Respond with exactly one word: "RECOMMENDATION" or "CONVERSATION". Do not include any punctuation or extra text.
-			
+
 			User message: "$query"
 		""".trimIndent()
 		val reply = runCatchingCancellable {
 			provider.request(prompt)
 		}.getOrNull()
-		
+
 		if (reply?.trim()?.uppercase() == "RECOMMENDATION") {
 			"RECOMMENDATION"
 		} else {
@@ -127,22 +129,143 @@ class CloudAiLibrarianEngine @Inject constructor(
 		}
 	}
 
+	suspend fun classifyVisionIntent(
+		query: String,
+	): String = withContext(Dispatchers.IO) {
+		val provider = AiProvider(
+			name = "Cloudflare AI proxy",
+			url = BuildConfig.AI_CLOUD_PROXY_URL,
+			clientToken = BuildConfig.AI_CLOUD_PROXY_CLIENT_TOKEN,
+			model = BuildConfig.AI_CLOUD_PROXY_MODEL,
+		)
+		if (provider.url.isBlank()) {
+			return@withContext "IDENTIFY"
+		}
+		val prompt = """
+			Analyze the user's message that accompanies an image they uploaded. Determine their intent:
+			- If they want to IDENTIFY the comic/manga/manhwa/manhua title shown in the image, or find where to read it, or want source-backed results from that image, return "IDENTIFY".
+			- If they are asking a GENERAL question about the image (e.g. who is this character, what's happening in this scene, describe this image, what art style is this, translate this text, or any other question that just needs a direct answer about the image content), return "GENERAL".
+			- If no text query was provided and only an image is sent, return "IDENTIFY".
+			Respond with exactly one word: "IDENTIFY" or "GENERAL". Do not include any punctuation or extra text.
+
+			User message: "$query"
+		""".trimIndent()
+		val reply = runCatchingCancellable {
+			provider.request(prompt)
+		}.getOrNull()
+
+		if (reply?.trim()?.uppercase() == "GENERAL") {
+			"GENERAL"
+		} else {
+			"IDENTIFY"
+		}
+	}
+
+	suspend fun generateImage(
+		prompt: String,
+		includeNsfw: Boolean,
+	): ImageGenerationResult = withContext(Dispatchers.IO) {
+		ImageGenerationResult(error = "Image generation is currently disabled to save API tokens.")
+	}
+
+	private fun extractImageError(responseBody: String): String {
+		return runCatching {
+			val root = json.parseToJsonElement(responseBody).jsonObject
+			val error = root["error"] ?: return@runCatching ""
+			when (error) {
+				is JsonObject -> error["message"]?.jsonPrimitive?.contentOrNull
+					?: error["code"]?.jsonPrimitive?.contentOrNull
+					?: error.toString()
+				else -> error.jsonPrimitive.contentOrNull ?: error.toString()
+			}
+		}.getOrDefault("")
+	}
+
+	private fun buildImagePrompt(prompt: String, includeNsfw: Boolean): String {
+		return if (includeNsfw) {
+			"""
+				NSFW mode is enabled. Generate an explicit, uncensored adult illustration based on the user's prompt.
+				Nudity, sexual themes, and mature content are fully allowed and expected.
+				All depicted characters must be adults (18+). Do not depict minors, non-consensual acts, or illegal content.
+
+				User prompt:
+				$prompt
+			""".trimIndent()
+		} else {
+			"""
+				Safe mode is enabled. Generate a clean, non-explicit illustration from this prompt.
+				Keep it suitable for general audiences. No nudity, sexual content, fetish content, graphic violence, or suggestive framing.
+
+				User prompt:
+				$prompt
+			""".trimIndent()
+		}
+	}
+
+	suspend fun generateVisionSearchQuery(
+		imageBase64: String,
+	): String? = withContext(Dispatchers.IO) {
+		val provider = AiProvider(
+			name = "Cloudflare AI proxy",
+			url = BuildConfig.AI_CLOUD_PROXY_URL,
+			clientToken = BuildConfig.AI_CLOUD_PROXY_CLIENT_TOKEN,
+			model = BuildConfig.AI_CLOUD_PROXY_MODEL,
+		)
+		if (provider.url.isBlank()) {
+			return@withContext null
+		}
+		val prompt = """
+			Analyze this image carefully. Your goal is to generate the BEST possible web search query to identify this comic/manga/manhwa/manhua.
+
+			Strategies to use:
+			1. Read ALL visible text in the image — dialogue bubbles, captions, sound effects, watermarks, credits, chapter numbers. Include exact quotes in your search query.
+			2. Identify distinctive character features — hair color, eye color, clothing, accessories, expressions.
+			3. Note the art style — is it manhwa (Korean webtoon), manga (Japanese), manhua (Chinese)?
+			4. Look for any title text, logos, or watermarks.
+
+			Correct any obvious spelling typos in visible text (e.g., 'OFFICIALLWY' → 'OFFICIALLY').
+			Combine the most identifying elements into a single optimized search query.
+			Output ONLY the search query in plain text. No quotes, no explanation, no formatting.
+		""".trimIndent()
+		runCatchingCancellable {
+			provider.requestVision(prompt, imageBase64)
+		}.onFailure {
+			it.printStackTraceDebug()
+		}.getOrNull()?.trim()?.removeSurrounding("\"")?.removeSurrounding("'")
+	}
+
 	suspend fun generateVisionReply(
 		query: String,
 		imageBase64: String,
 		includeNsfw: Boolean,
+		conversationContext: String = "",
+		webSearchContext: String = "",
 	): String? = withContext(Dispatchers.IO) {
 		val provider = AiProvider(
-			name = "Grok 4.3",
-			url = "https://newapi.makelove.cloud/v1/chat/completions",
-			apiKey = BuildConfig.AI_GROK_API_KEY,
-			model = "grok-4.3",
+			name = "Cloudflare AI proxy",
+			url = BuildConfig.AI_CLOUD_PROXY_URL,
+			clientToken = BuildConfig.AI_CLOUD_PROXY_CLIENT_TOKEN,
+			model = BuildConfig.AI_CLOUD_PROXY_MODEL,
 		)
-		if (provider.apiKey.isBlank()) {
+		if (provider.url.isBlank()) {
 			return@withContext null
 		}
+		val visionPrompt = buildString {
+			if (conversationContext.isNotBlank()) {
+				append("Recent conversation:\n")
+				append(conversationContext)
+				append("\n\n")
+			}
+			if (webSearchContext.isNotBlank()) {
+				append("Web Search Results (use these to identify the comic title, character names, and source):\n")
+				append(webSearchContext)
+				append("\n\n")
+				append("IMPORTANT: Use the web search results above along with your own knowledge to identify the comic/manhwa/manga title and any characters shown. If a title appears in the search results that matches what you see in the image, state it confidently.\n\n")
+			}
+			append(query)
+		}
 		runCatchingCancellable {
-			provider.requestVision(query, imageBase64)
+			provider.requestVision(visionPrompt, imageBase64)
 		}.onFailure {
 			it.printStackTraceDebug()
 		}.getOrNull()
@@ -155,7 +278,7 @@ class CloudAiLibrarianEngine @Inject constructor(
 				add(
 					buildJsonObject {
 						put("role", JsonPrimitive("system"))
-						put("content", JsonPrimitive("You are Tarumi AI, a capable conversational assistant and source-backed comics librarian. Reply in plain text only."))
+						put("content", JsonPrimitive("You are Tarumi AI, an exceptionally knowledgeable and intelligent assistant. You have deep expertise in manga, manhwa, manhua, anime, and comics, including characters, authors, art styles, plot details, publication history, and cultural context. You also have broad general knowledge and can answer questions on any topic thoughtfully and accurately. Always provide detailed, well-reasoned responses. Use your full knowledge to give the best possible answer. Reply in plain text only."))
 					},
 				)
 				add(
@@ -166,13 +289,18 @@ class CloudAiLibrarianEngine @Inject constructor(
 				)
 			})
 			put("temperature", JsonPrimitive(0.7))
-			put("max_tokens", JsonPrimitive(700))
+			put("max_tokens", JsonPrimitive(1200))
+			put("search_parameters", buildJsonObject {
+				put("mode", JsonPrimitive("auto"))
+			})
 		}.toString()
 		val request = Request.Builder()
 			.url(url)
-			.header("Authorization", "Bearer $apiKey")
 			.header("Content-Type", "application/json")
 			.apply {
+				if (clientToken.isNotBlank()) {
+					header("X-Tarumi-Client-Token", clientToken)
+				}
 				if (isOpenRouter) {
 					header("HTTP-Referer", "https://github.com/preymium5-ctrl/Tarumi")
 					header("X-Title", "Tarumi")
@@ -210,7 +338,7 @@ class CloudAiLibrarianEngine @Inject constructor(
 				add(
 					buildJsonObject {
 						put("role", JsonPrimitive("system"))
-						put("content", JsonPrimitive("You are Tarumi AI, a capable conversational assistant and source-backed comics librarian. Reply in plain text only."))
+						put("content", JsonPrimitive("You are Tarumi AI, an expert at identifying manga, manhwa, manhua, and comic panels. You can recognize characters, art styles, dialogue patterns, and titles with high accuracy. Use your knowledge and any available web search results to provide confident, accurate identification. When you identify a title, state it clearly and confidently. Reply in plain text only."))
 					},
 				)
 				add(
@@ -219,13 +347,15 @@ class CloudAiLibrarianEngine @Inject constructor(
 						put("content", buildJsonArray {
 							add(
 								buildJsonObject {
-									put("type", JsonPrimitive("input_image"))
-									put("image_url", JsonPrimitive(fullBase64))
+									put("type", JsonPrimitive("image_url"))
+									put("image_url", buildJsonObject {
+										put("url", JsonPrimitive(fullBase64))
+									})
 								}
 							)
 							add(
 								buildJsonObject {
-									put("type", JsonPrimitive("input_text"))
+									put("type", JsonPrimitive("text"))
 									put("text", JsonPrimitive(prompt))
 								}
 							)
@@ -234,13 +364,20 @@ class CloudAiLibrarianEngine @Inject constructor(
 				)
 			})
 			put("temperature", JsonPrimitive(0.7))
-			put("max_tokens", JsonPrimitive(700))
+			put("max_tokens", JsonPrimitive(1200))
+			put("search_parameters", buildJsonObject {
+				put("mode", JsonPrimitive("on"))
+			})
 		}.toString()
 
 		val request = Request.Builder()
 			.url(url)
-			.header("Authorization", "Bearer $apiKey")
 			.header("Content-Type", "application/json")
+			.apply {
+				if (clientToken.isNotBlank()) {
+					header("X-Tarumi-Client-Token", clientToken)
+				}
+			}
 			.post(body.toRequestBody(JSON_MEDIA_TYPE))
 			.build()
 
@@ -299,9 +436,10 @@ class CloudAiLibrarianEngine @Inject constructor(
 
 			Current mode: ${if (includeNsfw) "18+ only. Recommend adult/NSFW candidates only." else "Safe only. Recommend non-adult candidates only."}
 			Honor every requested format such as manga, manhwa, or manhua. Use the conversation context to answer
-			follow-ups naturally. Briefly explain the shared genre, trope, or story qualities that make these
-			candidates relevant. Mention that the cards below are the best source-backed matches. Do not invent
-			titles outside the candidate list.
+			follow-ups naturally. For each recommendation, explain WHY the user would enjoy it — mention shared
+			genres, tropes, story qualities, art style similarities, or thematic connections that make each pick
+			relevant. Give thoughtful, personalized reasoning, not just generic descriptions. Mention that the
+			cards below are the best source-backed matches. Do not invent titles outside the candidate list.
 		""".trimIndent()
 	}
 
@@ -318,6 +456,10 @@ class CloudAiLibrarianEngine @Inject constructor(
 		}
 		return """
 			$personality
+			You are an exceptionally knowledgeable AI with deep expertise in manga, manhwa, manhua, anime, comics, and broad general knowledge.
+			You can discuss characters, plot details, authors, art styles, publication history, cultural context, and any other topic with depth and accuracy.
+			Always think carefully before answering. Provide detailed, well-reasoned, and insightful responses.
+
 			Recent conversation:
 			${conversationContext.ifBlank { "No prior chat turns are available." }}
 
@@ -325,17 +467,22 @@ class CloudAiLibrarianEngine @Inject constructor(
 			${libraryContext.ifBlank { "No reading history context is available yet." }}
 			User message: "$query"
 
-			Current mode: ${if (includeNsfw) "18+ conversation only. Do not recommend safe-mode sources unless the user turns 18+ mode off." else "Safe conversation only. Do not discuss or recommend adult/NSFW comics."}
-			Reply naturally and answer the message directly. You can discuss the app, comics, characters,
-			recommendation ideas, or general topics. If the user asks for source-backed comic picks, suggest
-			they ask by mood, trope, genre, or similar title.
+			Current mode: ${if (includeNsfw) "18+ conversation. Adult topics and NSFW comic discussions are allowed." else "Safe conversation. Keep responses appropriate for general audiences."}
+			Answer the user's question directly and thoroughly. Use your full knowledge to give the best possible answer.
+			If the user asks about a specific character, give detailed information. If they ask about a plot, explain it well.
+			If they ask a general knowledge question, answer it accurately. Be conversational but informative.
 		""".trimIndent()
 	}
+
+	data class ImageGenerationResult(
+		val image: String? = null,
+		val error: String? = null,
+	)
 
 	private data class AiProvider(
 		val name: String,
 		val url: String,
-		val apiKey: String,
+		val clientToken: String,
 		val model: String,
 		val isOpenRouter: Boolean = false,
 	)

@@ -1,9 +1,12 @@
 package org.koitharu.kotatsu.ai.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import androidx.core.content.edit
+import java.io.ByteArrayOutputStream
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
@@ -92,11 +95,38 @@ class AskAiViewModel @Inject constructor(
 		launchJob(Dispatchers.IO) {
 			try {
 				context.contentResolver.openInputStream(uri)?.use { stream ->
-					val bytes = stream.readBytes()
+					val originalBitmap = BitmapFactory.decodeStream(stream) ?: return@use
+					val maxDim = 1024
+					val width = originalBitmap.width
+					val height = originalBitmap.height
+					val scaledBitmap = if (width > maxDim || height > maxDim) {
+						val ratio = width.toFloat() / height.toFloat()
+						val (newWidth, newHeight) = if (ratio > 1f) {
+							maxDim to (maxDim / ratio).toInt()
+						} else {
+							(maxDim * ratio).toInt() to maxDim
+						}
+						Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+					} else {
+						originalBitmap
+					}
+					val outputStream = ByteArrayOutputStream()
+					scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+					val bytes = outputStream.toByteArray()
 					val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+					if (scaledBitmap != originalBitmap) {
+						scaledBitmap.recycle()
+					}
+					originalBitmap.recycle()
+
+					val cacheDir = java.io.File(context.cacheDir, "ask_ai_images").apply { mkdirs() }
+					val localFile = java.io.File(cacheDir, "img_${System.currentTimeMillis()}.jpg")
+					localFile.writeBytes(bytes)
+					val localUri = Uri.fromFile(localFile).toString()
+
 					_state.update {
 						it.copy(
-							selectedImageUri = uri.toString(),
+							selectedImageUri = localUri,
 							selectedImageBase64 = base64,
 						)
 					}
@@ -149,11 +179,13 @@ class AskAiViewModel @Inject constructor(
 			)
 		)
 		clearSelectedImage()
-		_state.update { it.copy(isLoading = true) }
+		_state.update { it.copy(isLoading = true, searchStatus = "Thinking...") }
 		searchJob = launchJob(Dispatchers.Default) {
 			try {
+				val wantsImageGeneration = isImageGenerationRequest(finalQuery)
 				val limitOverride = AskAiLimitPrefs.isLimitOverrideEnabled(context)
-				val hasCloudAsk = limitOverride || consumeDailyToken()
+				val tokenCost = if (wantsImageGeneration) IMAGE_GEN_TOKEN_COST else 1
+				val hasCloudAsk = limitOverride || consumeDailyTokens(tokenCost)
 				val hasLocalFallback = _state.value.localModelStatus == LocalAiModelStatus.Ready
 				if (!hasCloudAsk && !hasLocalFallback) {
 					streamAssistantReply(
@@ -162,28 +194,131 @@ class AskAiViewModel @Inject constructor(
 							query = finalQuery,
 							includeNsfw = includeNsfw,
 						),
-						finalText = context.getString(
-							R.string.ask_ai_tokens_empty,
-							formatDurationUntil(_state.value.tokenResetAtMillis),
-						),
+						finalText = if (wantsImageGeneration && !limitOverride) {
+							"Image generation requires $IMAGE_GEN_TOKEN_COST tokens. You don't have enough tokens remaining. Tokens reset in ${formatDurationUntil(_state.value.tokenResetAtMillis)}."
+						} else {
+							context.getString(
+								R.string.ask_ai_tokens_empty,
+								formatDurationUntil(_state.value.tokenResetAtMillis),
+							)
+						},
 					)
 					return@launchJob
 				}
 
+				if (wantsImageGeneration) {
+					_state.update { it.copy(searchStatus = "Generating image...") }
+					val imageResult = if (hasCloudAsk) {
+						cloudAiLibrarianEngine.generateImage(finalQuery, includeNsfw)
+					} else {
+						CloudAiLibrarianEngine.ImageGenerationResult(error = "Cloud image generation needs an Ask AI token.")
+					}
+
+					val localUri = if (!imageResult.image.isNullOrBlank()) {
+						cacheGeneratedImage(imageResult.image)
+					} else {
+						null
+					}
+
+					val replyText = if (localUri != null) {
+						context.getString(R.string.ask_ai_image_generated, finalQuery)
+					} else if (!imageResult.error.isNullOrBlank()) {
+						context.getString(R.string.ask_ai_image_failed_detail, imageResult.error)
+					} else {
+						context.getString(R.string.ask_ai_image_failed)
+					}
+
+					appendMessages(
+						AskAiMessage(
+							role = AskAiRole.ASSISTANT,
+							text = replyText,
+							query = finalQuery,
+							includeNsfw = includeNsfw,
+							imageUri = localUri,
+						)
+					)
+					_state.update { it.copy(isLoading = false) }
+					return@launchJob
+				}
+
 				if (imageBase64 != null) {
-					// Vision flow! Identify the comic title.
+					val messagesBeforeCurrent = _state.value.messages.dropLast(1)
+					val conversationContext = buildConversationContext(messagesBeforeCurrent, includeNsfw)
+
+					// Classify: does the user want to IDENTIFY the comic, or ask a GENERAL question about the image?
+					_state.update { it.copy(searchStatus = "Analyzing image...") }
+					val visionIntent = if (hasCloudAsk) {
+						cloudAiLibrarianEngine.classifyVisionIntent(finalQuery)
+					} else {
+						"IDENTIFY"
+					}
+
+					if (visionIntent == "GENERAL") {
+						// General vision Q&A — answer the question using the image + web search context
+						_state.update { it.copy(searchStatus = "Searching the web...") }
+						val generatedSearchQuery = if (hasCloudAsk) {
+							cloudAiLibrarianEngine.generateVisionSearchQuery(imageBase64)
+						} else {
+							null
+						}
+						val webSearchContext = if (!generatedSearchQuery.isNullOrBlank()) {
+							performWebSearch(generatedSearchQuery)
+						} else {
+							""
+						}
+
+						_state.update { it.copy(searchStatus = "Generating response...") }
+						val reply = if (hasCloudAsk) {
+							cloudAiLibrarianEngine.generateVisionReply(
+								query = finalQuery,
+								imageBase64 = imageBase64,
+								includeNsfw = includeNsfw,
+								conversationContext = conversationContext,
+								webSearchContext = webSearchContext,
+							)
+						} else {
+							null
+						} ?: "I could not analyze the image. Please make sure the image format is supported."
+
+						streamAssistantReply(
+							message = AskAiMessage(
+								role = AskAiRole.ASSISTANT,
+								query = finalQuery,
+								includeNsfw = includeNsfw,
+							),
+							finalText = reply,
+						)
+						return@launchJob
+					}
+
+					// IDENTIFY flow — identify the comic title and search sources
+					_state.update { it.copy(searchStatus = "Searching the web...") }
 					val visionQuery = """
 						$finalQuery
-						
+
 						Identify the title of the comic in this image.
 						Important: At the very end of your response, write exactly "[TITLE: <the identified comic title>]" (for example, "[TITLE: Solo Leveling]"). If you cannot identify the comic, write "[TITLE: Unknown]".
 					""".trimIndent()
 
+					val generatedSearchQuery = if (hasCloudAsk) {
+						cloudAiLibrarianEngine.generateVisionSearchQuery(imageBase64)
+					} else {
+						null
+					}
+					val webSearchContext = if (!generatedSearchQuery.isNullOrBlank()) {
+						performWebSearch(generatedSearchQuery)
+					} else {
+						""
+					}
+
+					_state.update { it.copy(searchStatus = "Identifying comic...") }
 					val reply = if (hasCloudAsk) {
 						cloudAiLibrarianEngine.generateVisionReply(
 							query = visionQuery,
 							imageBase64 = imageBase64,
 							includeNsfw = includeNsfw,
+							conversationContext = conversationContext,
+							webSearchContext = webSearchContext,
 						)
 					} else {
 						null
@@ -197,6 +332,7 @@ class AskAiViewModel @Inject constructor(
 
 					// Search sources for the identified title
 					val results = if (!identifiedTitle.isNullOrBlank() && !identifiedTitle.equals("Unknown", ignoreCase = true)) {
+						_state.update { it.copy(searchStatus = "Searching sources for \"$identifiedTitle\"...") }
 						val sources = if (includeNsfw) {
 							NSFW_SOURCE_NAMES.resolveSources()
 						} else {
@@ -246,8 +382,15 @@ class AskAiViewModel @Inject constructor(
 					finalQuery
 				}
 
-				// Smart classification check using Grok 4.3 pre-flight call
-				val isRec = if (hasCloudAsk) {
+				// Smart classification check
+				_state.update { it.copy(searchStatus = "Understanding your question...") }
+				val isRec = if (requestedIntent.isRecommendationRequest) {
+					// Keyword parser already determined this is a recommendation — trust it
+					true
+				} else if (includeNsfw && looksLikeRecommendation(finalQuery)) {
+					// In 18+ mode, use keyword check to avoid AI safety filters blocking NSFW classification
+					true
+				} else if (hasCloudAsk) {
 					cloudAiLibrarianEngine.classifyIntent(finalQuery) == "RECOMMENDATION"
 				} else {
 					requestedIntent.isRecommendationRequest
@@ -264,6 +407,7 @@ class AskAiViewModel @Inject constructor(
 				}
 
 				if (!intent.isRecommendationRequest) {
+					_state.update { it.copy(searchStatus = "Generating response...") }
 					val reply = localAiLibrarianEngine.generateConversationReply(
 						query = finalQuery,
 						includeNsfw = includeNsfw,
@@ -287,6 +431,7 @@ class AskAiViewModel @Inject constructor(
 					)
 					return@launchJob
 				}
+				_state.update { it.copy(searchStatus = "Searching manga sources...") }
 				val sources = if (includeNsfw) {
 					NSFW_SOURCE_NAMES.resolveSources()
 				} else {
@@ -372,7 +517,7 @@ class AskAiViewModel @Inject constructor(
 					finalText = "Tarumi hit a search problem before I could finish. Try a shorter tag, title, or genre and I will crawl the sources again.",
 				)
 			} finally {
-				_state.update { it.copy(isLoading = false) }
+				_state.update { it.copy(isLoading = false, searchStatus = null) }
 			}
 		}
 	}
@@ -380,7 +525,14 @@ class AskAiViewModel @Inject constructor(
 	fun clearConversation() {
 		searchJob?.cancel()
 		historyPrefs.edit { remove(KEY_MESSAGES) }
-		_state.update { it.copy(isLoading = false, messages = emptyList()) }
+		_state.update { it.copy(isLoading = false, searchStatus = null, messages = emptyList()) }
+		launchJob(Dispatchers.IO) {
+			try {
+				java.io.File(context.cacheDir, "ask_ai_images").deleteRecursively()
+			} catch (e: Exception) {
+				e.printStackTraceDebug()
+			}
+		}
 	}
 
 	fun setComposerExpanded(expanded: Boolean) {
@@ -635,6 +787,90 @@ class AskAiViewModel @Inject constructor(
 			cacheWebDiscovery(cacheKey, queries)
 			return queries
 		}
+	}
+
+	private suspend fun cacheGeneratedImage(generatedImage: String): String? = withContext(Dispatchers.IO) {
+		if (generatedImage.startsWith("data:", ignoreCase = true)) {
+			val base64 = generatedImage.substringAfter("base64,", missingDelimiterValue = "")
+			if (base64.isBlank()) return@withContext null
+			val extension = if (generatedImage.substringBefore(";").contains("jpeg", ignoreCase = true)) {
+				"jpg"
+			} else {
+				"png"
+			}
+			return@withContext runCatching {
+				val bytes = Base64.decode(base64, Base64.DEFAULT)
+				writeGeneratedImageToCache(bytes, extension)
+			}.getOrNull()
+		}
+		downloadImageToCache(generatedImage)
+	}
+
+	private fun writeGeneratedImageToCache(bytes: ByteArray, extension: String): String {
+		val cacheDir = java.io.File(context.cacheDir, "ask_ai_images").apply { mkdirs() }
+		val localFile = java.io.File(cacheDir, "gen_${System.currentTimeMillis()}.$extension")
+		localFile.writeBytes(bytes)
+		return Uri.fromFile(localFile).toString()
+	}
+
+	private fun performWebSearch(searchQuery: String): String {
+		val url = WEB_DISCOVERY_URL.toHttpUrl()
+			.newBuilder()
+			.addQueryParameter("q", searchQuery)
+			.build()
+		val request = Request.Builder()
+			.url(url)
+			.header("User-Agent", WEB_DISCOVERY_USER_AGENT)
+			.build()
+		return try {
+			okHttpClient.newCall(request).execute().use { response ->
+				if (!response.isSuccessful) return ""
+				val document = Jsoup.parse(response.body.string())
+				val results = document.select("div.web-result, .result")
+				results.take(5).mapIndexed { index, element ->
+					val title = element.selectFirst("a.result__a")?.text().orEmpty()
+					val snippet = element.selectFirst(".result__snippet")?.text().orEmpty()
+					"${index + 1}. Title: $title\nSnippet: $snippet"
+				}.joinToString("\n\n")
+			}
+		} catch (e: Exception) {
+			""
+		}
+	}
+
+	private suspend fun downloadImageToCache(imageUrl: String): String? = withContext(Dispatchers.IO) {
+		val request = Request.Builder().url(imageUrl).build()
+		runCatching {
+			okHttpClient.newCall(request).execute().use { response ->
+				if (!response.isSuccessful) return@runCatching null
+				val bytes = response.body.bytes()
+				writeGeneratedImageToCache(bytes, "jpg")
+			}
+		}.getOrNull()
+	}
+
+	private fun isImageGenerationRequest(query: String): Boolean {
+		val cleaned = query.trim().lowercase()
+		val normalized = cleaned
+			.removePrefix("now ")
+			.removePrefix("please ")
+			.removePrefix("can you ")
+			.removePrefix("could you ")
+			.removePrefix("would you ")
+			.trim()
+		val hasImageVerb = Regex("""\b(generate|draw|paint|create|make)\b""").containsMatchIn(normalized)
+		val hasImageTarget = Regex(
+			"""\b(image|picture|photo|drawing|art|artwork|illustration|portrait|avatar|wallpaper|character|anime\s+girl|anime\s+boy|girl|boy|woman|man)\b""",
+		).containsMatchIn(normalized)
+		return normalized.startsWith("generate ") ||
+			normalized.startsWith("draw ") ||
+			normalized.startsWith("paint ") ||
+			normalized.startsWith("create image ") ||
+			normalized.startsWith("make an image ") ||
+			normalized.startsWith("make a drawing ") ||
+			normalized.contains("generate an image") ||
+			normalized.contains("generate a picture") ||
+			(hasImageVerb && hasImageTarget)
 	}
 
 	private suspend fun searchSources(
@@ -927,6 +1163,26 @@ class AskAiViewModel @Inject constructor(
 		val messages = readStoredMessages()
 		_state.update { it.copy(messages = messages) }
 		persistMessages(messages)
+		cleanupOrphanedImages(messages)
+	}
+
+	private fun cleanupOrphanedImages(messages: List<AskAiMessage>) {
+		launchJob(Dispatchers.IO) {
+			try {
+				val cacheDir = java.io.File(context.cacheDir, "ask_ai_images")
+				if (!cacheDir.exists()) return@launchJob
+				val activeUris = messages.mapNotNull { it.imageUri }.toSet()
+				val files = cacheDir.listFiles() ?: return@launchJob
+				for (file in files) {
+					val fileUri = Uri.fromFile(file).toString()
+					if (fileUri !in activeUris && fileUri != _state.value.selectedImageUri) {
+						file.delete()
+					}
+				}
+			} catch (e: Exception) {
+				e.printStackTraceDebug()
+			}
+		}
 	}
 
 	private fun appendMessages(vararg messages: AskAiMessage, persist: Boolean = true) {
@@ -1093,17 +1349,20 @@ class AskAiViewModel @Inject constructor(
 		}
 	}
 
-	private fun consumeDailyToken(): Boolean {
+	private fun consumeDailyToken(): Boolean = consumeDailyTokens(1)
+
+	private fun consumeDailyTokens(count: Int): Boolean {
 		if (AskAiLimitPrefs.isLimitOverrideEnabled(context)) {
 			refreshTokenState()
 			return true
 		}
 		val window = readTokenWindow()
-		if (window.used >= DAILY_TOKEN_LIMIT) {
+		val remaining = DAILY_TOKEN_LIMIT - window.used
+		if (remaining < count) {
 			refreshTokenState()
 			return false
 		}
-		val used = window.used + 1
+		val used = window.used + count
 		historyPrefs.edit {
 			putInt(KEY_TOKEN_USED, used)
 			putLong(KEY_TOKEN_RESET_AT, window.resetAtMillis)
@@ -1151,7 +1410,6 @@ class AskAiViewModel @Inject constructor(
 
 	private fun buildConversationContext(messages: List<AskAiMessage>, includeNsfw: Boolean): String {
 		val recent = messages
-			.filter { it.includeNsfw == includeNsfw }
 			.takeLast(CONVERSATION_CONTEXT_LIMIT)
 		if (recent.isEmpty()) {
 			return ""
@@ -1526,17 +1784,20 @@ class AskAiViewModel @Inject constructor(
 			.ifBlank { query }
 		val traits = detectTraits(query)
 		val asksForComics = Regex(
-			"""(?i)\b(?:manga|manhwa|manhua|comic|comics|doujin|doujinshi|hentai|webtoon|read|reading)\b""",
+			"""(?i)\b(?:manga|manhwa|manhua|comic|comics|doujin|doujinshi|hentai|webtoon)\b""",
 		).containsMatchIn(query)
 		val asksForRecommendations = Regex(
-			"""(?i)\b(?:recommend|recommendation|suggest|suggestion|similar|same|find|show|looking|pick|picks|story|trope|genre)\b""",
+			"""(?i)\b(?:recommend|recommendation|suggest|suggestion|recs|suggestions|recommendations|similar\s+to|same\s+as|something\s+like|looking\s+for|pick\s+me|picks\s+for|suggest\s+some|recommend\s+some)\b""",
 		).containsMatchIn(query)
-		val isRecommendationRequest = referenceTitle != null ||
-			requestedType != null ||
-			asksForComics ||
-			asksForRecommendations ||
+
+		val hasRecommendationIntent = asksForRecommendations ||
+			(asksForComics && Regex("""(?i)\b(?:recommend|suggest|give|show|find|list|looking|want|read|any)\b""").containsMatchIn(query)) ||
 			traits.isNotEmpty() ||
 			words.any { it in RECOMMENDATION_WORDS }
+
+		val isRecommendationRequest = referenceTitle != null ||
+			requestedType != null ||
+			hasRecommendationIntent
 		return RecommendationIntent(
 			requestedType = requestedType,
 			referenceTitle = referenceTitle,
@@ -1546,6 +1807,12 @@ class AskAiViewModel @Inject constructor(
 			isMoreRequest = isMoreRequest,
 			isRecommendationRequest = isRecommendationRequest,
 		)
+	}
+
+	private fun looksLikeRecommendation(query: String): Boolean {
+		return Regex(
+			"""(?i)\b(?:recommend|suggest|give\s+me|show\s+me|find\s+me|looking\s+for|similar\s+to|something\s+like|any\s+good|picks?\s+for|list|ntr|incest|romance|harem|isekai|action|fantasy|ecchi|smut)\b""",
+		).containsMatchIn(query)
 	}
 
 	private fun detectTraits(query: String): Set<String> {
@@ -1628,6 +1895,7 @@ class AskAiViewModel @Inject constructor(
 		private const val SEARCH_CACHE_MAX_ITEMS = 96
 		private const val DETAILS_CACHE_MAX_ITEMS = 320
 		private const val DAILY_TOKEN_LIMIT = 15
+		private const val IMAGE_GEN_TOKEN_COST = 2
 		private const val DAILY_TOKEN_RESET_MS = 24L * 60L * 60L * 1000L
 		private const val DETAIL_BATCH_SIZE = 8
 		private const val SOURCE_TIMEOUT_MS = 8_000L
@@ -1714,8 +1982,7 @@ class AskAiViewModel @Inject constructor(
 		)
 		private val GREETING_WORDS = setOf("hello", "hi", "hey", "yo", "sup", "morning", "evening")
 		private val RECOMMENDATION_WORDS = setOf(
-			"recommend", "suggest", "similar", "same", "like", "find", "show", "manga", "manhwa",
-			"manhua", "comic", "comics", "read", "looking", "story", "trope", "genre",
+			"recommend", "suggest", "similar", "find", "looking", "recommendation", "recommendations", "suggestion", "suggestions", "recs"
 		)
 		private val TRAIT_ALIASES = mapOf(
 			"underdog" to setOf("weak", "trash", "loser", "bullied", "low rank", "zero", "underdog"),
@@ -1802,13 +2069,16 @@ class AskAiViewModel @Inject constructor(
 		)
 
 		private val SAFE_SOURCE_NAMES = listOf(
-			"MANGAPLUSPARSER_EN",
-			"MANHWAZ",
+			"MANGAFREAK",
+			"WHALEMANGA",
+			"AQUAMANGA",
 		)
 
 		private val NSFW_SOURCE_NAMES = listOf(
 			"18PornComic",
 			"HentaiRead",
+			"MANGA_DISTRICT",
+			"ALLPORN_COMIC",
 		)
 
 		private val REQUIRED_TRAITS = setOf(
@@ -1838,6 +2108,7 @@ private data class TokenWindow(
 data class AskAiState(
 	val includeNsfw: Boolean = false,
 	val isLoading: Boolean = false,
+	val searchStatus: String? = null,
 	val isComposerExpanded: Boolean = true,
 	val localModelStatus: LocalAiModelStatus = LocalAiModelStatus.NotDownloaded,
 	val remainingTokens: Int = 15,

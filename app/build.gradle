@@ -28,8 +28,8 @@ android {
 		applicationId 'com.tarumi.reader'
 		minSdk = 23
 		targetSdk = 36
-		versionCode = 2147
-        versionName = '1.4.1'
+		versionCode = 2148
+        versionName = '1.4.2'
 		generatedDensities = []
 		testInstrumentationRunner 'org.koitharu.kotatsu.HiltTestRunner'
 		ksp {
@@ -47,13 +47,9 @@ android {
 		def quoteBuildConfig = { value ->
 			"\"" + (value ?: '').replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 		}
-		buildConfigField 'String', 'AI_GROQ_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_groq_api_key', ''))
-		buildConfigField 'String', 'AI_GROK_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_grok_api_key', ''))
-		buildConfigField 'String', 'AI_OPENROUTER_GEMINI_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_openrouter_gemini_api_key', ''))
-		buildConfigField 'String', 'AI_OPENROUTER_NEMOTRON_API_KEY', quoteBuildConfig(localProperties.getProperty('ai_openrouter_nemotron_api_key', ''))
-		buildConfigField 'String', 'AI_GROQ_MODEL', quoteBuildConfig(localProperties.getProperty('ai_groq_model', 'llama-3.1-8b-instant'))
-		buildConfigField 'String', 'AI_OPENROUTER_GEMINI_MODEL', quoteBuildConfig(localProperties.getProperty('ai_openrouter_gemini_model', 'google/gemini-2.0-flash-exp:free'))
-		buildConfigField 'String', 'AI_OPENROUTER_NEMOTRON_MODEL', quoteBuildConfig(localProperties.getProperty('ai_openrouter_nemotron_model', 'nvidia/nemotron-3-super:free'))
+		buildConfigField 'String', 'AI_CLOUD_PROXY_URL', quoteBuildConfig(localProperties.getProperty('ai_cloud_proxy_url', ''))
+		buildConfigField 'String', 'AI_CLOUD_PROXY_CLIENT_TOKEN', quoteBuildConfig(localProperties.getProperty('ai_cloud_proxy_client_token', ''))
+		buildConfigField 'String', 'AI_CLOUD_PROXY_MODEL', quoteBuildConfig(localProperties.getProperty('ai_cloud_proxy_model', 'gpt-4.1-mini'))
 		buildConfigField 'String', 'AI_LOCAL_MODEL_URL', quoteBuildConfig(localProperties.getProperty('ai_local_model_url', 'https://huggingface.co/AfiOne/gemma3-1b-it-int4.task/resolve/main/gemma3-1b-it-int4.task'))
 		buildConfigField 'String', 'AI_LOCAL_MODEL_FILE', quoteBuildConfig(localProperties.getProperty('ai_local_model_file', 'tarumi-local-gemma3-1b.task'))
 		buildConfigField 'long', 'AI_LOCAL_MODEL_SIZE_BYTES', localProperties.getProperty('ai_local_model_size_bytes', '554661243L')

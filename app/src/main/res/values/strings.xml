@@ -728,6 +728,9 @@
     <string name="ask_ai_safe_mode">Safe</string>
     <string name="ask_ai_nsfw_mode">18+</string>
     <string name="ask_ai_searching">Tarumi is reading the shelves...</string>
+    <string name="ask_ai_image_generated">Here is the image I generated for: "%1$s"</string>
+    <string name="ask_ai_image_failed">I was unable to generate the image. Please try again later.</string>
+    <string name="ask_ai_image_failed_detail">I was unable to generate the image: %1$s</string>
     <string name="ask_ai_reason_tags">Matched tags: %s</string>
     <string name="ask_ai_reason_title">Strong title match from your sources.</string>
     <string name="ask_ai_reason_source">Similar source result based on your request.</string>

@@ -173,6 +173,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 			pageSignatures[page] = pageResult.signature
 			val visibleManga = hydrateDetails(repository, pageResult.items)
 				.filter { it.matchesBrowserFilters(query, selectedTags) }
+				.filter { it.matchesEnglishCatalogSource(source) }
 			_state.value = _state.value.copy(
 				isLoading = false,
 				items = visibleManga,
@@ -276,6 +277,25 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		return matchesBrowserQuery(query)
 	}
 
+	private fun Manga.matchesEnglishCatalogSource(source: MangaParserSource): Boolean {
+		if (source.name !in ENGLISH_ONLY_BROWSER_SOURCES) {
+			return true
+		}
+		if (chapters.orEmpty().any { chapter ->
+				chapter.branch?.contains("english", ignoreCase = true) == true ||
+					chapter.branch?.contains("translated", ignoreCase = true) == true
+			}
+		) {
+			return true
+		}
+		return tags.any { tag ->
+			tag.key.equals("english", ignoreCase = true) ||
+				tag.title.equals("English", ignoreCase = true) ||
+				tag.key.equals("translated", ignoreCase = true) ||
+				tag.title.equals("Translated", ignoreCase = true)
+		}
+	}
+
 	private fun Manga.matchesBrowserTags(selectedTags: List<MangaTag>): Boolean {
 		if (selectedTags.size <= 1 && tags.isEmpty()) {
 			return true
@@ -335,6 +355,12 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		const val PAGE_SIZE = 25
 		private const val SOURCE_PAGE_HINT = 50
 		private const val DETAILS_CHUNK_SIZE = 5
+		private val ENGLISH_ONLY_BROWSER_SOURCES = setOf(
+			"NHENTAI",
+			"NHENTAI_TO",
+			"NHENTAI_XXX",
+			"HITOMILA",
+		)
 	}
 }
 
