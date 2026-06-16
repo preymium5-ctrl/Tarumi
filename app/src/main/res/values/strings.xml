@@ -754,7 +754,7 @@
     <string name="ask_ai_expand">Expand Ask AI controls</string>
     <string name="ask_ai_tokens">%1$d/%2$d</string>
     <string name="ask_ai_tokens_reset">Resets in %1$s</string>
-    <string name="ask_ai_tokens_empty">You used today\'s Ask AI tokens. Please wait %1$s for the reset, or use local AI when the model is downloaded.</string>
+    <string name="ask_ai_tokens_empty">You used today\'s Ask AI tokens. Please wait %1$s for the reset.</string>
     <string name="ask_ai_thinking">Tarumi is thinking...</string>
     <string name="ask_ai_typing">Tarumi is typing...</string>
     <string name="ask_ai_override_title">AI limit override</string>
@@ -1114,6 +1114,6 @@
     <string name="stats_days_pattern">%1$d days</string>
     <string name="stats_manga_summary_pattern">%1$s - %2$d chapters</string>
     <string name="genre_breakdown">Genre breakdown</string>
-    <string name="genre_stats_pattern">%1$s - %2$d chapters</string>
+    <string name="genre_stats_pattern">%1$s - %2$d chapters - %3$d%%</string>
     <string name="genre_percent_pattern">%1$d%%</string>
 </resources>

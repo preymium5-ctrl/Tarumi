@@ -55,7 +55,7 @@ import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class StatsActivity : BaseActivity<ActivityStatsBinding>(),
-	OnListItemClickListener<Manga>,
+	OnListItemClickListener<StatsRecord>,
 	PieChartView.OnSegmentClickListener,
 	AsyncListDiffer.ListListener<StatsRecord>,
 	ViewStub.OnInflateListener,
@@ -74,13 +74,26 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		viewBinding.recyclerView.adapter = adapter
 		viewBinding.chart.onSegmentClickListener = this
 		viewBinding.stubEmpty.setOnInflateListener(this)
-		viewBinding.chipPeriod.setOnClickListener(this)
+		val periodButtons = listOf(
+			viewBinding.btnPeriodDay to StatsPeriod.DAY,
+			viewBinding.btnPeriodWeek to StatsPeriod.WEEK,
+			viewBinding.btnPeriodMonth to StatsPeriod.MONTH,
+			viewBinding.btnPeriodAll to StatsPeriod.ALL,
+		)
+		for ((view, period) in periodButtons) {
+			view?.setOnClickListener {
+				viewModel.period.value = period
+			}
+		}
+		viewBinding.chipPeriod?.setOnClickListener {
+			showPeriodSelector()
+		}
 
 		viewModel.isLoading.observe(this) {
 			viewBinding.progressBar.showOrHide(it)
 		}
-		viewModel.period.observe(this) {
-			viewBinding.chipPeriod.setText(it.titleResId)
+		viewModel.period.observe(this) { activePeriod ->
+			updatePeriodTabs(activePeriod)
 		}
 		viewModel.summary.observe(this) { summary ->
 			viewBinding.textStreak.text = getString(R.string.stats_days_pattern, summary.streakDays)
@@ -131,6 +144,7 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 	}
 
 	private fun createGenreLegendRow(record: GenreStatsRecord, color: Int, total: Int): View {
+		val percent = (record.chapters * 100f / total).toInt().coerceAtLeast(1)
 		return LinearLayout(this).apply {
 			orientation = LinearLayout.VERTICAL
 			setPadding(0, 12.dp(), 0, 0)
@@ -146,7 +160,7 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 					)
 					addView(
 						TextView(context).apply {
-							text = getString(R.string.genre_stats_pattern, record.title, record.chapters)
+							text = getString(R.string.genre_stats_pattern, record.title, record.chapters, percent)
 							setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
 							textSize = 13f
 							maxLines = 1
@@ -154,9 +168,29 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 						},
 						LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
 					)
+					addView(
+						TextView(context).apply {
+							text = getString(R.string.genre_percent_pattern, percent)
+							setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+							textSize = 12f
+						},
+					)
 				},
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT,
+			)
+			addView(
+				ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+					max = 100
+					progress = percent
+					progressTintList = android.content.res.ColorStateList.valueOf(color)
+					progressBackgroundTintList = android.content.res.ColorStateList.valueOf(
+						ColorUtils.setAlphaComponent(getThemeColor(com.google.android.material.R.attr.colorOnSurface), 28),
+					)
+				},
+				LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 8.dp()).apply {
+					topMargin = 6.dp()
+				},
 			)
 		}
 	}
@@ -206,9 +240,6 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 	}
 
 	override fun onClick(v: View) {
-		when (v.id) {
-			R.id.chip_period -> showPeriodSelector()
-		}
 	}
 
 	override fun onCheckedChanged(buttonView: CompoundButton, isChecked: Boolean) {
@@ -216,13 +247,22 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		viewModel.setCategoryChecked(category, isChecked)
 	}
 
-	override fun onItemClick(item: Manga, view: View) {
-		router.showStatisticSheet(item)
+	override fun onItemClick(item: StatsRecord, view: View) {
+		val manga = item.manga
+		if (manga != null) {
+			router.showStatisticSheet(manga)
+		} else {
+			router.showOtherStatsSheet(viewModel.period.value, viewModel.selectedCategories.value)
+		}
 	}
 
 	override fun onSegmentClick(view: PieChartView, segment: PieChartView.Segment) {
-		val manga = segment.tag as? Manga ?: return
-		onItemClick(manga, view)
+		val manga = segment.tag as? Manga
+		if (manga != null) {
+			router.showStatisticSheet(manga)
+		} else {
+			router.showOtherStatsSheet(viewModel.period.value, viewModel.selectedCategories.value)
+		}
 	}
 
 	override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -260,7 +300,7 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 
 	private fun createCategoriesChips(categories: List<FavouriteCategory>) {
 		val container = viewBinding.layoutChips
-		if (container.childCount > 1) {
+		if (container.childCount > 0) {
 			// avoid duplication
 			return
 		}
@@ -287,8 +327,31 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 		}.show()
 	}
 
+	private fun updatePeriodTabs(activePeriod: StatsPeriod) {
+		viewBinding.chipPeriod?.setText(activePeriod.titleResId)
+		val tabs = listOf(
+			viewBinding.btnPeriodDay to StatsPeriod.DAY,
+			viewBinding.btnPeriodWeek to StatsPeriod.WEEK,
+			viewBinding.btnPeriodMonth to StatsPeriod.MONTH,
+			viewBinding.btnPeriodAll to StatsPeriod.ALL,
+		)
+		for ((view, period) in tabs) {
+			if (view == null) continue
+			if (period == activePeriod) {
+				view.setBackgroundResource(R.drawable.bg_period_tab_selected)
+				view.setTextColor(ContextCompat.getColor(this, R.color.taru_on_accent))
+				view.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL))
+			} else {
+				view.setBackgroundResource(R.drawable.bg_period_tab_unselected)
+				view.setTextColor(ContextCompat.getColor(this, R.color.taru_text_secondary))
+				view.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL))
+			}
+		}
+	}
+
 	private fun showPeriodSelector() {
-		val menu = PopupMenu(this, viewBinding.chipPeriod)
+		val anchor = viewBinding.chipPeriod ?: return
+		val menu = PopupMenu(this, anchor)
 		val selected = viewModel.period.value
 		for ((i, branch) in StatsPeriod.entries.withIndex()) {
 			val item = menu.menu.add(R.id.group_period, Menu.NONE, i, branch.titleResId)

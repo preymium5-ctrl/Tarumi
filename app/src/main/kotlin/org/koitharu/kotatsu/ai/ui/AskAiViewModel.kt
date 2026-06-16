@@ -80,11 +80,6 @@ class AskAiViewModel @Inject constructor(
 	init {
 		refreshTokenState()
 		restoreConversation()
-		launchJob {
-			localAiLibrarianEngine.status.collect { status ->
-				_state.update { it.copy(localModelStatus = status) }
-			}
-		}
 	}
 
 	fun setNsfw(enabled: Boolean) {
@@ -146,13 +141,7 @@ class AskAiViewModel @Inject constructor(
 		}
 	}
 
-	fun downloadLocalModel() {
-		launchJob(Dispatchers.IO) {
-			localAiLibrarianEngine.downloadModel()
-		}
-	}
-
-	fun localModelSizeBytes(): Long = localAiLibrarianEngine.expectedModelSizeBytes
+	fun localModelSizeBytes(): Long = 0L
 
 	fun ask(query: String) {
 		val normalized = query.trim()
@@ -396,12 +385,6 @@ class AskAiViewModel @Inject constructor(
 							conversationContext = conversationContext,
 						)
 					} else null)
-						?: localAiLibrarianEngine.generateConversationReply(
-							query = finalQuery,
-							includeNsfw = includeNsfw,
-							libraryContext = historyContext,
-							conversationContext = conversationContext,
-						)
 						?: buildConversationFallback(finalQuery, includeNsfw)
 					streamAssistantReply(
 						message = AskAiMessage(
@@ -472,13 +455,7 @@ class AskAiViewModel @Inject constructor(
 						)
 					} else null
 
-					aiReply ?: localAiLibrarianEngine.generateRecommendationReply(
-						query = finalQuery,
-						includeNsfw = includeNsfw,
-						results = results,
-						libraryContext = historyContext,
-						conversationContext = conversationContext,
-					) ?: buildRecommendationReply(
+					aiReply ?: buildRecommendationReply(
 						query = finalQuery,
 						effectiveQuery = effectiveQuery,
 						includeNsfw = includeNsfw,

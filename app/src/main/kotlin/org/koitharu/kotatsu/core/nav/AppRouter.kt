@@ -513,6 +513,14 @@ class AppRouter private constructor(
         }.showDistinct()
     }
 
+    fun showOtherStatsSheet(period: org.koitharu.kotatsu.stats.domain.StatsPeriod, categories: Set<Long>) {
+        org.koitharu.kotatsu.stats.ui.sheet.OtherStatsSheet().withArgs(2) {
+            putInt(org.koitharu.kotatsu.stats.ui.sheet.OtherStatsViewModel.KEY_PERIOD_ORDINAL, period.ordinal)
+            putLongArray(org.koitharu.kotatsu.stats.ui.sheet.OtherStatsViewModel.KEY_CATEGORIES, categories.toLongArray())
+        }.showDistinct()
+    }
+
+
     fun showReaderConfigSheet(mode: ReaderMode) {
         ReaderConfigSheet().withArgs(1) {
             putInt(KEY_READER_MODE, mode.id)

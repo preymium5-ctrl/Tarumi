@@ -11,6 +11,5 @@ enum class StatsPeriod(
 	DAY(R.string.day, 1),
 	WEEK(R.string.week, 7),
 	MONTH(R.string.month, 30),
-	MONTHS_3(R.string.three_months, 90),
 	ALL(R.string.all_time, Int.MAX_VALUE),
 }

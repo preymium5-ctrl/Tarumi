@@ -32,14 +32,7 @@ class AboutSettingsFragment : BasePreferenceFragment(R.string.about) {
 		findPreference<Preference>(AppSettings.KEY_APP_VERSION)?.run {
 			title = getString(R.string.app_version, BuildConfig.VERSION_NAME)
 		}
-		preferenceScreen.addPreference(
-			Preference(requireContext()).apply {
-				key = KEY_AI_LIMIT_OVERRIDE
-				title = getString(R.string.ask_ai_override_title)
-				summary = getString(R.string.ask_ai_override_summary)
-				isPersistent = false
-			},
-		)
+
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

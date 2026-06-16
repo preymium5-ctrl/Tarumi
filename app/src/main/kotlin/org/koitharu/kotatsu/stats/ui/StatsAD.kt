@@ -6,17 +6,16 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.util.KotatsuColors
 import org.koitharu.kotatsu.databinding.ItemStatsBinding
-import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.stats.domain.StatsRecord
 
 fun statsAD(
-	listener: OnListItemClickListener<Manga>,
+	listener: OnListItemClickListener<StatsRecord>,
 ) = adapterDelegateViewBinding<StatsRecord, StatsRecord, ItemStatsBinding>(
 	{ layoutInflater, parent -> ItemStatsBinding.inflate(layoutInflater, parent, false) },
 ) {
 
 	binding.root.setOnClickListener { v ->
-		listener.onItemClick(item.manga ?: return@setOnClickListener, v)
+		listener.onItemClick(item, v)
 	}
 
 	bind {
@@ -27,6 +26,6 @@ fun statsAD(
 			item.chapters,
 		)
 		binding.imageViewBadge.imageTintList = ColorStateList.valueOf(KotatsuColors.ofManga(context, item.manga))
-		binding.root.isClickable = item.manga != null
+		binding.root.isClickable = true
 	}
 }

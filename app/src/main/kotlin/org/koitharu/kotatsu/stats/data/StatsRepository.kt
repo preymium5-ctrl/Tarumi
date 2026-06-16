@@ -59,6 +59,34 @@ class StatsRepository @Inject constructor(
 		return result
 	}
 
+	suspend fun getOtherReadingStats(period: StatsPeriod, categories: Set<Long>): List<StatsRecord> {
+		val fromDate = if (period == StatsPeriod.ALL) {
+			0L
+		} else {
+			System.currentTimeMillis() - TimeUnit.DAYS.toMillis(period.days.toLong())
+		}
+		val stats = db.getStatsDao().getDurationStats(fromDate, null, categories)
+		val chapterStats = db.getStatsDao().getChapterStats(fromDate, categories)
+		val result = ArrayList<StatsRecord>()
+		val total = stats.values.sum().coerceAtLeast(1)
+		for ((mangaEntity, duration) in stats) {
+			val manga = mangaEntity.toManga(emptySet(), null)
+			val percent = duration.toDouble() / total
+			if (percent < 0.05) {
+				val chapters = chapterStats.entries
+					.firstOrNull { it.key.id == mangaEntity.id }
+					?.value
+					?.toInt() ?: 0
+				result += StatsRecord(
+					manga = manga,
+					duration = duration,
+					chapters = chapters,
+				)
+			}
+		}
+		return result.sortedByDescending { it.duration }
+	}
+
 	suspend fun getTimePerPage(mangaId: Long): Long = db.withTransaction {
 		val dao = db.getStatsDao()
 		val pages = dao.getReadPagesCount(mangaId)

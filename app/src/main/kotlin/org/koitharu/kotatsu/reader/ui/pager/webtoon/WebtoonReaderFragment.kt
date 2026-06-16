@@ -30,6 +30,7 @@ import org.koitharu.kotatsu.reader.ui.pager.BaseReaderAdapter
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>(),
@@ -141,24 +142,53 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 				?: ((firstVisiblePosition + lastVisiblePosition) / 2)
 		}
 		val scroll = (recyclerView.findViewHolderForAdapterPosition(selectedPosition) as? WebtoonHolder)?.getScrollY() ?: 0
-		val progress = calculateScrollProgress(selectedPosition, scroll)
+		val progress = calculateScrollProgress(selectedPosition, firstVisiblePosition)
 		viewModel.onCurrentPageChanged(firstVisiblePosition, lastVisiblePosition, selectedPosition, scroll, progress)
 	}
 
-	private fun calculateScrollProgress(position: Int, scroll: Int): Float? {
+	private fun calculateScrollProgress(selectedPosition: Int, firstVisiblePosition: Int): Float? {
 		val pages = currentPages
 		if (pages.isEmpty()) return null
-		val adapter = viewBinding?.recyclerView?.adapter as? BaseReaderAdapter<*>
-		val page = adapter?.getItemOrNull(position) ?: return null
-		val holder = viewBinding?.recyclerView?.findViewHolderForAdapterPosition(position) as? WebtoonHolder
-		val scrollRange = holder?.getScrollRange() ?: 0
-		val ratio = if (scrollRange > 0) scroll.toFloat() / scrollRange.toFloat() else 0f
+		val recyclerView = viewBinding?.recyclerView ?: return null
+		val adapter = recyclerView.adapter as? BaseReaderAdapter<*> ?: return null
+		val page = adapter.getItemOrNull(selectedPosition) ?: return null
 		val chapterPages = pages.filter { it.chapterId == page.chapterId }
 		val totalPagesCount = chapterPages.size
-		if (totalPagesCount > 0) {
-			return ((page.index.toFloat() + ratio) / totalPagesCount.toFloat()).coerceIn(0f, 1f)
+		if (totalPagesCount <= 0) {
+			return null
 		}
-		return null
+		if (!recyclerView.canScrollVertically(-1) && page.index <= 0) {
+			return 0f
+		}
+		if (!recyclerView.canScrollVertically(1) && page.index >= totalPagesCount - 1) {
+			return 1f
+		}
+		val pageMetrics = chapterPages.map { chapterPage ->
+			val adapterPosition = pages.indexOfFirst {
+				it.chapterId == chapterPage.chapterId && it.index == chapterPage.index
+			}
+			findWebtoonExtent(recyclerView, adapterPosition)
+		}
+		val measuredExtents = pageMetrics.mapNotNull { it?.takeIf { extent -> extent > 0 } }
+		val fallbackExtent = measuredExtents
+			.takeIf { it.isNotEmpty() }
+			?.average()
+			?.roundToInt()
+			?.coerceAtLeast(1)
+			?: recyclerView.height.coerceAtLeast(1)
+		val pageExtents = pageMetrics.map { it?.takeIf { extent -> extent > 0 } ?: fallbackExtent }
+		val totalExtent = pageExtents.sum().coerceAtLeast(1)
+		val scrollableExtent = (totalExtent - recyclerView.height).coerceAtLeast(1)
+		val anchorPosition = firstVisiblePosition
+			.takeIf { adapter.getItemOrNull(it)?.chapterId == page.chapterId }
+			?: selectedPosition
+		val anchorPage = adapter.getItemOrNull(anchorPosition) ?: page
+		val anchorChapterIndex = chapterPages.indexOfFirst { it.index == anchorPage.index }.coerceAtLeast(0)
+		val anchorHolder = recyclerView.findViewHolderForAdapterPosition(anchorPosition) as? WebtoonHolder
+		val anchorOffset = pageExtents.take(anchorChapterIndex).sum() +
+			(anchorHolder?.getScrollY() ?: 0) +
+			maxOf(0, -(anchorHolder?.itemView?.top ?: 0))
+		return (anchorOffset / scrollableExtent.toFloat()).coerceIn(0f, 1f)
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
@@ -183,7 +213,7 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 							?.restoreScroll(pendingState.scroll)
 					}
 				}
-				val progress = calculateScrollProgress(position, pendingState.scroll)
+				val progress = calculateScrollProgress(position, position)
 				viewModel.onCurrentPageChanged(position, position, position, pendingState.scroll, progress)
 			} else {
 				Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
@@ -299,6 +329,14 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 			!canScrollVertically(-1) -> first
 			else -> findCurrentPagePosition().takeIf { it != RecyclerView.NO_POSITION } ?: ((first + last) / 2)
 		}
+	}
+
+	private fun findWebtoonExtent(recyclerView: RecyclerView, position: Int): Int? {
+		if (position == RecyclerView.NO_POSITION) {
+			return null
+		}
+		val holder = recyclerView.findViewHolderForAdapterPosition(position) as? WebtoonHolder ?: return null
+		return holder.itemView.height + holder.getScrollRange()
 	}
 
 	private fun TextView.updateFeedback(progress: Float) {

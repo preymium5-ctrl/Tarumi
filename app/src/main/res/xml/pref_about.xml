@@ -4,6 +4,7 @@
 	android:title="@string/about">
 
 	<Preference
+		android:icon="@drawable/ic_app_update"
 		android:key="app_version"
 		android:persistent="false"
 		android:summary="@string/check_for_updates" />

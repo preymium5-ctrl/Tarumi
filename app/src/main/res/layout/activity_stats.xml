@@ -46,6 +46,86 @@
 		app:trackCornerRadius="0dp"
 		tools:visibility="visible" />
 
+	<com.google.android.material.card.MaterialCardView
+		android:id="@+id/card_period"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="16dp"
+		android:layout_marginTop="8dp"
+		app:cardCornerRadius="16dp"
+		app:cardElevation="0dp"
+		app:strokeWidth="1dp"
+		app:strokeColor="@color/taru_outline"
+		app:cardBackgroundColor="@color/taru_surface"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/appbar">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:padding="4dp">
+
+			<TextView
+				android:id="@+id/btn_period_day"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/day"
+				android:fontFamily="@font/outfit"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+
+			<TextView
+				android:id="@+id/btn_period_week"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/week"
+				android:fontFamily="@font/outfit"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+
+			<TextView
+				android:id="@+id/btn_period_month"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/month"
+				android:fontFamily="@font/outfit"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+
+
+			<TextView
+				android:id="@+id/btn_period_all"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/all_time"
+				android:fontFamily="@font/outfit"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+		</LinearLayout>
+	</com.google.android.material.card.MaterialCardView>
+
 	<HorizontalScrollView
 		android:id="@+id/scrollView_chips"
 		android:layout_width="0dp"
@@ -55,20 +135,12 @@
 		android:scrollbars="none"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@id/appbar">
+		app:layout_constraintTop_toBottomOf="@id/card_period">
 
 		<com.google.android.material.chip.ChipGroup
 			android:id="@+id/layout_chips"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content">
-
-			<com.google.android.material.chip.Chip
-				android:id="@+id/chip_period"
-				style="@style/Widget.Kotatsu.Chip.Dropdown"
-				android:layout_width="wrap_content"
-				android:layout_height="wrap_content"
-				android:text="@string/week"
-				app:chipIcon="@drawable/ic_history" />
 		</com.google.android.material.chip.ChipGroup>
 	</HorizontalScrollView>
 

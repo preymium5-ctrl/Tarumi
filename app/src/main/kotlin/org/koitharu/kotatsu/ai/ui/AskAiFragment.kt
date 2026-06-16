@@ -74,7 +74,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		binding.buttonComposerToggle.setOnClickListener {
 			viewModel.setComposerExpanded(!viewModel.state.value.isComposerExpanded)
 		}
-		binding.buttonLocalModel.setOnClickListener { confirmLocalModelDownload() }
+
 		binding.modeControls.setOnClickListener {
 			binding.switchNsfw.isChecked = !binding.switchNsfw.isChecked
 		}
@@ -122,16 +122,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		viewModel.ask(query)
 	}
 
-	private fun confirmLocalModelDownload() {
-		val context = context ?: return
-		val size = FileSize.BYTES.format(context, viewModel.localModelSizeBytes())
-		MaterialAlertDialogBuilder(context)
-			.setTitle(R.string.ask_ai_local_model_confirm_title)
-			.setMessage(getString(R.string.ask_ai_local_model_confirm_message, size))
-			.setNegativeButton(android.R.string.cancel, null)
-			.setPositiveButton(R.string.ask_ai_local_model_confirm_download) { _, _ -> viewModel.downloadLocalModel() }
-			.show()
-	}
+
 
 	private fun renderState(state: AskAiState) {
 		val binding = viewBinding ?: return
@@ -165,7 +156,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		}
 		binding.introRow.isVisible = state.isComposerExpanded
 		binding.modeControls.isVisible = state.isComposerExpanded
-		binding.localModelCard.isVisible = state.isComposerExpanded
+
 		binding.buttonComposerToggle.setIconResource(
 			if (state.isComposerExpanded) R.drawable.ic_arrow_down else R.drawable.ic_arrow_up,
 		)
@@ -176,49 +167,12 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		if (binding.switchNsfw.isChecked != state.includeNsfw) {
 			binding.switchNsfw.isChecked = state.includeNsfw
 		}
-		renderLocalModelStatus(state.localModelStatus)
+
 		renderMessages(binding.messagesList, state.messages, state.isLoading, state.includeNsfw, state.searchStatus)
 		binding.messagesScroll.post { binding.messagesScroll.fullScroll(View.FOCUS_DOWN) }
 	}
 
-	private fun renderLocalModelStatus(status: LocalAiModelStatus) {
-		val binding = viewBinding ?: return
-		when (status) {
-			LocalAiModelStatus.NotConfigured -> {
-				binding.textLocalModelStatus.setText(R.string.ask_ai_local_model_not_configured)
-				binding.buttonLocalModel.isVisible = false
-			}
-			LocalAiModelStatus.NotDownloaded -> {
-				binding.textLocalModelStatus.text = getString(
-					R.string.ask_ai_local_model_not_downloaded,
-				) + "\n" + getString(R.string.ask_ai_cloud_fallback)
-				binding.buttonLocalModel.isVisible = true
-				binding.buttonLocalModel.setText(R.string.ask_ai_download_local_model)
-				binding.buttonLocalModel.isEnabled = true
-			}
-			is LocalAiModelStatus.Downloading -> {
-				binding.textLocalModelStatus.text = getString(
-					R.string.ask_ai_local_model_downloading,
-					status.progress,
-				)
-				binding.buttonLocalModel.isVisible = true
-				binding.buttonLocalModel.isEnabled = false
-			}
-			LocalAiModelStatus.Ready -> {
-				binding.textLocalModelStatus.setText(R.string.ask_ai_local_model_ready)
-				binding.buttonLocalModel.isVisible = false
-			}
-			is LocalAiModelStatus.Error -> {
-				binding.textLocalModelStatus.text = getString(
-					R.string.ask_ai_local_model_error,
-					status.message,
-				) + "\n" + getString(R.string.ask_ai_cloud_fallback)
-				binding.buttonLocalModel.isVisible = true
-				binding.buttonLocalModel.setText(R.string.ask_ai_retry_local_model)
-				binding.buttonLocalModel.isEnabled = true
-			}
-		}
-	}
+
 
 	private fun renderMessages(
 		container: LinearLayout,
@@ -243,7 +197,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 		val context = container.context
 		val bubbleLayout = LinearLayout(context).apply {
 			orientation = LinearLayout.VERTICAL
-			setBackgroundResource(R.drawable.bg_taru_page_active)
+			setBackgroundResource(R.drawable.bg_ask_ai_user_bubble)
 			setPadding(12.dp(this), 12.dp(this), 12.dp(this), 12.dp(this))
 		}
 
@@ -270,7 +224,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			val textView = TextView(context).apply {
 				setTextColor(ContextCompat.getColor(context, android.R.color.white))
 				textSize = 15f
-				typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+				typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
 				text = message.text
 			}
 			bubbleLayout.addView(textView, LinearLayout.LayoutParams(
@@ -299,11 +253,14 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			gravity = Gravity.TOP
 			orientation = LinearLayout.HORIZONTAL
 		}
-		val avatar = ImageView(container.context).apply {
+		val avatar = com.google.android.material.imageview.ShapeableImageView(container.context).apply {
 			setImageResource(if (message.includeNsfw) R.drawable.ask_ai_nsfw_avatar else R.drawable.ask_ai_safe_avatar)
 			scaleType = ImageView.ScaleType.CENTER_CROP
 			setBackgroundResource(R.drawable.bg_taru_home_chip)
 			setPadding(4.dp(this), 4.dp(this), 4.dp(this), 4.dp(this))
+			shapeAppearanceModel = com.google.android.material.shape.ShapeAppearanceModel.builder()
+				.setAllCornerSizes(com.google.android.material.shape.RelativeCornerSize(0.5f))
+				.build()
 		}
 		row.addView(
 			avatar,
@@ -315,10 +272,10 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			orientation = LinearLayout.VERTICAL
 		}
 		val bubble = TextView(container.context).apply {
-			setBackgroundResource(R.drawable.bg_taru_home_feature)
+			setBackgroundResource(R.drawable.bg_ask_ai_assistant_bubble)
 			setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
 			textSize = 15f
-			typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+			typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
 			setLineSpacing(2.dp(this).toFloat(), 1f)
 			setPadding(18.dp(this), 14.dp(this), 18.dp(this), 14.dp(this))
 			this.text = if (message.isStreaming) "${message.text} |" else message.text
@@ -374,11 +331,14 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			gravity = Gravity.TOP
 			orientation = LinearLayout.HORIZONTAL
 		}
-		val avatar = ImageView(container.context).apply {
+		val avatar = com.google.android.material.imageview.ShapeableImageView(container.context).apply {
 			setImageResource(if (includeNsfw) R.drawable.ask_ai_nsfw_avatar else R.drawable.ask_ai_safe_avatar)
 			scaleType = ImageView.ScaleType.CENTER_CROP
 			setBackgroundResource(R.drawable.bg_taru_home_chip)
 			setPadding(4.dp(this), 4.dp(this), 4.dp(this), 4.dp(this))
+			shapeAppearanceModel = com.google.android.material.shape.ShapeAppearanceModel.builder()
+				.setAllCornerSizes(com.google.android.material.shape.RelativeCornerSize(0.5f))
+				.build()
 		}
 		startAvatarPulse(avatar)
 		row.addView(
@@ -391,7 +351,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			orientation = LinearLayout.VERTICAL
 		}
 		val bubble = LinearLayout(container.context).apply {
-			setBackgroundResource(R.drawable.bg_taru_home_feature)
+			setBackgroundResource(R.drawable.bg_ask_ai_assistant_bubble)
 			gravity = Gravity.CENTER_VERTICAL
 			orientation = LinearLayout.HORIZONTAL
 			setPadding(18.dp(this), 12.dp(this), 18.dp(this), 12.dp(this))
@@ -400,7 +360,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			setText(R.string.ask_ai_typing)
 			setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
 			textSize = 14f
-			typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+			typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
 		}
 		bubble.addView(label)
 		val dots = List(3) {
