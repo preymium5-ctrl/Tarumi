@@ -42,7 +42,8 @@ export default {
       return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: JSON_HEADERS });
     }
 
-    delete payload.search_parameters;
+    // Pass through search_parameters so grok can use built-in web search for image identification
+    // delete payload.search_parameters;
     if (env.AI_MODEL) {
       payload.model = env.AI_MODEL;
     }

@@ -254,27 +254,15 @@ class AskAiViewModel @Inject constructor(
 					}
 
 					if (visionIntent == "GENERAL") {
-						// General vision Q&A — answer the question using the image + web search context
-						_state.update { it.copy(searchStatus = "Searching the web...") }
-						val generatedSearchQuery = if (hasCloudAsk) {
-							cloudAiLibrarianEngine.generateVisionSearchQuery(imageBase64)
-						} else {
-							null
-						}
-						val webSearchContext = if (!generatedSearchQuery.isNullOrBlank()) {
-							performWebSearch(generatedSearchQuery)
-						} else {
-							""
-						}
-
-						_state.update { it.copy(searchStatus = "Generating response...") }
+						// General vision Q&A — answer the question using the image + web search
+						_state.update { it.copy(searchStatus = "Analyzing image...") }
 						val reply = if (hasCloudAsk) {
 							cloudAiLibrarianEngine.generateVisionReply(
 								query = finalQuery,
 								imageBase64 = imageBase64,
 								includeNsfw = includeNsfw,
 								conversationContext = conversationContext,
-								webSearchContext = webSearchContext,
+								webSearchContext = "",
 							)
 						} else {
 							null
@@ -292,33 +280,25 @@ class AskAiViewModel @Inject constructor(
 					}
 
 					// IDENTIFY flow — identify the comic title and search sources
-					_state.update { it.copy(searchStatus = "Searching the web...") }
+					_state.update { it.copy(searchStatus = "Analyzing image...") }
 					val visionQuery = """
 						$finalQuery
 
-						Identify the title of the comic in this image.
+						Use web search to identify the exact title of the comic/manga/manhwa/manhua in this image.
+						Look at the image directly — read any visible title text, dialogue, watermarks, or chapter numbers.
+						Search the web (including targeting reddit, quora, and manga forums/databases) using what you see in the image to find the correct title.
+						Do NOT guess or hallucinate a title. Only state a title if you find it through web search or recognize it with high confidence.
+						
 						Important: At the very end of your response, write exactly "[TITLE: <the identified comic title>]" (for example, "[TITLE: Solo Leveling]"). If you cannot identify the comic, write "[TITLE: Unknown]".
 					""".trimIndent()
 
-					val generatedSearchQuery = if (hasCloudAsk) {
-						cloudAiLibrarianEngine.generateVisionSearchQuery(imageBase64)
-					} else {
-						null
-					}
-					val webSearchContext = if (!generatedSearchQuery.isNullOrBlank()) {
-						performWebSearch(generatedSearchQuery)
-					} else {
-						""
-					}
-
-					_state.update { it.copy(searchStatus = "Identifying comic...") }
 					val reply = if (hasCloudAsk) {
 						cloudAiLibrarianEngine.generateVisionReply(
 							query = visionQuery,
 							imageBase64 = imageBase64,
 							includeNsfw = includeNsfw,
 							conversationContext = conversationContext,
-							webSearchContext = webSearchContext,
+							webSearchContext = "",
 						)
 					} else {
 						null
@@ -408,18 +388,20 @@ class AskAiViewModel @Inject constructor(
 
 				if (!intent.isRecommendationRequest) {
 					_state.update { it.copy(searchStatus = "Generating response...") }
-					val reply = localAiLibrarianEngine.generateConversationReply(
-						query = finalQuery,
-						includeNsfw = includeNsfw,
-						libraryContext = historyContext,
-						conversationContext = conversationContext,
-					)
-						?: (if (hasCloudAsk) cloudAiLibrarianEngine.generateConversationReply(
+					val reply = (if (hasCloudAsk) {
+						cloudAiLibrarianEngine.generateConversationReply(
 							query = finalQuery,
 							includeNsfw = includeNsfw,
 							libraryContext = historyContext,
 							conversationContext = conversationContext,
-						) else null)
+						)
+					} else null)
+						?: localAiLibrarianEngine.generateConversationReply(
+							query = finalQuery,
+							includeNsfw = includeNsfw,
+							libraryContext = historyContext,
+							conversationContext = conversationContext,
+						)
 						?: buildConversationFallback(finalQuery, includeNsfw)
 					streamAssistantReply(
 						message = AskAiMessage(
@@ -480,7 +462,23 @@ class AskAiViewModel @Inject constructor(
 				val reply = if (results.isEmpty()) {
 					buildTimedSearchFallback(finalQuery, effectiveQuery, includeNsfw, intent, previousRecommendation != null)
 				} else {
-					buildRecommendationReply(
+					val aiReply = if (hasCloudAsk) {
+						cloudAiLibrarianEngine.generateReply(
+							query = finalQuery,
+							includeNsfw = includeNsfw,
+							results = results,
+							libraryContext = historyContext,
+							conversationContext = conversationContext,
+						)
+					} else null
+
+					aiReply ?: localAiLibrarianEngine.generateRecommendationReply(
+						query = finalQuery,
+						includeNsfw = includeNsfw,
+						results = results,
+						libraryContext = historyContext,
+						conversationContext = conversationContext,
+					) ?: buildRecommendationReply(
 						query = finalQuery,
 						effectiveQuery = effectiveQuery,
 						includeNsfw = includeNsfw,
@@ -1894,7 +1892,7 @@ class AskAiViewModel @Inject constructor(
 		private const val WEB_DISCOVERY_CACHE_MAX_ITEMS = 48
 		private const val SEARCH_CACHE_MAX_ITEMS = 96
 		private const val DETAILS_CACHE_MAX_ITEMS = 320
-		private const val DAILY_TOKEN_LIMIT = 15
+		private const val DAILY_TOKEN_LIMIT = 10
 		private const val IMAGE_GEN_TOKEN_COST = 2
 		private const val DAILY_TOKEN_RESET_MS = 24L * 60L * 60L * 1000L
 		private const val DETAIL_BATCH_SIZE = 8
@@ -2111,8 +2109,8 @@ data class AskAiState(
 	val searchStatus: String? = null,
 	val isComposerExpanded: Boolean = true,
 	val localModelStatus: LocalAiModelStatus = LocalAiModelStatus.NotDownloaded,
-	val remainingTokens: Int = 15,
-	val maxTokens: Int = 15,
+	val remainingTokens: Int = 10,
+	val maxTokens: Int = 10,
 	val isLimitOverrideEnabled: Boolean = false,
 	val tokenResetAtMillis: Long = System.currentTimeMillis() + 24L * 60L * 60L * 1000L,
 	val messages: List<AskAiMessage> = emptyList(),

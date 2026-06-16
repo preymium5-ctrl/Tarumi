@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
 import org.koitharu.kotatsu.core.db.MangaDatabase
+import org.koitharu.kotatsu.core.db.entity.toEntities
 import org.koitharu.kotatsu.core.db.entity.toManga
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -48,11 +49,13 @@ class TrackingRepository @Inject constructor(
 	private var isGcCalled = AtomicBoolean(false)
 
 	suspend fun getNewChaptersCount(mangaId: Long): Int {
-		return db.getTracksDao().findNewChapters(mangaId)
+		val timeLimit = System.currentTimeMillis() - 24 * 3600 * 1000L
+		return db.getTracksDao().findNewChapters(mangaId, timeLimit)
 	}
 
 	fun observeNewChaptersCount(mangaId: Long): Flow<Int> {
-		return db.getTracksDao().observeNewChapters(mangaId)
+		val timeLimit = System.currentTimeMillis() - 24 * 3600 * 1000L
+		return db.getTracksDao().observeNewChapters(mangaId, timeLimit)
 	}
 
 	@Deprecated("")
@@ -151,7 +154,10 @@ class TrackingRepository @Inject constructor(
 
 	suspend fun markAsRead(trackLogId: Long) = db.getTrackLogsDao().markAsRead(trackLogId)
 
-	suspend fun markAllAsRead() = db.getTrackLogsDao().markAllAsRead()
+	suspend fun markAllAsRead() = db.withTransaction {
+		db.getTrackLogsDao().markAllAsRead()
+		db.getTracksDao().clearCounters()
+	}
 
 	suspend fun gc() = db.withTransaction {
 		db.getTracksDao().gc()
@@ -165,15 +171,21 @@ class TrackingRepository @Inject constructor(
 		db.withTransaction {
 			val track = getOrCreateTrack(updates.manga.id).mergeWith(updates)
 			db.getTracksDao().upsert(track)
-			if (updates is MangaUpdates.Success && updates.isValid && updates.newChapters.isNotEmpty()) {
-				progressUpdateUseCase(updates.manga)
-				val logEntity = TrackLogEntity(
-					mangaId = updates.manga.id,
-					chapters = updates.newChapters.joinToString("\n") { x -> x.name },
-					createdAt = System.currentTimeMillis(),
-					isUnread = true,
-				)
-				db.getTrackLogsDao().insert(logEntity)
+			if (updates is MangaUpdates.Success && updates.isValid) {
+				val chapters = updates.manga.chapters
+				if (!chapters.isNullOrEmpty() && db.getMangaDao().find(updates.manga.id) != null) {
+					db.getChaptersDao().replaceAll(updates.manga.id, chapters.withIndex().toEntities(updates.manga.id))
+				}
+				if (updates.newChapters.isNotEmpty()) {
+					progressUpdateUseCase(updates.manga)
+					val logEntity = TrackLogEntity(
+						mangaId = updates.manga.id,
+						chapters = updates.newChapters.joinToString("\n") { x -> x.name },
+						createdAt = System.currentTimeMillis(),
+						isUnread = true,
+					)
+					db.getTrackLogsDao().insert(logEntity)
+				}
 			}
 		}
 	}

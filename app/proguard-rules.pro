@@ -15,6 +15,13 @@
 -dontwarn org.openjsse.**
 -dontwarn com.google.j2objc.annotations.**
 -dontwarn coil3.PlatformContext
+-dontwarn com.google.auto.value.AutoValue$Builder
+-dontwarn com.google.auto.value.AutoValue
+-dontwarn com.google.protobuf.Internal$ProtoMethodMayReturnNull
+-dontwarn com.google.protobuf.Internal$ProtoNonnullApi
+-dontwarn com.google.protobuf.ProtoField
+-dontwarn com.google.protobuf.ProtoPresenceBits
+-dontwarn com.google.protobuf.ProtoPresenceCheckedField
 
 -keep class org.koitharu.kotatsu.settings.NotificationSettingsLegacyFragment
 -keep class org.koitharu.kotatsu.settings.about.changelog.ChangelogFragment

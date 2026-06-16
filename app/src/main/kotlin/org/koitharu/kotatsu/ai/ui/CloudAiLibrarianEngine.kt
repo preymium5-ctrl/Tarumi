@@ -215,17 +215,21 @@ class CloudAiLibrarianEngine @Inject constructor(
 			return@withContext null
 		}
 		val prompt = """
-			Analyze this image carefully. Your goal is to generate the BEST possible web search query to identify this comic/manga/manhwa/manhua.
+			Look at this image and identify the exact title of the comic/manga/manhwa/manhua shown.
 
-			Strategies to use:
-			1. Read ALL visible text in the image — dialogue bubbles, captions, sound effects, watermarks, credits, chapter numbers. Include exact quotes in your search query.
-			2. Identify distinctive character features — hair color, eye color, clothing, accessories, expressions.
-			3. Note the art style — is it manhwa (Korean webtoon), manga (Japanese), manhua (Chinese)?
-			4. Look for any title text, logos, or watermarks.
+			Use your web search to look up this image and find:
+			1. The exact title of the series
+			2. Any character names visible or recognizable
+			3. The chapter or volume number if visible
 
-			Correct any obvious spelling typos in visible text (e.g., 'OFFICIALLWY' → 'OFFICIALLY').
-			Combine the most identifying elements into a single optimized search query.
-			Output ONLY the search query in plain text. No quotes, no explanation, no formatting.
+			Steps:
+			1. First, read ALL visible text — title text, dialogue, watermarks, credits, chapter numbers.
+			2. Search the web using the most distinctive text or visual elements you can see.
+			3. If you recognize the art style or characters, search for those directly.
+			4. Correct any obvious misspellings in visible text before searching.
+
+			Output ONLY the most likely title as a plain text search query. No quotes, no explanation, no formatting.
+			If you can identify the title with confidence, output just the title name.
 		""".trimIndent()
 		runCatchingCancellable {
 			provider.requestVision(prompt, imageBase64)
@@ -338,7 +342,7 @@ class CloudAiLibrarianEngine @Inject constructor(
 				add(
 					buildJsonObject {
 						put("role", JsonPrimitive("system"))
-						put("content", JsonPrimitive("You are Tarumi AI, an expert at identifying manga, manhwa, manhua, and comic panels. You can recognize characters, art styles, dialogue patterns, and titles with high accuracy. Use your knowledge and any available web search results to provide confident, accurate identification. When you identify a title, state it clearly and confidently. Reply in plain text only."))
+						put("content", JsonPrimitive("You are Tarumi AI, an expert at identifying manga, manhwa, manhua, and comic panels. When asked to identify a comic from an image, you MUST use your web search capabilities to look up the image. Try multiple search queries including searching on community discussion forums and databases (like site:reddit.com, site:quora.com, site:myanimelist.net, anilist.co, etc.) to check where this image, scene, or character has been discussed. Analyze the search results carefully to extract the correct title. Do NOT guess or rely only on internal knowledge — search the web to verify. When you identify a title, state it confidently with evidence from your search. Reply in plain text only."))
 					},
 				)
 				add(

@@ -131,7 +131,6 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 	}
 
 	private fun createGenreLegendRow(record: GenreStatsRecord, color: Int, total: Int): View {
-		val percent = (record.chapters * 100f / total).toInt().coerceAtLeast(1)
 		return LinearLayout(this).apply {
 			orientation = LinearLayout.VERTICAL
 			setPadding(0, 12.dp(), 0, 0)
@@ -147,7 +146,7 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 					)
 					addView(
 						TextView(context).apply {
-							text = getString(R.string.genre_stats_pattern, record.title, record.chapters, percent)
+							text = getString(R.string.genre_stats_pattern, record.title, record.chapters)
 							setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
 							textSize = 13f
 							maxLines = 1
@@ -155,29 +154,9 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 						},
 						LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
 					)
-					addView(
-						TextView(context).apply {
-							text = getString(R.string.genre_percent_pattern, percent)
-							setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
-							textSize = 12f
-						},
-					)
 				},
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT,
-			)
-			addView(
-				ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-					max = 100
-					progress = percent
-					progressTintList = android.content.res.ColorStateList.valueOf(color)
-					progressBackgroundTintList = android.content.res.ColorStateList.valueOf(
-						ColorUtils.setAlphaComponent(getThemeColor(com.google.android.material.R.attr.colorOnSurface), 28),
-					)
-				},
-				LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 8.dp()).apply {
-					topMargin = 6.dp()
-				},
 			)
 		}
 	}

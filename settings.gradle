@@ -32,3 +32,9 @@ dependencyResolutionManagement {
 
 include ':app'
 rootProject.name = "Tarumi"
+
+includeBuild('../kotatsu-parsers-redo') {
+	dependencySubstitution {
+		substitute module('com.github.preymium5-ctrl:kotatsu-parsers-redo') using project(':')
+	}
+}
