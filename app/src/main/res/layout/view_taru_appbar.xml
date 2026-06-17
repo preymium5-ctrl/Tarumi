@@ -90,16 +90,7 @@
 		android:src="@drawable/ic_taru_search"
 		app:tint="@color/taru_text_primary" />
 
-	<ImageButton
-		android:id="@+id/buttonHistory"
-		android:layout_width="40dp"
-		android:layout_height="40dp"
-		android:layout_marginStart="6dp"
-		android:background="@drawable/bg_taru_home_button"
-		android:contentDescription="@string/history"
-		android:padding="9dp"
-		android:src="@drawable/ic_taru_history"
-		app:tint="@color/taru_text_primary" />
+
 
 	<ImageButton
 		android:id="@+id/buttonMenu"

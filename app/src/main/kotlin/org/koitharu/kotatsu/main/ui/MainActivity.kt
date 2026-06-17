@@ -127,7 +127,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		taruAppBar = viewBinding.taruAppBar
 		taruAppBar?.buttonNotifications?.setOnClickListener(this)
 		taruAppBar?.buttonSearch?.setOnClickListener(this)
-		taruAppBar?.buttonHistory?.setOnClickListener(this)
 		taruAppBar?.buttonMenu?.setOnClickListener(this)
 
 		viewBinding.fab?.setOnClickListener(this)
@@ -235,7 +234,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			R.id.fab, R.id.railFab -> viewModel.openLastReader()
 			R.id.buttonNotifications -> router.openMangaUpdates()
 			R.id.buttonSearch -> openSearch()
-			R.id.buttonHistory -> router.openHistory()
 			R.id.buttonMenu -> router.openSettings()
 		}
 	}

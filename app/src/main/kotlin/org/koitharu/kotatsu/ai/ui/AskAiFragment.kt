@@ -224,7 +224,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			val textView = TextView(context).apply {
 				setTextColor(ContextCompat.getColor(context, android.R.color.white))
 				textSize = 15f
-				typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
+				typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
 				text = message.text
 			}
 			bubbleLayout.addView(textView, LinearLayout.LayoutParams(
@@ -275,7 +275,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			setBackgroundResource(R.drawable.bg_ask_ai_assistant_bubble)
 			setTextColor(ContextCompat.getColor(context, R.color.taru_text_primary))
 			textSize = 15f
-			typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
+			typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
 			setLineSpacing(2.dp(this).toFloat(), 1f)
 			setPadding(18.dp(this), 14.dp(this), 18.dp(this), 14.dp(this))
 			this.text = if (message.isStreaming) "${message.text} |" else message.text
@@ -360,7 +360,7 @@ class AskAiFragment : BaseFragment<FragmentAskAiBinding>() {
 			setText(R.string.ask_ai_typing)
 			setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
 			textSize = 14f
-			typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.outfit)
+			typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
 		}
 		bubble.addView(label)
 		val dots = List(3) {

@@ -76,6 +76,7 @@
 		<item name="badgeViewStyle">@style/Widget.Kotatsu.BadgeView</item>
 		<item name="coverImageViewStyle">@style/Widget.Kotatsu.ImageView.Cover</item>
 		<item name="bottomNavigationStyle">@style/Widget.Tarumi.BottomNavigationView</item>
+		<item name="materialCardViewOutlinedStyle">@style/Widget.Tarumi.CardView.Outlined</item>
 		<item name="colorHomeBgStart">@color/home_bg_start</item>
 		<item name="colorHomeBgEnd">@color/home_bg_end</item>
 	</style>

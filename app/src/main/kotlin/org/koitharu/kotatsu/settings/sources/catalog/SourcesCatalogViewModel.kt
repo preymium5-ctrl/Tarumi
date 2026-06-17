@@ -136,7 +136,7 @@ class SourcesCatalogViewModel @Inject constructor(
 	): List<SourceCatalogItem> {
 		val isPreset = activePresetId != 0L
 		val sources = repository.queryParserSources(
-			isDisabledOnly = false,
+			isDisabledOnly = !isPreset,
 			isNewOnly = filter.isNewOnly,
 			excludeBroken = isPreset,
 			types = filter.types,

@@ -35,7 +35,7 @@
 			android:layout_height="wrap_content"
 			android:layout_marginStart="10dp"
 			android:layout_weight="1"
-			android:fontFamily="@font/outfit"
+			android:fontFamily="sans-serif-medium"
 			android:text="@string/ask_ai_title"
 			android:textColor="@color/taru_text_primary"
 			android:textSize="22sp" />
@@ -49,7 +49,6 @@
 			android:paddingHorizontal="12dp"
 			android:text="@string/clear"
 			android:textColor="@color/taru_text_secondary"
-			android:fontFamily="@font/outfit"
 			android:textSize="12sp" />
 	</LinearLayout>
 
@@ -94,7 +93,7 @@
 				android:layout_width="0dp"
 				android:layout_height="wrap_content"
 				android:layout_weight="1"
-				android:fontFamily="@font/outfit"
+				android:fontFamily="sans-serif-medium"
 				android:letterSpacing="0.12"
 				android:text="@string/ask_ai_memory_label"
 				android:textAllCaps="true"
@@ -105,7 +104,7 @@
 				android:id="@+id/textTokenUsage"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:fontFamily="@font/outfit"
+				android:fontFamily="sans-serif-medium"
 				android:text="@string/ask_ai_unlimited"
 				android:textColor="@color/taru_text_primary"
 				android:textSize="13sp"
@@ -127,7 +126,7 @@
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:layout_marginTop="7dp"
-			android:fontFamily="@font/outfit"
+			android:fontFamily="sans-serif"
 			android:textColor="@color/taru_text_muted"
 			android:textSize="12sp"
 			android:text="@string/ask_ai_memory_note" />
@@ -237,7 +236,7 @@
 				android:layout_height="36dp"
 				android:layout_weight="1"
 				android:background="@drawable/bg_taru_home_badge"
-				android:fontFamily="@font/outfit"
+				android:fontFamily="sans-serif-medium"
 				android:gravity="center_vertical"
 				android:letterSpacing="0.12"
 				android:paddingHorizontal="12dp"
@@ -254,7 +253,6 @@
 				android:layout_height="wrap_content"
 				android:layout_marginStart="12dp"
 				android:text="@string/ask_ai_nsfw_mode"
-				android:fontFamily="@font/outfit"
 				android:textColor="@color/taru_text_secondary"
 				android:textSize="13sp" />
 		</LinearLayout>
@@ -323,7 +321,7 @@
 				android:layout_height="wrap_content"
 				android:layout_weight="1"
 				android:background="@android:color/transparent"
-				android:fontFamily="@font/outfit"
+				android:fontFamily="sans-serif"
 				android:hint="@string/ask_ai_hint"
 				android:imeOptions="actionSearch"
 				android:inputType="textMultiLine|textCapSentences"
