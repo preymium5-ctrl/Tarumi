@@ -335,16 +335,18 @@ class StatsActivity : BaseActivity<ActivityStatsBinding>(),
 			viewBinding.btnPeriodMonth to StatsPeriod.MONTH,
 			viewBinding.btnPeriodAll to StatsPeriod.ALL,
 		)
+		val mediumTypeface = androidx.core.content.res.ResourcesCompat.getFont(this, R.font.outfit_medium)
+		val regularTypeface = androidx.core.content.res.ResourcesCompat.getFont(this, R.font.outfit_regular)
 		for ((view, period) in tabs) {
 			if (view == null) continue
 			if (period == activePeriod) {
 				view.setBackgroundResource(R.drawable.bg_period_tab_selected)
 				view.setTextColor(ContextCompat.getColor(this, R.color.taru_on_accent))
-				view.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL))
+				view.setTypeface(mediumTypeface)
 			} else {
 				view.setBackgroundResource(R.drawable.bg_period_tab_unselected)
 				view.setTextColor(ContextCompat.getColor(this, R.color.taru_text_secondary))
-				view.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL))
+				view.setTypeface(regularTypeface)
 			}
 		}
 	}

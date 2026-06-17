@@ -167,7 +167,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		}
 		featuredIndex = index.coerceIn(0, featuredComics.lastIndex)
 		val manga = featuredComics[featuredIndex]
-		binding.textFeaturedType.text = manga.detectComicType().label
+		binding.textFeaturedType.text = manga.detectComicType().label.uppercase()
 		binding.textFeaturedTitle.text = manga.title
 		binding.textFeaturedDescription.text = manga.featuredDescription()
 		val selectedCover = binding.comicsCarousel.getChildAt(featuredIndex) ?: return
@@ -230,7 +230,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		if (closestIndex != featuredIndex && closestIndex in featuredComics.indices) {
 			featuredIndex = closestIndex
 			val manga = featuredComics[closestIndex]
-			binding.textFeaturedType.text = manga.detectComicType().label
+			binding.textFeaturedType.text = manga.detectComicType().label.uppercase()
 			binding.textFeaturedTitle.text = manga.title
 			binding.textFeaturedDescription.text = manga.featuredDescription()
 		}
@@ -279,6 +279,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				itemView.findViewById<CoverImageView>(R.id.imageView_cover)
 					.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
 				itemView.findViewById<android.widget.TextView>(R.id.textView_title).text = manga.title
+				itemView.findViewById<android.widget.TextView>(R.id.textView_rank).text = (index + 1).toString()
 				itemView.contentDescription = manga.title
 				itemView.setOnClickListener { router.openDetails(manga) }
 				row.addView(itemView)
