@@ -3,6 +3,7 @@
 	<string-array name="themes" translatable="false">
 		<item>@string/light</item>
 		<item>@string/dark</item>
+		<item>@string/theme_name_coffee</item>
 	</string-array>
 	<string-array name="zoom_modes" translatable="false">
 		<item>@string/zoom_mode_fit_center</item>

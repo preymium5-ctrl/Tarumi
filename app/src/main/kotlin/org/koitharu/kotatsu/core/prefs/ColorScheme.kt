@@ -24,6 +24,7 @@ enum class ColorScheme(
 	MAMIMI(R.style.ThemeOverlay_Kotatsu_Mamimi, R.string.theme_name_mamimi),
 	KANADE(R.style.ThemeOverlay_Kotatsu_Kanade, R.string.theme_name_kanade),
 	ITSUKA(R.style.ThemeOverlay_Kotatsu_Itsuka, R.string.theme_name_itsuka),
+	COFFEE(R.style.ThemeOverlay_Kotatsu_Coffee, R.string.theme_name_coffee),
 	;
 
 	companion object {

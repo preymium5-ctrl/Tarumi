@@ -53,7 +53,7 @@ class AppearanceSettingsFragment :
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         addPreferencesFromResource(R.xml.pref_appearance)
         findPreference<ListPreference>(AppSettings.KEY_THEME)?.run {
-            if (value != "1" && value != "2") {
+            if (value != "1" && value != "2" && value != "3") {
                 value = "1"
             }
         }

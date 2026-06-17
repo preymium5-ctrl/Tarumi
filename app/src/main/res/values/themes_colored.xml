@@ -48,6 +48,8 @@
 		<item name="colorSurfaceContainer">@color/totoro_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/totoro_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/totoro_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/home_bg_start</item>
+		<item name="colorHomeBgEnd">@color/home_bg_end</item>
 	</style>
 	<!-- Asuka -->
 	<style name="ThemeOverlay.Kotatsu.Asuka">
@@ -97,6 +99,8 @@
 		<item name="colorSurfaceContainer">@color/asuka_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/asuka_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/asuka_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/asuka_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/asuka_background</item>
 	</style>
 
 	<!-- Itsuka -->
@@ -147,6 +151,8 @@
 		<item name="colorSurfaceContainer">@color/itsuka_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/itsuka_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/itsuka_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/itsuka_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/itsuka_background</item>
 	</style>
 	<!-- Kanade -->
 	<style name="ThemeOverlay.Kotatsu.Kanade">
@@ -196,6 +202,8 @@
 		<item name="colorSurfaceContainer">@color/kanade_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/kanade_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/kanade_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/kanade_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/kanade_background</item>
 	</style>
 	<!-- Mamimi -->
 	<style name="ThemeOverlay.Kotatsu.Mamimi">
@@ -245,6 +253,8 @@
 		<item name="colorSurfaceContainer">@color/mamimi_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/mamimi_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/mamimi_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/mamimi_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/mamimi_background</item>
 	</style>
 	<!-- Miku -->
 	<style name="ThemeOverlay.Kotatsu.Miku">
@@ -294,6 +304,8 @@
 		<item name="colorSurfaceContainer">@color/miku_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/miku_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/miku_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/miku_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/miku_background</item>
 	</style>
 	<!-- Mion -->
 	<style name="ThemeOverlay.Kotatsu.Mion">
@@ -343,6 +355,8 @@
 		<item name="colorSurfaceContainer">@color/mion_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/mion_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/mion_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/mion_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/mion_background</item>
 	</style>
 	<!-- Rikka -->
 	<style name="ThemeOverlay.Kotatsu.Rikka">
@@ -392,12 +406,12 @@
 		<item name="colorSurfaceContainer">@color/rikka_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/rikka_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/rikka_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/rikka_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/rikka_background</item>
 	</style>
 	<!-- Sakura -->
 	<style name="ThemeOverlay.Kotatsu.Sakura">
 		<item name="colorPrimary">@color/sakura_primary</item>
-		<item name="colorOnPrimary">@color/sakura_onPrimary</item>
-		<item name="colorPrimaryContainer">@color/sakura_primaryContainer</item>
 		<item name="colorOnPrimaryContainer">@color/sakura_onPrimaryContainer</item>
 		<item name="colorSecondary">@color/sakura_secondary</item>
 		<item name="colorOnSecondary">@color/sakura_onSecondary</item>
@@ -441,5 +455,58 @@
 		<item name="colorSurfaceContainer">@color/sakura_surfaceContainer</item>
 		<item name="colorSurfaceContainerHigh">@color/sakura_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/sakura_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/sakura_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/sakura_background</item>
+	</style>
+	<!-- Coffee -->
+	<style name="ThemeOverlay.Kotatsu.Coffee">
+		<item name="colorPrimary">@color/coffee_primary</item>
+		<item name="colorOnPrimary">@color/coffee_onPrimary</item>
+		<item name="colorPrimaryContainer">@color/coffee_primaryContainer</item>
+		<item name="colorOnPrimaryContainer">@color/coffee_onPrimaryContainer</item>
+		<item name="colorSecondary">@color/coffee_secondary</item>
+		<item name="colorOnSecondary">@color/coffee_onSecondary</item>
+		<item name="colorSecondaryContainer">@color/coffee_secondaryContainer</item>
+		<item name="colorOnSecondaryContainer">@color/coffee_onSecondaryContainer</item>
+		<item name="colorTertiary">@color/coffee_tertiary</item>
+		<item name="colorOnTertiary">@color/coffee_onTertiary</item>
+		<item name="colorTertiaryContainer">@color/coffee_tertiaryContainer</item>
+		<item name="colorOnTertiaryContainer">@color/coffee_onTertiaryContainer</item>
+		<item name="colorError">@color/coffee_error</item>
+		<item name="colorOnError">@color/coffee_onError</item>
+		<item name="colorErrorContainer">@color/coffee_errorContainer</item>
+		<item name="colorOnErrorContainer">@color/coffee_onErrorContainer</item>
+		<item name="android:colorBackground">@color/coffee_background</item>
+		<item name="colorOnBackground">@color/coffee_onBackground</item>
+		<item name="colorSurface">@color/coffee_surface</item>
+		<item name="colorOnSurface">@color/coffee_onSurface</item>
+		<item name="colorSurfaceVariant">@color/coffee_surfaceVariant</item>
+		<item name="colorOnSurfaceVariant">@color/coffee_onSurfaceVariant</item>
+		<item name="colorOutline">@color/coffee_outline</item>
+		<item name="colorOutlineVariant">@color/coffee_outlineVariant</item>
+		<item name="colorSurfaceInverse">@color/coffee_inverseSurface</item>
+		<item name="colorOnSurfaceInverse">@color/coffee_inverseOnSurface</item>
+		<item name="colorPrimaryInverse">@color/coffee_inversePrimary</item>
+		<item name="colorPrimaryFixed">@color/coffee_primaryFixed</item>
+		<item name="colorOnPrimaryFixed">@color/coffee_onPrimaryFixed</item>
+		<item name="colorPrimaryFixedDim">@color/coffee_primaryFixedDim</item>
+		<item name="colorOnPrimaryFixedVariant">@color/coffee_onPrimaryFixedVariant</item>
+		<item name="colorSecondaryFixed">@color/coffee_secondaryFixed</item>
+		<item name="colorOnSecondaryFixed">@color/coffee_onSecondaryFixed</item>
+		<item name="colorSecondaryFixedDim">@color/coffee_secondaryFixedDim</item>
+		<item name="colorOnSecondaryFixedVariant">@color/coffee_onSecondaryFixedVariant</item>
+		<item name="colorTertiaryFixed">@color/coffee_tertiaryFixed</item>
+		<item name="colorOnTertiaryFixed">@color/coffee_onTertiaryFixed</item>
+		<item name="colorTertiaryFixedDim">@color/coffee_tertiaryFixedDim</item>
+		<item name="colorOnTertiaryFixedVariant">@color/coffee_onTertiaryFixedVariant</item>
+		<item name="colorSurfaceDim">@color/coffee_surfaceDim</item>
+		<item name="colorSurfaceBright">@color/coffee_surfaceBright</item>
+		<item name="colorSurfaceContainerLowest">@color/coffee_surfaceContainerLowest</item>
+		<item name="colorSurfaceContainerLow">@color/coffee_surfaceContainerLow</item>
+		<item name="colorSurfaceContainer">@color/coffee_surfaceContainer</item>
+		<item name="colorSurfaceContainerHigh">@color/coffee_surfaceContainerHigh</item>
+		<item name="colorSurfaceContainerHighest">@color/coffee_surfaceContainerHighest</item>
+		<item name="colorHomeBgStart">@color/coffee_surfaceContainer</item>
+		<item name="colorHomeBgEnd">@color/coffee_background</item>
 	</style>
 </resources>

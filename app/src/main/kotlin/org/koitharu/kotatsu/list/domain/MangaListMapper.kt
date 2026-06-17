@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.chaptersCount
 import org.koitharu.kotatsu.core.model.getLocalizedTitle
+import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
@@ -127,10 +128,12 @@ class MangaListMapper @Inject constructor(
 			manga
 		}
 		val chapters = mangaWithChapters.chapters.orEmpty()
+		val branch = mangaWithChapters.getPreferredBranch(history)
+		val branchChapters = mangaWithChapters.getChapters(branch).orEmpty().ifEmpty { chapters }
 		val currentChapter = history?.let { chapters.findById(it.chapterId) }
-		val latestChapter = chapters.maxWithOrNull(compareBy({ it.number }, { it.uploadDate }))
+		val latestChapter = branchChapters.latestChapter()
 		val currentChapterIndex = currentChapter?.let { chapter ->
-			chapters.indexOfFirst { it.id == chapter.id }.takeIf { it >= 0 }?.plus(1)
+			branchChapters.indexOfFirst { it.id == chapter.id }.takeIf { it >= 0 }?.plus(1)
 		}
 		val totalChapters = mangaWithChapters.chaptersCount().takeIf { it > 0 } ?: history?.chaptersCount ?: progress?.totalChapters ?: 0
 		val currentChapterNumber = currentChapter?.numberString()
@@ -161,6 +164,11 @@ class MangaListMapper @Inject constructor(
 			showRemoveAction = showRemoveAction,
 		)
 	}
+
+	private fun List<org.koitharu.kotatsu.parsers.model.MangaChapter>.latestChapter() =
+		filter { it.uploadDate > 0L }.maxByOrNull { it.uploadDate }
+			?: filter { it.number > 0 }.maxByOrNull { it.number }
+			?: lastOrNull()
 
 	private suspend fun toGridModel(
 		manga: Manga,

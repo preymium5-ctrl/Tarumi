@@ -7,47 +7,53 @@
 	android:layout_height="wrap_content"
 	android:orientation="vertical">
 
-	<FrameLayout
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_cover"
 		android:layout_width="match_parent"
-		android:layout_height="wrap_content">
-
-		<org.koitharu.kotatsu.image.ui.CoverImageView
-			android:id="@+id/imageView_cover"
-			android:layout_width="match_parent"
-			android:layout_height="250dp"
-			android:background="@drawable/bg_taru_cover_peek"
-			android:scaleType="centerCrop"
-			app:allowRgb565="true"
-			app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover"
-			tools:ignore="ContentDescription"
-			tools:src="@tools:sample/backgrounds/scenic[5]" />
-
-		<TextView
-			android:id="@+id/textView_rank"
-			android:layout_width="28dp"
-			android:layout_height="28dp"
-			android:layout_gravity="top|start"
-			android:layout_marginStart="8dp"
-			android:layout_marginTop="8dp"
-			android:background="@drawable/bg_taru_rank_badge"
-			android:gravity="center"
-			android:fontFamily="@font/outfit"
-			android:textColor="@color/taru_on_accent"
-			android:textSize="12sp"
-			android:textStyle="bold"
-			tools:text="1" />
-	</FrameLayout>
+		android:layout_height="wrap_content"
+		android:background="@drawable/bg_taru_cover_peek"
+		android:scaleType="centerCrop"
+		app:allowRgb565="true"
+		app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover"
+		app:aspectRationWidth="13"
+		app:aspectRationHeight="18"
+		tools:ignore="ContentDescription"
+		tools:src="@tools:sample/backgrounds/scenic[5]" />
 
 	<TextView
 		android:id="@+id/textView_title"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:layout_marginTop="8dp"
+		android:layout_marginTop="11dp"
 		android:ellipsize="end"
-		android:fontFamily="@font/outfit"
-		android:lineSpacingExtra="2dp"
-		android:maxLines="2"
+		android:fontFamily="sans-serif-medium"
+		android:maxLines="1"
 		android:textColor="@color/taru_text_primary"
 		android:textSize="14sp"
 		tools:text="Record of Ragnarok" />
+
+	<TextView
+		android:id="@+id/textView_chapter"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="2dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="1"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="12sp"
+		tools:text="Chapter 81" />
+
+	<TextView
+		android:id="@+id/textView_rating"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="2dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="1"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="12sp"
+		tools:text="★★★★★ 9.7" />
+
 </LinearLayout>

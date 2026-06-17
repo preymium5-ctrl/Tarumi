@@ -38,4 +38,6 @@
 	<color name="background_sakura">#191C1D</color>
 	<color name="background_mamimi">#201A1A</color>
 	<color name="background_kanade">#222222</color>
+	<color name="home_bg_start">#07111F</color>
+	<color name="home_bg_end">#101A2D</color>
 </resources>

@@ -45,7 +45,6 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
 	override fun onViewBindingCreated(binding: FragmentHomeBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
-		binding.buttonSeeMore.setOnClickListener { router.openTrending() }
 		binding.buttonContinueReadingAll.setOnClickListener { router.openContinueReading() }
 		binding.buttonContinueReadingSeeAll.setOnClickListener { router.openContinueReading() }
 		viewModel.continueReadingComics.observe(viewLifecycleOwner, ::renderContinueReading)
@@ -238,7 +237,8 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
 	private fun renderTrendingComics(comics: List<Manga>) {
 		val binding = viewBinding ?: return
-		val isLoading = comics.isEmpty()
+		val visibleComics = comics.take(6)
+		val isLoading = visibleComics.isEmpty()
 		binding.trendingLoading.isVisible = isLoading
 		binding.trendingGrid.isVisible = !isLoading
 		if (isLoading) {
@@ -250,7 +250,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		val colSpacingPx = (18 * context.resources.displayMetrics.density).toInt()
 		binding.trendingGrid.removeAllViews()
 
-		val rows = (comics.size + COLUMNS - 1) / COLUMNS
+		val rows = (visibleComics.size + COLUMNS - 1) / COLUMNS
 		for (rowIndex in 0 until rows) {
 			val row = LinearLayout(context).apply {
 				orientation = LinearLayout.HORIZONTAL
@@ -263,7 +263,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			}
 			for (col in 0 until COLUMNS) {
 				val index = rowIndex * COLUMNS + col
-				if (index >= comics.size) {
+				if (index >= visibleComics.size) {
 					val spacer = View(context)
 					val lp = LinearLayout.LayoutParams(0, 0, 1f)
 					if (col > 0) lp.marginStart = colSpacingPx
@@ -271,7 +271,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 					row.addView(spacer)
 					continue
 				}
-				val manga = comics[index]
+				val manga = visibleComics[index]
 				val itemView = inflater.inflate(R.layout.item_home_trending_cover, row, false)
 				val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
 				if (col > 0) lp.marginStart = colSpacingPx
@@ -279,7 +279,34 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				itemView.findViewById<CoverImageView>(R.id.imageView_cover)
 					.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
 				itemView.findViewById<android.widget.TextView>(R.id.textView_title).text = manga.title
-				itemView.findViewById<android.widget.TextView>(R.id.textView_rank).text = (index + 1).toString()
+
+				val chapterView = itemView.findViewById<android.widget.TextView>(R.id.textView_chapter)
+				val latestChapter = manga.chapters?.sortedWith(HomeViewModel.CHAPTER_COMPARATOR)?.firstOrNull()
+				if (latestChapter != null) {
+					chapterView.visibility = View.VISIBLE
+					chapterView.text = latestChapter.title
+				} else {
+					chapterView.visibility = View.GONE
+				}
+
+				val ratingView = itemView.findViewById<android.widget.TextView>(R.id.textView_rating)
+				if (manga.hasRating) {
+					ratingView.visibility = View.VISIBLE
+					val ratingVal = manga.rating * 10f
+					val ratingText = String.format(java.util.Locale.US, "%.1f", ratingVal)
+					val starsStr = "★★★★★"
+					val fullText = "$starsStr  $ratingText"
+					val spannable = android.text.SpannableString(fullText)
+					spannable.setSpan(
+						android.text.style.ForegroundColorSpan(ContextCompat.getColor(context, R.color.common_yellow)),
+						0, starsStr.length,
+						android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+					)
+					ratingView.text = spannable
+				} else {
+					ratingView.visibility = View.GONE
+				}
+
 				itemView.contentDescription = manga.title
 				itemView.setOnClickListener { router.openDetails(manga) }
 				row.addView(itemView)

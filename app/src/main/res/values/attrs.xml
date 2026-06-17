@@ -218,4 +218,7 @@
 		<attr name="number" />
 	</declare-styleable>
 
+	<attr name="colorHomeBgStart" format="color" />
+	<attr name="colorHomeBgEnd" format="color" />
+
 </resources>

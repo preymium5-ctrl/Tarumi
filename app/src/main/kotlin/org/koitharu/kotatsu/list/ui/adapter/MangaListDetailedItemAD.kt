@@ -21,8 +21,8 @@ fun mangaListDetailedItemAD(
 
 	bind { payloads ->
 		binding.textViewTitle.text = item.title
-		binding.textViewAuthor.text = item.latestChapterNumber?.let { "Latest $it" }
-			?: item.latestChapterTitle?.let { "Latest $it" }
+		binding.textViewAuthor.text = item.latestChapterTitle?.let { "Latest $it" }
+			?: item.latestChapterNumber?.let { "Latest $it" }
 			?: "Latest unknown"
 		binding.textViewCurrentChapter.text = when {
 			item.currentChapterNumber != null && item.totalChapterLabel != null ->

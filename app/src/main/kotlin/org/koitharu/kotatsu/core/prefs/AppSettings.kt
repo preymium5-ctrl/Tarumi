@@ -60,11 +60,16 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val theme: Int
 		get() = when (prefs.getString(KEY_THEME, null)?.toIntOrNull()) {
 			AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.MODE_NIGHT_YES
+			THEME_COFFEE -> AppCompatDelegate.MODE_NIGHT_NO
 			else -> AppCompatDelegate.MODE_NIGHT_NO
 		}
 
 	val colorScheme: ColorScheme
-		get() = ColorScheme.default
+		get() = if (prefs.getString(KEY_THEME, null)?.toIntOrNull() == THEME_COFFEE) {
+			ColorScheme.COFFEE
+		} else {
+			prefs.getEnumValue(KEY_COLOR_THEME, ColorScheme.default)
+		}
 
 	val isAmoledTheme: Boolean
 		get() = false
@@ -808,6 +813,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_THEME = "theme"
 		const val KEY_COLOR_THEME = "color_theme"
 		const val KEY_THEME_AMOLED = "amoled_theme"
+		private const val THEME_COFFEE = 3
 		const val KEY_OFFLINE_DISABLED = "no_offline"
 		const val KEY_PAGES_CACHE_CLEAR = "pages_cache_clear"
 		const val KEY_HTTP_CACHE_CLEAR = "http_cache_clear"

@@ -105,6 +105,7 @@
     <string name="filter">Filter</string>
     <string name="saved_filters">Saved filters</string>
     <string name="theme">Theme</string>
+    <string name="theme_mode">Theme mode</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
     <!-- Should be as abstract as possible -->
@@ -456,6 +457,7 @@
     <string name="theme_name_sakura">Sakura</string>
     <string name="theme_name_mamimi">Mamimi</string>
     <string name="theme_name_kanade">Kanade</string>
+    <string name="theme_name_coffee">Coffee</string>
     <string name="nothing_here">There is nothing here</string>
     <string name="scrobbling_empty_hint">To track reading progress, select Menu â†’ Track on the manga details screen.</string>
     <string name="services">Services</string>

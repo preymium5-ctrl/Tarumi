@@ -98,6 +98,15 @@ class HomeViewModel @Inject constructor(
 		restoreCachedHomeFeed()
 		_featuredComics.value = cachedFeaturedComics
 		_trendingComics.value = cachedTrendingComics
+		if (cachedTrendingComics.isNotEmpty()) {
+			launchJob(Dispatchers.Default) {
+				val updatedTrending = cachedTrendingComics.map { manga ->
+					async { loadMangaDetailsOrDefault(manga) }
+				}.awaitAll()
+				cachedTrendingComics = updatedTrending
+				_trendingComics.value = updatedTrending
+			}
+		}
 		_recentUpdates.value = cachedRecentUpdates.visibleRecentUpdates()
 		_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty() && isRecentUpdatesLoading
 		_manhuaRecommendations.value = cachedManhuaRecommendations
@@ -124,7 +133,7 @@ class HomeViewModel @Inject constructor(
 				val all = loadAsuraComics(FEATURED_POOL_LIMIT)
 				val featuredPool = all.rotateForPeriod(featuredPeriod)
 				val featured = featuredPool.take(FEATURED_LIMIT).map { loadMangaDetailsOrDefault(it) }
-				val trending = featuredPool.drop(FEATURED_LIMIT).take(TRENDING_LIMIT)
+				val trending = featuredPool.drop(FEATURED_LIMIT).take(TRENDING_LIMIT).map { loadMangaDetailsOrDefault(it) }
 				cachedFeaturedComics = featured
 				cachedTrendingComics = trending
 				cachedFeaturedPeriod = featuredPeriod
@@ -803,7 +812,7 @@ class HomeViewModel @Inject constructor(
 		)
 	}
 
-	private companion object {
+	companion object {
 		var cachedFeaturedComics: List<Manga> = emptyList()
 		var cachedTrendingComics: List<Manga> = emptyList()
 		var cachedRecentUpdates: List<RecentUpdateGroup> = emptyList()
@@ -845,10 +854,10 @@ class HomeViewModel @Inject constructor(
 		const val RECENT_DETAILS_TIMEOUT_MS = 4_000L
 		const val RECENT_SOURCE_PAGE_DELAY_MS = 350L
 		const val RECENT_DETAILS_DELAY_MS = 60L
-		const val HOME_CACHE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
+		const val HOME_CACHE_TTL_MS = 24L * 60L * 60L * 1000L
 		const val RECENT_CACHE_TTL_MS = 6L * 60L * 60L * 1000L
 		const val RECENT_CACHE_VERSION = 10
-		const val FEATURED_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
+		const val FEATURED_ROTATION_MS = 24L * 60L * 60L * 1000L
 		const val RECOMMENDATION_ROTATION_MS = 3L * 24L * 60L * 60L * 1000L
 		const val SMART_RECOMMENDATION_ROTATION_MS = 24L * 60L * 60L * 1000L
 		const val WEEBCENTRAL_HOME_URL = "https://weebcentral.com/"

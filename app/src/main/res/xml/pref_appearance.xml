@@ -9,8 +9,12 @@
         android:entries="@array/themes"
         android:entryValues="@array/values_theme"
         android:key="theme"
-        android:title="@string/theme"
+        android:title="@string/theme_mode"
         app:useSimpleSummaryProvider="true" />
+
+    <org.koitharu.kotatsu.settings.utils.ThemeChooserPreference
+        android:key="color_theme"
+        android:title="@string/theme" />
 
     <org.koitharu.kotatsu.settings.utils.ActivityListPreference
         android:key="app_locale"

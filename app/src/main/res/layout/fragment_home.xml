@@ -86,22 +86,11 @@
 			<TextView
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:fontFamily="@font/outfit"
-				android:text="CURATED WEEKLY"
-				android:textColor="@color/taru_accent"
-				android:textSize="11sp"
-				android:textStyle="bold"
-				android:letterSpacing="0.12"
-				android:layout_marginBottom="4dp" />
-
-			<TextView
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:fontFamily="@font/outfit"
+				android:fontFamily="sans-serif"
 				android:text="@string/featured_manhwa"
 				android:textColor="@color/taru_text_primary"
-				android:textSize="26sp"
-				android:textStyle="bold" />
+				android:textSize="30sp"
+				android:textStyle="normal" />
 
 			<LinearLayout
 				android:layout_width="match_parent"
@@ -114,16 +103,14 @@
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
 					android:background="@drawable/bg_taru_home_chip_active"
-					android:fontFamily="@font/outfit"
+					android:fontFamily="sans-serif"
 					android:gravity="center"
-					android:minHeight="30dp"
-					android:paddingHorizontal="12dp"
-					android:paddingVertical="4dp"
-					android:text="COMIC"
+					android:minHeight="32dp"
+					android:paddingHorizontal="14dp"
+					android:paddingVertical="6dp"
+					android:text="Comic"
 					android:textColor="@color/taru_text_primary"
-					android:textSize="11sp"
-					android:textStyle="bold"
-					android:letterSpacing="0.06"
+					android:textSize="13sp"
 					tools:ignore="HardcodedText" />
 
 				<TextView
@@ -131,16 +118,14 @@
 					android:layout_height="wrap_content"
 					android:layout_marginStart="8dp"
 					android:background="@drawable/bg_taru_home_chip"
-					android:fontFamily="@font/outfit"
+					android:fontFamily="sans-serif"
 					android:gravity="center"
-					android:minHeight="30dp"
-					android:paddingHorizontal="12dp"
-					android:paddingVertical="4dp"
-					android:text="ONGOING"
+					android:minHeight="32dp"
+					android:paddingHorizontal="14dp"
+					android:paddingVertical="6dp"
+					android:text="Ongoing"
 					android:textColor="@color/taru_text_primary"
-					android:textSize="11sp"
-					android:textStyle="bold"
-					android:letterSpacing="0.06"
+					android:textSize="13sp"
 					tools:ignore="HardcodedText" />
 			</LinearLayout>
 
@@ -148,23 +133,23 @@
 				android:id="@+id/textFeaturedTitle"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginTop="16dp"
-				android:fontFamily="@font/outfit"
-				android:lineSpacingMultiplier="1.1"
+				android:layout_marginTop="14dp"
+				android:fontFamily="sans-serif"
+				android:lineSpacingMultiplier="1.05"
 				android:text=""
 				android:textColor="@color/taru_text_primary"
-				android:textSize="24sp"
-				android:textStyle="bold"
+				android:textSize="29sp"
+				android:textStyle="normal"
 				tools:ignore="HardcodedText" />
 
 			<TextView
 				android:id="@+id/textFeaturedDescription"
 				android:layout_width="match_parent"
 				android:layout_height="58dp"
-				android:layout_marginTop="8dp"
+				android:layout_marginTop="10dp"
 				android:ellipsize="end"
-				android:fontFamily="@font/outfit"
-				android:lineSpacingExtra="3dp"
+				android:fontFamily="sans-serif"
+				android:lineSpacingExtra="2dp"
 				android:maxLines="3"
 				android:text=""
 				android:textColor="@color/taru_text_secondary"
@@ -205,47 +190,11 @@
 			<TextView
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:fontFamily="@font/outfit"
-				android:text="POPULAR NOW"
-				android:textColor="@color/taru_accent"
-				android:textSize="11sp"
-				android:textStyle="bold"
-				android:letterSpacing="0.12"
-				android:layout_marginBottom="4dp" />
-
-			<LinearLayout
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:gravity="center_vertical"
-				android:orientation="horizontal">
-
-				<TextView
-					android:layout_width="0dp"
-					android:layout_height="wrap_content"
-					android:layout_weight="1"
-					android:fontFamily="@font/outfit"
-					android:text="@string/trending_title"
-					android:textColor="@color/taru_text_primary"
-					android:textSize="26sp"
-					android:textStyle="bold" />
-
-				<TextView
-					android:id="@+id/buttonSeeMore"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:background="?attr/selectableItemBackground"
-					android:drawablePadding="4dp"
-					android:fontFamily="@font/outfit"
-					android:gravity="center_vertical"
-					android:paddingHorizontal="6dp"
-					android:paddingVertical="6dp"
-					android:text="@string/see_more"
-					android:textColor="@color/taru_text_secondary"
-					android:textSize="14sp"
-					android:textStyle="normal"
-					app:drawableEndCompat="@drawable/ic_taru_chevron_right"
-					app:drawableTint="@color/taru_text_secondary" />
-			</LinearLayout>
+				android:fontFamily="sans-serif"
+				android:text="@string/trending_title"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="30sp"
+				android:textStyle="normal" />
 
 			<LinearLayout
 				android:id="@+id/trendingGrid"
