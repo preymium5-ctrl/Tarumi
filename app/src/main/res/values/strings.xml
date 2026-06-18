@@ -1118,4 +1118,6 @@
     <string name="genre_breakdown">Genre breakdown</string>
     <string name="genre_stats_pattern">%1$s - %2$d chapters - %3$d%%</string>
     <string name="genre_percent_pattern">%1$d%%</string>
+    <string name="disabled_catalog">Disabled Catalog</string>
+    <string name="enabled_catalog">Enabled Catalog</string>
 </resources>

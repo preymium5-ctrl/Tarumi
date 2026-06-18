@@ -54,6 +54,37 @@
 			app:icon="@drawable/ic_web"
 			app:iconGravity="textStart" />
 
+		<com.google.android.material.button.MaterialButtonToggleGroup
+			android:id="@+id/toggleGroupCatalog"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginHorizontal="@dimen/list_spacing_large"
+			android:layout_marginBottom="@dimen/margin_small"
+			android:baselineAligned="false"
+			android:orientation="horizontal"
+			app:selectionRequired="true"
+			app:singleSelection="true">
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/buttonShowAdded"
+				style="?attr/materialButtonOutlinedStyle"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Added"
+				app:icon="@drawable/ic_check" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/buttonShowAvailable"
+				style="?attr/materialButtonOutlinedStyle"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Available"
+				app:icon="@drawable/ic_add" />
+
+		</com.google.android.material.button.MaterialButtonToggleGroup>
+
 	</com.google.android.material.appbar.AppBarLayout>
 
 	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView

@@ -345,7 +345,7 @@ class MangaSourcesRepository @Inject constructor(
 	}
 
 	private fun MangaSourceInfo.isVisibleInDiscover(): Boolean {
-		return !mangaSource.isNsfw()
+		return true
 	}
 
 	private suspend fun setSourcesPinnedImpl(sources: Collection<MangaSource>, isPinned: Boolean) {

@@ -68,6 +68,21 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		combine(viewModel.appliedFilter, viewModel.hasNewSources, viewModel.contentTypes, ::Triple).observe(this) {
 			updateFilers(it.first, it.second, it.third)
 		}
+		viewBinding.toggleGroupCatalog.isGone = viewModel.isPresetMode
+		viewBinding.toggleGroupCatalog.addOnButtonCheckedListener { _, checkedId, isChecked ->
+			if (isChecked) {
+				val showDisabled = checkedId == R.id.buttonShowAvailable
+				if (viewModel.showDisabledOnly.value != showDisabled) {
+					viewModel.toggleShowDisabledOnly()
+				}
+			}
+		}
+		viewModel.showDisabledOnly.observe(this) { disabledOnly ->
+			val targetId = if (disabledOnly) R.id.buttonShowAvailable else R.id.buttonShowAdded
+			if (viewBinding.toggleGroupCatalog.checkedButtonId != targetId) {
+				viewBinding.toggleGroupCatalog.check(targetId)
+			}
+		}
 		addMenuProvider(SourcesCatalogMenuProvider(this, viewModel, this))
 	}
 
@@ -108,7 +123,11 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		if (viewModel.isPresetMode) {
 			viewModel.togglePresetSource(item.source)
 		} else {
-			viewModel.addSource(item.source)
+			if (item.isEnabled) {
+				viewModel.removeSource(item.source)
+			} else {
+				viewModel.addSource(item.source)
+			}
 		}
 		return false
 	}

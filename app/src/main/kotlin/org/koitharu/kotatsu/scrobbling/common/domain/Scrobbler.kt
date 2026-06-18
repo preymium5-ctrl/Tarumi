@@ -86,7 +86,20 @@ abstract class Scrobbler(
 			chapters = chapters.filter { x -> x.branch == chapter.branch }
 			chapters.indexOf(chapter) + 1
 		}
-		val entity = db.getScrobblingDao().find(scrobblerService.id, manga.id) ?: return
+		var entity = db.getScrobblingDao().find(scrobblerService.id, manga.id)
+		if (entity == null && isEnabled) {
+			val searchResults = runCatchingCancellable {
+				findManga(manga.title, 0)
+			}.getOrNull()
+			val match = searchResults?.firstOrNull { it.isBestMatch } ?: searchResults?.firstOrNull()
+			if (match != null) {
+				runCatchingCancellable {
+					linkManga(manga.id, match.id)
+					entity = db.getScrobblingDao().find(scrobblerService.id, manga.id)
+				}
+			}
+		}
+		if (entity == null) return
 		repository.updateRate(entity.id, entity.mangaId, number)
 	}
 

@@ -36,7 +36,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SourcesCatalogViewModel @Inject constructor(
 	private val repository: MangaSourcesRepository,
-	db: MangaDatabase,
+	private val db: MangaDatabase,
 	private val settings: AppSettings,
 	private val presetsRepository: SourcePresetsRepository,
 ) : BaseViewModel() {
@@ -66,13 +66,16 @@ class SourcesCatalogViewModel @Inject constructor(
 	val isPresetMode: Boolean
 		get() = activePresetId != 0L
 
+	val showDisabledOnly = MutableStateFlow(false)
+
 	val content: StateFlow<List<ListModel>> = combine(
 		searchQuery,
 		appliedFilter,
 		presetSources,
+		showDisabledOnly,
 		db.invalidationTrackerFlow(TABLE_SOURCES),
-	) { q, f, ps, _ ->
-		buildSourcesList(f, q, ps)
+	) { q, f, ps, disabledOnly, _ ->
+		buildSourcesList(f, q, ps, disabledOnly)
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, listOf(LoadingState()))
 
 	init {
@@ -91,10 +94,21 @@ class SourcesCatalogViewModel @Inject constructor(
 		appliedFilter.value = appliedFilter.value.copy(locale = value)
 	}
 
+	fun toggleShowDisabledOnly() {
+		showDisabledOnly.value = !showDisabledOnly.value
+	}
+
 	fun addSource(source: MangaSource) {
 		launchJob(Dispatchers.Default) {
 			val rollback = repository.setSourcesEnabled(setOf(source), true)
 			onActionDone.call(ReversibleAction(R.string.source_enabled, rollback))
+		}
+	}
+
+	fun removeSource(source: MangaSource) {
+		launchJob(Dispatchers.Default) {
+			val rollback = repository.setSourcesEnabled(setOf(source), false)
+			onActionDone.call(ReversibleAction(R.string.source_disabled, rollback))
 		}
 	}
 
@@ -133,19 +147,30 @@ class SourcesCatalogViewModel @Inject constructor(
 		filter: SourcesCatalogFilter,
 		query: String?,
 		presetSourceNames: Set<String>,
+		disabledOnly: Boolean,
 	): List<SourceCatalogItem> {
 		val isPreset = activePresetId != 0L
+		val enabledNames = db.getSourcesDao().findAllEnabledNames().toSet()
 		val sources = repository.queryParserSources(
-			isDisabledOnly = !isPreset,
+			isDisabledOnly = false,
 			isNewOnly = filter.isNewOnly,
 			excludeBroken = isPreset,
 			types = filter.types,
 			query = query,
 			locale = filter.locale,
 			sortOrder = SourcesSortOrder.ALPHABETIC,
-			skipNsfwSources = false,
-		).filter { it.isNsfw() }
-		return if (sources.isEmpty()) {
+			skipNsfwSources = settings.isNsfwContentDisabled,
+		)
+
+		val filteredSources = if (isPreset) {
+			sources
+		} else if (disabledOnly) {
+			sources.filter { it.name !in enabledNames }
+		} else {
+			sources.filter { it.name in enabledNames }
+		}
+
+		return if (filteredSources.isEmpty()) {
 			listOf(
 				if (query == null) {
 					SourceCatalogItem.Hint(
@@ -162,10 +187,11 @@ class SourcesCatalogViewModel @Inject constructor(
 				},
 			)
 		} else {
-			sources.map {
+			filteredSources.map {
 				SourceCatalogItem.Source(
 					source = it,
 					isInPreset = isPreset && it.name in presetSourceNames,
+					isEnabled = it.name in enabledNames,
 				)
 			}
 		}
@@ -173,9 +199,12 @@ class SourcesCatalogViewModel @Inject constructor(
 
 	@WorkerThread
 	private fun getContentTypes(): List<ContentType> {
-		return repository.allMangaSources
-			.filter { it.isNsfw() }
-			.mapSortedByCount { it.contentType }
+		val result = repository.allMangaSources.mapSortedByCount { it.contentType }
+		return if (settings.isNsfwContentDisabled) {
+			result.filterNot { it == ContentType.HENTAI }
+		} else {
+			result
+		}
 	}
 
 	private suspend fun loadActivePreset() {
