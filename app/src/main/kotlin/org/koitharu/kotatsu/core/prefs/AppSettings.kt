@@ -741,6 +741,14 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		return result
 	}
 
+	var remoteGridAspectRatio: String
+		get() = prefs.getString(KEY_REMOTE_GRID_ASPECT_RATIO, "normal") ?: "normal"
+		set(value) = prefs.edit { putString(KEY_REMOTE_GRID_ASPECT_RATIO, value) }
+
+	var remoteGridColumns: Int
+		get() = prefs.getInt(KEY_REMOTE_GRID_COLUMNS, 0)
+		set(value) = prefs.edit { putInt(KEY_REMOTE_GRID_COLUMNS, value) }
+
 	fun subscribe(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
 		prefs.registerOnSharedPreferenceChangeListener(listener)
 	}
@@ -977,6 +985,9 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_DISCORD_RPC_SKIP_NSFW = "discord_rpc_skip_nsfw"
 		const val KEY_DISCORD_TOKEN = "discord_token"
 		const val KEY_ACTIVE_SOURCE_PRESET = "active_source_preset"
+
+		const val KEY_REMOTE_GRID_ASPECT_RATIO = "remote_grid_aspect_ratio"
+		const val KEY_REMOTE_GRID_COLUMNS = "remote_grid_columns"
 
 		// keys for non-persistent preferences
 		const val KEY_APP_VERSION = "app_version"

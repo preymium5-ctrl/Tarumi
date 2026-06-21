@@ -12,6 +12,13 @@
 		app:showAsAction="ifRoom" />
 
 	<item
+		android:id="@+id/action_view_mode"
+		android:icon="@drawable/ic_grid"
+		android:orderInCategory="20"
+		android:title="@string/view_mode"
+		app:showAsAction="ifRoom" />
+
+	<item
 		android:id="@+id/action_filter"
 		android:orderInCategory="30"
 		android:title="@string/filter"

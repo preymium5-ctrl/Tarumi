@@ -15,6 +15,8 @@ class GridSpanResolver(
 	var spanCount = 3
 		private set
 
+	var fixedSpanCount = 0
+
 	private val gridWidth = resources.getDimension(R.dimen.preferred_grid_width)
 	private val remoteGridWidth = resources.getDimension(R.dimen.tarumi_source_grid_width)
 	private val spacing = resources.getDimension(R.dimen.grid_spacing)
@@ -55,6 +57,10 @@ class GridSpanResolver(
 	}
 
 	private fun resolveGridSpanCount(width: Int) {
+		if (fixedSpanCount > 0) {
+			spanCount = fixedSpanCount
+			return
+		}
 		val estimatedCount = (width / cellWidth).roundToInt()
 		spanCount = estimatedCount.coerceAtLeast(2)
 	}

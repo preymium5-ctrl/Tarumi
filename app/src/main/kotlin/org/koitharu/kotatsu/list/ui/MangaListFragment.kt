@@ -79,7 +79,7 @@ abstract class MangaListFragment :
 	private var listAdapter: BaseListAdapter<ListModel>? = null
 	private var paginationListener: PaginationScrollListener? = null
 	private var selectionController: ListSelectionController? = null
-	private var spanResolver: GridSpanResolver? = null
+	protected var spanResolver: GridSpanResolver? = null
 	private val spanSizeLookup = SpanSizeLookup()
 	open val isSwipeRefreshEnabled = true
 

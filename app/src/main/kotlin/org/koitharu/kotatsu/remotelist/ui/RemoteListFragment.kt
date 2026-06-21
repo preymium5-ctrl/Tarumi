@@ -33,6 +33,10 @@ import org.koitharu.kotatsu.list.ui.adapter.RemoteMangaListAdapter
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.size.DynamicItemSizeResolver
 import org.koitharu.kotatsu.parsers.model.MangaSource
+import android.view.LayoutInflater
+import androidx.recyclerview.widget.GridLayoutManager
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
+import org.koitharu.kotatsu.databinding.DialogViewModeBinding
 import org.koitharu.kotatsu.search.domain.SearchKind
 
 @AndroidEntryPoint
@@ -68,6 +72,7 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
             .observe(viewLifecycleOwner) {
                 activity?.invalidateMenu()
             }
+        applyGridSettings()
     }
 
     override fun onScrolledToEnd() {
@@ -78,6 +83,7 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
         return RemoteMangaListAdapter(
             listener = this,
             sizeResolver = DynamicItemSizeResolver(resources, viewLifecycleOwner, settings, adjustWidth = false),
+            settings = settings,
         )
     }
 
@@ -167,6 +173,11 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
                 true
             }
 
+            R.id.action_view_mode -> {
+                showViewModeDialog()
+                true
+            }
+
             else -> false
         }
 
@@ -174,6 +185,68 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
             super.onPrepareMenu(menu)
             menu.findItem(R.id.action_random)?.isEnabled = !viewModel.isRandomLoading.value
             menu.findItem(R.id.action_filter_reset)?.isVisible = filterCoordinator.isFilterApplied
+        }
+    }
+
+    private fun showViewModeDialog() {
+        val context = context ?: return
+        val dialogBinding = DialogViewModeBinding.inflate(LayoutInflater.from(context))
+
+        val currentRatio = settings.remoteGridAspectRatio
+        if (currentRatio == "elongated") {
+            dialogBinding.toggleGroupAspectRatio.check(R.id.button_aspectElongated)
+        } else {
+            dialogBinding.toggleGroupAspectRatio.check(R.id.button_aspectNormal)
+        }
+
+        val currentCols = settings.remoteGridColumns
+        when (currentCols) {
+            4 -> dialogBinding.toggleGroupColumns.check(R.id.button_cols4)
+            5 -> dialogBinding.toggleGroupColumns.check(R.id.button_cols5)
+            else -> dialogBinding.toggleGroupColumns.check(R.id.button_colsAuto)
+        }
+
+        buildAlertDialog(context, isCentered = true) {
+            setTitle(R.string.view_mode)
+            setView(dialogBinding.root)
+            setPositiveButton(android.R.string.ok) { _, _ ->
+                val newRatio = if (dialogBinding.toggleGroupAspectRatio.checkedButtonId == R.id.button_aspectElongated) {
+                    "elongated"
+                } else {
+                    "normal"
+                }
+                val newCols = when (dialogBinding.toggleGroupColumns.checkedButtonId) {
+                    R.id.button_cols4 -> 4
+                    R.id.button_cols5 -> 5
+                    else -> 0
+                }
+
+                if (settings.remoteGridAspectRatio != newRatio || settings.remoteGridColumns != newCols) {
+                    settings.remoteGridAspectRatio = newRatio
+                    settings.remoteGridColumns = newCols
+                    applyGridSettings()
+                }
+            }
+            setNegativeButton(android.R.string.cancel, null)
+        }.show()
+    }
+
+    private fun applyGridSettings() {
+        val rv = viewBinding?.recyclerView ?: return
+        val fixedCols = settings.remoteGridColumns
+        spanResolver?.let { resolver ->
+            resolver.fixedSpanCount = fixedCols
+            val lm = rv.layoutManager as? GridLayoutManager
+            if (lm != null) {
+                if (fixedCols > 0) {
+                    lm.spanCount = fixedCols
+                } else {
+                    resolver.setGridSize(settings.gridSize / 100f, rv)
+                }
+            }
+        }
+        rv.adapter?.let { adapter ->
+            adapter.notifyItemRangeChanged(0, adapter.itemCount)
         }
     }
 

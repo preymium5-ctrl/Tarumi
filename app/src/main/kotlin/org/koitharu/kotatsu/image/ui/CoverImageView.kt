@@ -63,6 +63,14 @@ class CoverImageView @JvmOverloads constructor(
 	private val hasAspectRatio: Boolean
 		get() = aspectRationHeight > 0 && aspectRationWidth > 0
 
+	fun setAspectRatio(width: Int, height: Int) {
+		if (aspectRationWidth != width || aspectRationHeight != height) {
+			aspectRationWidth = width
+			aspectRationHeight = height
+			requestLayout()
+		}
+	}
+
 	init {
 		context.withStyledAttributes(attrs, R.styleable.CoverImageView, defStyleAttr) {
 			aspectRationHeight = getInt(R.styleable.CoverImageView_aspectRationHeight, aspectRationHeight)

@@ -1120,4 +1120,12 @@
     <string name="genre_percent_pattern">%1$d%%</string>
     <string name="disabled_catalog">Disabled Catalog</string>
     <string name="enabled_catalog">Enabled Catalog</string>
+    <string name="view_mode">View Mode</string>
+    <string name="aspect_ratio">Aspect Ratio</string>
+    <string name="grid_columns">Grid Columns</string>
+    <string name="aspect_normal">Normal (Manga)</string>
+    <string name="aspect_elongated">Elongated (Webtoon)</string>
+    <string name="cols_auto">Auto</string>
+    <string name="cols_4">4 Columns</string>
+    <string name="cols_5">5 Columns</string>
 </resources>

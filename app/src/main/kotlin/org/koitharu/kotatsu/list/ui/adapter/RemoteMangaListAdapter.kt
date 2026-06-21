@@ -9,17 +9,19 @@ import org.koitharu.kotatsu.databinding.ItemMangaGridRemoteBinding
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.MangaGridModel
 import org.koitharu.kotatsu.list.ui.model.MangaListModel
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.list.ui.size.ItemSizeResolver
 
 class RemoteMangaListAdapter(
 	listener: MangaListListener,
 	sizeResolver: ItemSizeResolver,
+	private val settings: AppSettings,
 ) : BaseListAdapter<ListModel>() {
 
 	init {
 		addDelegate(ListItemType.MANGA_LIST, mangaListItemAD(listener))
 		addDelegate(ListItemType.MANGA_LIST_DETAILED, mangaListDetailedItemAD(listener))
-		addDelegate(ListItemType.MANGA_GRID, remoteMangaGridItemAD(sizeResolver, listener))
+		addDelegate(ListItemType.MANGA_GRID, remoteMangaGridItemAD(sizeResolver, settings, listener))
 		addDelegate(ListItemType.FOOTER_LOADING, loadingFooterAD())
 		addDelegate(ListItemType.STATE_LOADING, loadingStateAD())
 		addDelegate(ListItemType.STATE_ERROR, errorStateListAD(listener))
@@ -36,6 +38,7 @@ class RemoteMangaListAdapter(
 
 private fun remoteMangaGridItemAD(
 	sizeResolver: ItemSizeResolver,
+	settings: AppSettings,
 	clickListener: OnListItemClickListener<MangaListModel>,
 ) = adapterDelegateViewBinding<MangaGridModel, ListModel, ItemMangaGridRemoteBinding>(
 	{ inflater, parent -> ItemMangaGridRemoteBinding.inflate(inflater, parent, false) },
@@ -47,6 +50,11 @@ private fun remoteMangaGridItemAD(
 	bind {
 		itemView.setTooltipCompat(item.getSummary(context))
 		binding.textViewTitle.text = item.title
+		if (settings.remoteGridAspectRatio == "elongated") {
+			binding.imageViewCover.setAspectRatio(9, 16)
+		} else {
+			binding.imageViewCover.setAspectRatio(13, 18)
+		}
 		binding.imageViewCover.setImageAsync(item.coverUrl, item.manga)
 	}
 }

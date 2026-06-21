@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:paddingHorizontal="24dp"
+	android:paddingTop="16dp"
+	android:paddingBottom="24dp">
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:text="@string/aspect_ratio"
+		android:textAppearance="?attr/textAppearanceTitleMedium"
+		android:textColor="?android:attr/textColorSecondary"
+		android:layout_marginBottom="12dp" />
+
+	<com.google.android.material.button.MaterialButtonToggleGroup
+		android:id="@+id/toggleGroup_aspectRatio"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		app:singleSelection="true"
+		app:selectionRequired="true"
+		android:layout_marginBottom="24dp">
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_aspectNormal"
+			style="?attr/materialButtonOutlinedStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/aspect_normal" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_aspectElongated"
+			style="?attr/materialButtonOutlinedStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/aspect_elongated" />
+
+	</com.google.android.material.button.MaterialButtonToggleGroup>
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:text="@string/grid_columns"
+		android:textAppearance="?attr/textAppearanceTitleMedium"
+		android:textColor="?android:attr/textColorSecondary"
+		android:layout_marginBottom="12dp" />
+
+	<com.google.android.material.button.MaterialButtonToggleGroup
+		android:id="@+id/toggleGroup_columns"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		app:singleSelection="true"
+		app:selectionRequired="true">
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_colsAuto"
+			style="?attr/materialButtonOutlinedStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/cols_auto" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_cols4"
+			style="?attr/materialButtonOutlinedStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/cols_4" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_cols5"
+			style="?attr/materialButtonOutlinedStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:text="@string/cols_5" />
+
+	</com.google.android.material.button.MaterialButtonToggleGroup>
+
+</LinearLayout>
