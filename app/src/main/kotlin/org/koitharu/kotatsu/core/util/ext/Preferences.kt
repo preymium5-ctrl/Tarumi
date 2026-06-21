@@ -56,15 +56,39 @@ fun <T> SharedPreferences.observe(key: String, valueProducer: suspend () -> T): 
 	}
 }.distinctUntilChanged()
 
-fun SharedPreferences.Editor.putAll(values: Map<String, *>) {
+fun SharedPreferences.Editor.putAll(values: Map<String, *>, existingValues: Map<String, *> = emptyMap<String, Any>()) {
 	values.forEach { e ->
-		when (val v = e.value) {
-			is Boolean -> putBoolean(e.key, v)
-			is Int -> putInt(e.key, v)
-			is Long -> putLong(e.key, v)
-			is Float -> putFloat(e.key, v)
-			is String -> putString(e.key, v)
-			is JSONArray -> putStringSet(e.key, v.toStringSet())
+		val key = e.key
+		val v = e.value ?: return@forEach
+		val existing = existingValues[key]
+
+		when {
+			v is Boolean -> putBoolean(key, v)
+			v is String -> putString(key, v)
+			v is JSONArray -> putStringSet(key, v.toStringSet())
+			v is Number -> {
+				when (existing) {
+					is Long -> putLong(key, v.toLong())
+					is Float -> putFloat(key, v.toFloat())
+					is Int -> putInt(key, v.toInt())
+					is Boolean -> putBoolean(key, v.toInt() != 0)
+					else -> {
+						when (v) {
+							is Double -> putFloat(key, v.toFloat())
+							is Float -> putFloat(key, v)
+							is Long -> putLong(key, v)
+							is Int -> {
+								if (key.endsWith("_at") || key.endsWith("_date") || key.endsWith("duration") || key == "active_preset_2") {
+									putLong(key, v.toLong())
+								} else {
+									putInt(key, v)
+								}
+							}
+							else -> putInt(key, v.toInt())
+						}
+					}
+				}
+			}
 		}
 	}
 }

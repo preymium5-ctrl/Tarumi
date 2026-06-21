@@ -106,6 +106,8 @@ class RestoreService : BaseBackupRestoreService() {
 		@CheckResult
 		fun start(context: Context, uri: Uri, sections: Set<BackupSection>): Boolean = try {
 			val intent = Intent(context, RestoreService::class.java)
+			intent.data = uri
+			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 			intent.putExtra(AppRouter.KEY_DATA, uri.toString())
 			intent.putExtra(AppRouter.KEY_ENTRIES, sections.toTypedArray())
 			ContextCompat.startForegroundService(context, intent)

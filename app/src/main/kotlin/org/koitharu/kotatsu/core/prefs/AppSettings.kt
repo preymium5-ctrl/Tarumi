@@ -1,4 +1,4 @@
-package org.koitharu.kotatsu.core.prefs
+﻿package org.koitharu.kotatsu.core.prefs
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -766,9 +766,12 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	fun getAllValues(): Map<String, *> = prefs.all
 
-	fun upsertAll(m: Map<String, *>) = prefs.edit {
-		clear()
-		putAll(normalizeImportedPreferences(m))
+	fun upsertAll(m: Map<String, *>) {
+		val existing = prefs.all
+		prefs.edit {
+			clear()
+			putAll(normalizeImportedPreferences(m), existing)
+		}
 	}
 
 	private fun getLongCompat(key: String, defaultValue: Long): Long = try {
