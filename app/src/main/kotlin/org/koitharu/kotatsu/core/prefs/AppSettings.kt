@@ -1,4 +1,4 @@
-﻿package org.koitharu.kotatsu.core.prefs
+package org.koitharu.kotatsu.core.prefs
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -144,6 +144,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	var isNsfwContentDisabled: Boolean
 		get() = prefs.getBoolean(KEY_DISABLE_NSFW, false)
 		set(value) = prefs.edit { putBoolean(KEY_DISABLE_NSFW, value) }
+
+	var isNsfwDefaultEnabledV150: Boolean
+		get() = prefs.getBoolean("nsfw_default_enabled_v150", false)
+		set(value) = prefs.edit { putBoolean("nsfw_default_enabled_v150", value) }
 
 	var appLocales: LocaleListCompat
 		get() {

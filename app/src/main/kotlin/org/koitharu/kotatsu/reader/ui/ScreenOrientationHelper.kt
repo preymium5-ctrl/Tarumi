@@ -49,8 +49,8 @@ class ScreenOrientationHelper @Inject constructor(
 			}
 		}
 
-	fun applySettings() {
-		if (activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+	fun applySettings(force: Boolean = false) {
+		if (force || activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
 			// https://developer.android.com/reference/android/R.attr.html#screenOrientation
 			activity.requestedOrientation = settings.readerScreenOrientation
 		}

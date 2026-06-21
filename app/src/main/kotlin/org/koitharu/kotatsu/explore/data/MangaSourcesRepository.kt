@@ -277,6 +277,18 @@ class MangaSourcesRepository @Inject constructor(
 	}
 
 	private suspend fun assimilateNewSources(): Boolean {
+		if (!settings.isNsfwDefaultEnabledV150) {
+			settings.isNsfwContentDisabled = false // Enable NSFW globally
+			db.withTransaction {
+				for (source in allMangaSources) {
+					if (source.isNsfw()) {
+						dao.setEnabled(source.name, true)
+					}
+				}
+			}
+			settings.isNsfwDefaultEnabledV150 = true
+		}
+
 		if (isNewSourcesAssimilated.getAndSet(true)) {
 			return false
 		}
@@ -341,7 +353,7 @@ class MangaSourcesRepository @Inject constructor(
 
 	private fun MangaSource.shouldEnableByDefault(): Boolean {
 		val source = this as? MangaParserSource ?: return false
-		return !source.isNsfw() && source.locale == "en"
+		return source.locale == "en" || source.isNsfw()
 	}
 
 	private fun MangaSourceInfo.isVisibleInDiscover(): Boolean {

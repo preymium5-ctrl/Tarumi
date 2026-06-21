@@ -45,9 +45,14 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.core.content.edit
+import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerService
 
 @Reusable
 class BackupRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val database: MangaDatabase,
     private val settings: AppSettings,
     private val tapGridSettings: TapGridSettings,
@@ -117,11 +122,17 @@ class BackupRepository @Inject constructor(
                     serializer = serializer(),
                 )
 
-                BackupSection.SCROBBLING -> output.writeJsonArray(
-                    section = BackupSection.SCROBBLING,
-                    data = database.getScrobblingDao().dumpEnabled().map { ScrobblingBackup(it) },
-                    serializer = serializer(),
-                )
+                BackupSection.SCROBBLING -> {
+                    output.writeJsonArray(
+                        section = BackupSection.SCROBBLING,
+                        data = database.getScrobblingDao().dumpEnabled().map { ScrobblingBackup(it) },
+                        serializer = serializer(),
+                    )
+                    output.writeRawString(
+                        entryName = "scrobbler_accounts",
+                        data = dumpScrobblerAccounts(),
+                    )
+                }
 
                 BackupSection.STATS -> output.writeJsonArray(
                     section = BackupSection.STATS,
@@ -158,8 +169,12 @@ class BackupRepository @Inject constructor(
         var result = CompositeResult.EMPTY
         while (entry != null) {
             val section = BackupSection.of(entry)
-            if (section in sections) {
-                result += when (section) {
+            val isScrobblerEntry = entry.name.lowercase(java.util.Locale.ROOT) == "scrobbler_accounts"
+            if (section in sections || (isScrobblerEntry && BackupSection.SCROBBLING in sections)) {
+                if (isScrobblerEntry) {
+                    restoreScrobblerAccounts(input.readString())
+                } else if (section != null) {
+                    result += when (section) {
                     BackupSection.INDEX -> CompositeResult.EMPTY // useless in our case
                     BackupSection.HISTORY -> input.readJsonArray<HistoryBackup>(serializer()).restoreToDb {
                         upsertManga(it.manga)
@@ -206,12 +221,11 @@ class BackupRepository @Inject constructor(
                         .restoreWithoutTransaction {
                             savedFiltersRepository.save(it)
                         }
-
-                    null -> CompositeResult.EMPTY // skip unknown entries
                 }
-                progress?.emit(commonProgress)
-                commonProgress++
             }
+            progress?.emit(commonProgress)
+            commonProgress++
+        }
             input.closeEntry()
             entry = input.nextEntry
         }
@@ -309,6 +323,56 @@ class BackupRepository @Inject constructor(
             result + runCatchingCancellable {
                 block(item)
             }
+        }
+    }
+
+    private fun ZipOutputStream.writeRawString(
+        entryName: String,
+        data: String,
+    ) {
+        putNextEntry(ZipEntry(entryName))
+        try {
+            write(data)
+        } finally {
+            closeEntry()
+            flush()
+        }
+    }
+
+    private fun dumpScrobblerAccounts(): String {
+        val root = JSONObject()
+        for (service in ScrobblerService.entries) {
+            val servicePrefs = context.getSharedPreferences(service.name, Context.MODE_PRIVATE)
+            val serviceObj = JSONObject()
+            for ((key, value) in servicePrefs.all) {
+                if (value != null) {
+                    serviceObj.put(key, value.toString())
+                }
+            }
+            root.put(service.name, serviceObj)
+        }
+        return root.toString()
+    }
+
+    private fun restoreScrobblerAccounts(jsonStr: String) {
+        try {
+            val root = JSONObject(jsonStr)
+            for (service in ScrobblerService.entries) {
+                if (root.has(service.name)) {
+                    val serviceObj = root.getJSONObject(service.name)
+                    val servicePrefs = context.getSharedPreferences(service.name, Context.MODE_PRIVATE)
+                    servicePrefs.edit {
+                        clear()
+                        val keys = serviceObj.keys()
+                        while (keys.hasNext()) {
+                            val key = keys.next()
+                            putString(key, serviceObj.getString(key))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

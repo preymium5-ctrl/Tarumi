@@ -924,6 +924,16 @@ class ReaderActivity :
         if (key == AppSettings.KEY_READER_LONG_SCREENSHOT) {
             updateScreenshotButtonVisibility()
         }
+        if (key == AppSettings.KEY_READER_ORIENTATION) {
+            screenOrientationHelper.applySettings(force = true)
+        }
+        if (key == AppSettings.KEY_READER_FULLSCREEN) {
+            val isUiVisible = viewBinding.appbarTop.isVisible
+            val isFullscreen = settings.isReaderFullscreenEnabled
+            viewBinding.infoBar.isTimeVisible = isFullscreen
+            systemUiController.setSystemUiVisible(isUiVisible || !isFullscreen)
+            hideReaderNavigationBar()
+        }
     }
 
     private fun updateCustomScrollAdvance() {
