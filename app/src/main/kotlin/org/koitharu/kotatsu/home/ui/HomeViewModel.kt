@@ -22,6 +22,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.model.distinctById
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.SourceDiagnosticsStore
@@ -49,9 +50,11 @@ class HomeViewModel @Inject constructor(
 	@BaseHttpClient private val okHttpClient: OkHttpClient,
 	private val historyRepository: HistoryRepository,
 	private val diagnosticsStore: SourceDiagnosticsStore,
+	private val appSettings: AppSettings,
 ) : BaseViewModel() {
 
 	private val homeFeedCache = HomeFeedCache(context)
+	val isPerformanceMode = appSettings.isPerformanceMode
 
 	private val _featuredComics = MutableStateFlow<List<Manga>>(emptyList())
 	val featuredComics: StateFlow<List<Manga>> = _featuredComics
@@ -98,7 +101,7 @@ class HomeViewModel @Inject constructor(
 		restoreCachedHomeFeed()
 		_featuredComics.value = cachedFeaturedComics
 		_trendingComics.value = cachedTrendingComics
-		if (cachedTrendingComics.isNotEmpty()) {
+		if (!isPerformanceMode && cachedTrendingComics.isNotEmpty()) {
 			launchJob(Dispatchers.Default) {
 				val updatedTrending = cachedTrendingComics.map { manga ->
 					async { loadMangaDetailsOrDefault(manga) }
@@ -107,27 +110,30 @@ class HomeViewModel @Inject constructor(
 				_trendingComics.value = updatedTrending
 			}
 		}
-		_recentUpdates.value = cachedRecentUpdates.visibleRecentUpdates()
-		_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty() && isRecentUpdatesLoading
+		_recentUpdates.value = if (isPerformanceMode) emptyList() else cachedRecentUpdates.visibleRecentUpdates()
+		_recentUpdatesLoading.value = !isPerformanceMode && cachedRecentUpdates.isEmpty() && isRecentUpdatesLoading
 		_manhuaRecommendations.value = cachedManhuaRecommendations
 		_manhuaRecommendationsLoading.value = cachedManhuaRecommendations.isEmpty() && isManhuaRecommendationsLoading
 		_mangaRecommendations.value = cachedMangaRecommendations
 		_mangaRecommendationsLoading.value = cachedMangaRecommendations.isEmpty() && isMangaRecommendationsLoading
 		_smartRecommendations.value = cachedSmartRecommendations
 		_smartRecommendationsLoading.value = cachedSmartRecommendations.isEmpty() && isSmartRecommendationsLoading
-		val featuredPeriod = currentFeaturedPeriod()
-		val recommendationPeriod = currentRecommendationPeriod()
-		val smartRecommendationPeriod = currentSmartRecommendationPeriod()
-		val isHomeCacheExpired = cachedHomeFeedAt <= 0L ||
-			System.currentTimeMillis() - cachedHomeFeedAt >= HOME_CACHE_TTL_MS
-		val isRecentUpdatesExpired = cachedRecentUpdatesAt <= 0L ||
-			System.currentTimeMillis() - cachedRecentUpdatesAt >= RECENT_CACHE_TTL_MS
-		val areRecommendationsExpired = cachedRecommendationPeriod != recommendationPeriod
-		val areSmartRecommendationsExpired = cachedSmartRecommendationPeriod != smartRecommendationPeriod
-		if (
-			(cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty() || cachedFeaturedPeriod != featuredPeriod || isHomeCacheExpired) &&
-			!isFeaturedLoading
-		) {
+		val featuredPeriod = if (isPerformanceMode) 0L else currentFeaturedPeriod()
+		val recommendationPeriod = if (isPerformanceMode) 0L else currentRecommendationPeriod()
+		val smartRecommendationPeriod = if (isPerformanceMode) 0L else currentSmartRecommendationPeriod()
+		val isHomeCacheExpired = !isPerformanceMode && (cachedHomeFeedAt <= 0L ||
+			System.currentTimeMillis() - cachedHomeFeedAt >= HOME_CACHE_TTL_MS)
+		val isRecentUpdatesExpired = !isPerformanceMode && (cachedRecentUpdatesAt <= 0L ||
+			System.currentTimeMillis() - cachedRecentUpdatesAt >= RECENT_CACHE_TTL_MS)
+		val areRecommendationsExpired = !isPerformanceMode && (cachedRecommendationPeriod != recommendationPeriod)
+		val areSmartRecommendationsExpired = !isPerformanceMode && (cachedSmartRecommendationPeriod != smartRecommendationPeriod)
+		
+		val needFeaturedFetch = if (isPerformanceMode) {
+			cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty()
+		} else {
+			cachedFeaturedComics.isEmpty() || cachedTrendingComics.isEmpty() || cachedFeaturedPeriod != featuredPeriod || isHomeCacheExpired
+		}
+		if (needFeaturedFetch && !isFeaturedLoading) {
 			launchJob(Dispatchers.Default) {
 				isFeaturedLoading = true
 				val all = loadAsuraComics(FEATURED_POOL_LIMIT)
@@ -144,7 +150,7 @@ class HomeViewModel @Inject constructor(
 				isFeaturedLoading = false
 			}
 		}
-		if ((cachedRecentUpdates.isEmpty() || isRecentUpdatesExpired) && !isRecentUpdatesLoading) {
+		if (!isPerformanceMode && (cachedRecentUpdates.isEmpty() || isRecentUpdatesExpired) && !isRecentUpdatesLoading) {
 			launchJob(Dispatchers.Default) {
 				isRecentUpdatesLoading = true
 				_recentUpdatesLoading.value = cachedRecentUpdates.isEmpty()
@@ -165,7 +171,12 @@ class HomeViewModel @Inject constructor(
 				}
 			}
 		}
-		if ((cachedManhuaRecommendations.isEmpty() || areRecommendationsExpired) && !isManhuaRecommendationsLoading) {
+		val needManhuaFetch = if (isPerformanceMode) {
+			cachedManhuaRecommendations.isEmpty()
+		} else {
+			cachedManhuaRecommendations.isEmpty() || areRecommendationsExpired
+		}
+		if (needManhuaFetch && !isManhuaRecommendationsLoading) {
 			launchJob(Dispatchers.Default) {
 				isManhuaRecommendationsLoading = true
 				_manhuaRecommendationsLoading.value = true
@@ -187,7 +198,12 @@ class HomeViewModel @Inject constructor(
 				}
 			}
 		}
-		if ((cachedMangaRecommendations.isEmpty() || areRecommendationsExpired) && !isMangaRecommendationsLoading) {
+		val needMangaFetch = if (isPerformanceMode) {
+			cachedMangaRecommendations.isEmpty()
+		} else {
+			cachedMangaRecommendations.isEmpty() || areRecommendationsExpired
+		}
+		if (needMangaFetch && !isMangaRecommendationsLoading) {
 			launchJob(Dispatchers.Default) {
 				isMangaRecommendationsLoading = true
 				_mangaRecommendationsLoading.value = true
@@ -209,7 +225,12 @@ class HomeViewModel @Inject constructor(
 				}
 			}
 		}
-		if ((cachedSmartRecommendations.isEmpty() || areSmartRecommendationsExpired) && !isSmartRecommendationsLoading) {
+		val needSmartFetch = if (isPerformanceMode) {
+			cachedSmartRecommendations.isEmpty()
+		} else {
+			cachedSmartRecommendations.isEmpty() || areSmartRecommendationsExpired
+		}
+		if (needSmartFetch && !isSmartRecommendationsLoading) {
 			launchJob(Dispatchers.Default) {
 				isSmartRecommendationsLoading = true
 				_smartRecommendationsLoading.value = cachedSmartRecommendations.isEmpty()

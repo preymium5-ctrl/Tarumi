@@ -55,7 +55,7 @@ class MangaSourcesRepository @Inject constructor(
 	val allMangaSources: Set<MangaParserSource> = Collections.unmodifiableSet(
 		EnumSet.noneOf<MangaParserSource>(MangaParserSource::class.java).also {
 			MangaParserSource.entries.filterNotTo(it) { source ->
-				source.isBroken
+				source.isBroken || (source.isNsfw() && !(source.locale == "en" || source.locale == "all" || source.locale.isNullOrEmpty()))
 			}
         }
 	)

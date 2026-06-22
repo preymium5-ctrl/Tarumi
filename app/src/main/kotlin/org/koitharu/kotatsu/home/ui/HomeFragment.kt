@@ -68,16 +68,20 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		viewModel.mangaRecommendations.observe(viewLifecycleOwner) { comics ->
 			renderRecommendationRail(binding.mangaRecommendationList, binding.mangaRecommendationLoading, comics)
 		}
-		viewModel.recentUpdatesLoading.observe(viewLifecycleOwner) { isLoading ->
-			val hasUpdates = viewModel.recentUpdates.value.isNotEmpty()
-			binding.recentUpdatesLoading.isVisible = isLoading && !hasUpdates
-			binding.recentUpdatesList.isVisible = hasUpdates
-			binding.recentUpdatesPagination.isVisible = hasUpdates
-		}
-		combine(viewModel.recentUpdates, viewModel.recentUpdatesPage, ::Pair)
-			.observe(viewLifecycleOwner) { (updates, page) ->
-				renderRecentUpdates(updates, page)
+		if (viewModel.isPerformanceMode) {
+			binding.recentUpdatesSection.isVisible = false
+		} else {
+			viewModel.recentUpdatesLoading.observe(viewLifecycleOwner) { isLoading ->
+				val hasUpdates = viewModel.recentUpdates.value.isNotEmpty()
+				binding.recentUpdatesLoading.isVisible = isLoading && !hasUpdates
+				binding.recentUpdatesList.isVisible = hasUpdates
+				binding.recentUpdatesPagination.isVisible = hasUpdates
 			}
+			combine(viewModel.recentUpdates, viewModel.recentUpdatesPage, ::Pair)
+				.observe(viewLifecycleOwner) { (updates, page) ->
+					renderRecentUpdates(updates, page)
+				}
+		}
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {

@@ -57,6 +57,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getEnumValue(KEY_LIST_MODE, ListMode.GRID)
 		set(value) = prefs.edit { putEnumValue(KEY_LIST_MODE, value) }
 
+	var isPerformanceMode: Boolean
+		get() = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
+		set(value) = prefs.edit { putBoolean(KEY_PERFORMANCE_MODE, value) }
+
 	val theme: Int
 		get() = when (prefs.getString(KEY_THEME, null)?.toIntOrNull()) {
 			AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.MODE_NIGHT_YES
@@ -209,7 +213,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_READER_FULLSCREEN, true)
 
 	val isReaderOptimizationEnabled: Boolean
-		get() = prefs.getBoolean(KEY_READER_OPTIMIZE, false)
+		get() = prefs.getBoolean(KEY_READER_OPTIMIZE, false) || isPerformanceMode
 
 	val readerControls: Set<ReaderControl>
 		get() = prefs.getStringSet(KEY_READER_CONTROLS, null)?.mapNotNullTo(EnumSet.noneOf(ReaderControl::class.java)) {
@@ -992,6 +996,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_DISCORD_RPC_SKIP_NSFW = "discord_rpc_skip_nsfw"
 		const val KEY_DISCORD_TOKEN = "discord_token"
 		const val KEY_ACTIVE_SOURCE_PRESET = "active_source_preset"
+		const val KEY_PERFORMANCE_MODE = "performance_mode"
 
 		const val KEY_REMOTE_GRID_ASPECT_RATIO = "remote_grid_aspect_ratio"
 		const val KEY_REMOTE_GRID_COLUMNS = "remote_grid_columns"

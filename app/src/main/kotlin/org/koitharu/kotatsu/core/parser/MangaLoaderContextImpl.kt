@@ -129,7 +129,9 @@ class MangaLoaderContextImpl @Inject constructor(
             maxRequests = config.maxRequests,
             urlPattern = config.urlPattern,
             filterScript = config.filterScript,
-            pageScript = config.pageScript  // This is the key part that was missing!
+            pageScript = config.pageScript,
+            pageHtml = config.pageHtml,
+            pageBaseUrl = config.pageBaseUrl,
         )
 
         val captured = webViewRequestInterceptorExecutor.interceptRequests(url, appConfig)

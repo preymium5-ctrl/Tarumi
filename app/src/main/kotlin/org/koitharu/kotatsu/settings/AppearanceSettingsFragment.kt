@@ -118,6 +118,7 @@ class AppearanceSettingsFragment :
 
             AppSettings.KEY_COLOR_THEME,
             AppSettings.KEY_THEME_AMOLED,
+            AppSettings.KEY_PERFORMANCE_MODE,
                 -> {
                 postRestart()
             }

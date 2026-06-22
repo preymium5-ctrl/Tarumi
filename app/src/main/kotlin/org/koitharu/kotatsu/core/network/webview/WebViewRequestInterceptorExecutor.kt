@@ -101,7 +101,18 @@ class WebViewRequestInterceptorExecutor @Inject constructor(
                         }
                     }
 
-                    webView.loadUrl(url)
+                    val html = config.pageHtml
+                    if (html != null) {
+                        webView.loadDataWithBaseURL(
+                            config.pageBaseUrl ?: url,
+                            html,
+                            "text/html",
+                            "utf-8",
+                            null,
+                        )
+                    } else {
+                        webView.loadUrl(url)
+                    }
 
                     val timeoutRunnable = Runnable {
                         Log.w(TAG_VRF, "Timeout, stopping capture")

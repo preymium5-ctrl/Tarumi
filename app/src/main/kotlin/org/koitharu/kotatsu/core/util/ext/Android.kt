@@ -43,6 +43,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
+import androidx.preference.PreferenceManager
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import androidx.work.CoroutineWorker
@@ -129,6 +130,10 @@ fun Context.getAnimationDuration(@IntegerRes resId: Int): Long {
 }
 
 fun Context.isLowRamDevice(): Boolean {
+	val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+	if (prefs.getBoolean("performance_mode", false)) {
+		return true
+	}
 	return activityManager?.isLowRamDevice == true
 }
 

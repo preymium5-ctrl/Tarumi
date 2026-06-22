@@ -26,6 +26,7 @@ class RequestInterceptorWebViewClient(
     private val isCapturing = AtomicBoolean(true)
     private val startTime = System.currentTimeMillis()
     private val scriptInjected = AtomicBoolean(false)
+    private val scriptCheckPending = AtomicBoolean(false)
 
     @WorkerThread
     override fun shouldInterceptRequest(
@@ -55,11 +56,24 @@ class RequestInterceptorWebViewClient(
     override fun onPageFinished(view: WebView, url: String) {
         super.onPageFinished(view, url)
         val script = config.pageScript
-        if (!script.isNullOrBlank() && scriptInjected.compareAndSet(false, true)) {
-            Log.d(TAG_VRF, "Injecting pageScript for URL: $url")
-            view.evaluateJavascript(script, null)
-        } else if (!script.isNullOrBlank()) {
-            Log.v(TAG_VRF, "PageScript already injected, skipping for URL: $url")
+        if (script.isNullOrBlank() || scriptInjected.get() || !isCapturing.get()) return
+        if (!scriptCheckPending.compareAndSet(false, true)) return
+
+        // A managed Cloudflare challenge finishes loading like a normal page,
+        // then navigates again after verification. Injecting the parser script
+        // into that first page reports a false failure and prevents the retry.
+        // Keep the script unclaimed until a real content page is available.
+        view.evaluateJavascript(CLOUDFLARE_CHALLENGE_CHECK) { result ->
+            scriptCheckPending.set(false)
+            if (!isCapturing.get() || scriptInjected.get()) return@evaluateJavascript
+            if (result == "true") {
+                Log.d(TAG_VRF, "Cloudflare challenge detected; waiting for verified page: $url")
+                return@evaluateJavascript
+            }
+            if (scriptInjected.compareAndSet(false, true)) {
+                Log.d(TAG_VRF, "Injecting pageScript for URL: $url")
+                view.evaluateJavascript(script, null)
+            }
         }
     }
 
@@ -133,5 +147,21 @@ class RequestInterceptorWebViewClient(
         return synchronized(capturedRequests) {
             capturedRequests.toList()
         }
+    }
+
+    private companion object {
+        private const val CLOUDFLARE_CHALLENGE_CHECK = """
+            (function() {
+                const html = (document.documentElement && document.documentElement.outerHTML || '').toLowerCase();
+                const title = (document.title || '').toLowerCase();
+                return title.includes('just a moment') ||
+                    title.includes('attention required') ||
+                    html.includes('challenge-platform') ||
+                    html.includes('challenges.cloudflare.com') ||
+                    html.includes('cf-chl-opt') ||
+                    document.querySelector('form[action*="__cf_chl"]') !== null ||
+                    document.querySelector('.cf-browser-verification') !== null;
+            })();
+        """
     }
 }

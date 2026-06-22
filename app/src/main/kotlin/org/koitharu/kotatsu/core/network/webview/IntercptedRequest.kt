@@ -84,5 +84,7 @@ data class InterceptionConfig(
     val maxRequests: Int = 100,
     val urlPattern: Regex? = null,
     val filterScript: String? = null,   // JS containing predicate (last return)
-    val pageScript: String? = null      // JS to actually run in the page
+    val pageScript: String? = null,     // JS to actually run in the page
+    val pageHtml: String? = null,
+    val pageBaseUrl: String? = null,
 )
