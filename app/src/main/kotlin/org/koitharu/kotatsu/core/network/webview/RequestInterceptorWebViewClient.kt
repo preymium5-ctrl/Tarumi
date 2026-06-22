@@ -152,15 +152,19 @@ class RequestInterceptorWebViewClient(
     private companion object {
         private const val CLOUDFLARE_CHALLENGE_CHECK = """
             (function() {
-                const html = (document.documentElement && document.documentElement.outerHTML || '').toLowerCase();
                 const title = (document.title || '').toLowerCase();
-                return title.includes('just a moment') ||
+                if (title.includes('just a moment') ||
                     title.includes('attention required') ||
-                    html.includes('challenge-platform') ||
-                    html.includes('challenges.cloudflare.com') ||
-                    html.includes('cf-chl-opt') ||
+                    title.includes('checking your browser') ||
+                    title.includes('one more step')) {
+                    return true;
+                }
+                return document.querySelector('#cf-challenge-running') !== null ||
+                    document.querySelector('#challenge-stage') !== null ||
+                    document.querySelector('.cf-browser-verification') !== null ||
                     document.querySelector('form[action*="__cf_chl"]') !== null ||
-                    document.querySelector('.cf-browser-verification') !== null;
+                    document.querySelector('.cf-turnstile') !== null ||
+                    document.querySelector('iframe[src*="challenges.cloudflare.com"]') !== null;
             })();
         """
     }
