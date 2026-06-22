@@ -1,6 +1,6 @@
 # Tarumi v1.5.1 Release Notes
 
-This release introduces a new comprehensive low-memory **Performance Mode** to optimize RAM consumption, along with critical parser fixes for Comix.
+This release introduces a new comprehensive low-memory **Performance Mode** to optimize RAM consumption, along with critical parser fixes for Comix and MangaDistrict.
 
 ---
 
@@ -30,3 +30,8 @@ To drastically decrease startup latency and background overhead under **Performa
 ## 🛠️ Comix Parser Bug Fixes
 - **Turnstile False-Positive Bypass**: Refined the `challengeDetected()` script logic inside the parser to identify only *active* Cloudflare Turnstile verification challenge pages. This prevents normal background telemetry scripts from triggering false-positive blocks.
 - **Graceful WebView API Fallback**: Reworked `loadInitialQueries` to quietly return `null` on OkHttp network or Cloudflare HTTP 403 blocks. This safely triggers the parser's natural signed WebView bridge (`webViewApiJson()`) fallback rather than throwing a prompt error immediately.
+
+---
+
+## 🛠️ MangaDistrict Parser Fixes
+- **Bypass Broken AJAX Endpoint**: The source website `mangadistrict.com` recently made changes that caused its admin AJAX search/listing endpoint to return empty results. We disabled AJAX listing (`withoutAjax = true`) for this source, forcing it to fall back to parsing standard HTTP GET search and list pages directly. This fully restores the browsing and search functionality inside the application.
