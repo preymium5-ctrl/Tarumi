@@ -24,6 +24,15 @@ abstract class BookmarksDao {
 	)
 	abstract suspend fun findAll(offset: Int, limit: Int): Map<MangaWithTags, List<BookmarkEntity>>
 
+	@Query("SELECT DISTINCT manga_id FROM bookmarks ORDER BY manga_id LIMIT :limit OFFSET :offset")
+	abstract suspend fun findMangaIds(offset: Int, limit: Int): List<Long>
+
+	@Transaction
+	@Query(
+		"SELECT * FROM manga JOIN bookmarks ON bookmarks.manga_id = manga.manga_id WHERE manga.manga_id IN (:mangaIds) ORDER BY percent",
+	)
+	abstract suspend fun findByMangaIds(mangaIds: Collection<Long>): Map<MangaWithTags, List<BookmarkEntity>>
+
 	@Query("SELECT * FROM bookmarks WHERE manga_id = :mangaId AND chapter_id = :chapterId AND page = :page ORDER BY percent")
 	abstract fun observe(mangaId: Long, chapterId: Long, page: Int): Flow<BookmarkEntity?>
 
@@ -55,12 +64,13 @@ abstract class BookmarksDao {
 		val window = 4
 		var offset = 0
 		while (currentCoroutineContext().isActive) {
-			val list = findAll(offset, window)
-			if (list.isEmpty()) {
+			val mangaIds = findMangaIds(offset, window)
+			if (mangaIds.isEmpty()) {
 				break
 			}
-			offset += window
-			list.forEach { emit(it.key to it.value) }
+			offset += mangaIds.size
+			val grouped = findByMangaIds(mangaIds)
+			grouped.forEach { emit(it.key to it.value) }
 		}
 	}
 }

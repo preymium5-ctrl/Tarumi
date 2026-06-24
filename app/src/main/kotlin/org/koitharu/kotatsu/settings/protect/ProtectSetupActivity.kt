@@ -2,13 +2,9 @@ package org.koitharu.kotatsu.settings.protect
 
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.text.Editable
-import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
 import android.widget.CompoundButton
-import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
@@ -16,32 +12,27 @@ import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.BaseActivity
-import org.koitharu.kotatsu.core.ui.util.DefaultTextWatcher
 import org.koitharu.kotatsu.core.util.ext.consumeAllSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
 import org.koitharu.kotatsu.databinding.ActivitySetupProtectBinding
 
-private const val MIN_PASSWORD_LENGTH = 4
-
 @AndroidEntryPoint
 class ProtectSetupActivity :
 	BaseActivity<ActivitySetupProtectBinding>(),
-	DefaultTextWatcher,
 	View.OnClickListener,
-	TextView.OnEditorActionListener,
 	CompoundButton.OnCheckedChangeListener {
 
 	private val viewModel by viewModels<ProtectSetupViewModel>()
+	private var enteredPin = ""
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
-		window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+		// window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 		setContentView(ActivitySetupProtectBinding.inflate(layoutInflater))
-		viewBinding.editPassword.addTextChangedListener(this)
-		viewBinding.editPassword.setOnEditorActionListener(this)
-		viewBinding.buttonNext.setOnClickListener(this)
+
+		setupKeypad()
 		viewBinding.buttonCancel.setOnClickListener(this)
 
 		viewBinding.switchBiometric.isChecked = viewModel.isBiometricEnabled
@@ -52,11 +43,82 @@ class ProtectSetupActivity :
 			finishAfterTransition()
 		}
 		viewModel.onPasswordMismatch.observeEvent(this) {
-			viewBinding.editPassword.error = getString(R.string.passwords_mismatch)
+			viewBinding.textViewSubtitle.text = getString(R.string.passwords_mismatch)
+			animateShake(viewBinding.layoutDots)
+			enteredPin = ""
+			updateDots()
 		}
 		viewModel.onClearText.observeEvent(this) {
-			viewBinding.editPassword.text?.clear()
+			enteredPin = ""
+			updateDots()
 		}
+	}
+
+	private fun setupKeypad() {
+		val digits = listOf(
+			viewBinding.btn0, viewBinding.btn1, viewBinding.btn2, viewBinding.btn3,
+			viewBinding.btn4, viewBinding.btn5, viewBinding.btn6, viewBinding.btn7,
+			viewBinding.btn8, viewBinding.btn9
+		)
+		digits.forEach { btn ->
+			btn.setOnClickListener {
+				if (enteredPin.length < 6) {
+					animateTap(btn)
+					enteredPin += btn.text
+					updateDots()
+					if (enteredPin.length == 6) {
+						viewModel.onNextClick(enteredPin)
+					}
+				}
+			}
+		}
+
+		viewBinding.btnDelete.setOnClickListener {
+			if (enteredPin.isNotEmpty()) {
+				animateTap(viewBinding.btnDelete)
+				enteredPin = enteredPin.dropLast(1)
+				updateDots()
+			}
+		}
+	}
+
+	private fun updateDots() {
+		val dotsLayout = viewBinding.layoutDots
+		for (i in 0 until dotsLayout.childCount) {
+			val dot = dotsLayout.getChildAt(i) as? android.widget.ImageView ?: continue
+			if (i < enteredPin.length) {
+				dot.setImageResource(R.drawable.bg_pin_dot_filled)
+				if (i == enteredPin.length - 1) {
+					animateDot(dot)
+				}
+			} else {
+				dot.setImageResource(R.drawable.bg_pin_dot_empty)
+			}
+		}
+	}
+
+	private fun animateTap(view: View) {
+		view.animate().scaleX(0.85f).scaleY(0.85f).setDuration(80).withEndAction {
+			view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(80).start()
+		}.start()
+	}
+
+	private fun animateDot(view: View) {
+		view.animate().scaleX(1.3f).scaleY(1.3f).setDuration(100).withEndAction {
+			view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
+		}.start()
+	}
+
+	private fun animateShake(view: View) {
+		view.animate().translationX(-15f).setDuration(50).withEndAction {
+			view.animate().translationX(15f).setDuration(50).withEndAction {
+				view.animate().translationX(-10f).setDuration(50).withEndAction {
+					view.animate().translationX(10f).setDuration(50).withEndAction {
+						view.animate().translationX(0f).setDuration(50).start()
+					}.start()
+				}.start()
+			}.start()
+		}.start()
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -74,9 +136,6 @@ class ProtectSetupActivity :
 	override fun onClick(v: View) {
 		when (v.id) {
 			R.id.button_cancel -> finish()
-			R.id.button_next -> viewModel.onNextClick(
-				password = viewBinding.editPassword.text?.toString() ?: return,
-			)
 		}
 	}
 
@@ -84,32 +143,13 @@ class ProtectSetupActivity :
 		viewModel.setBiometricEnabled(isChecked)
 	}
 
-	override fun onEditorAction(v: TextView?, actionId: Int, event: KeyEvent?): Boolean {
-		return if (actionId == EditorInfo.IME_ACTION_DONE && viewBinding.buttonNext.isEnabled) {
-			viewBinding.buttonNext.performClick()
-			true
-		} else {
-			false
-		}
-	}
-
-	override fun afterTextChanged(s: Editable?) {
-		viewBinding.editPassword.error = null
-		val isEnoughLength = (s?.length ?: 0) >= MIN_PASSWORD_LENGTH
-		viewBinding.buttonNext.isEnabled = isEnoughLength
-		viewBinding.layoutPassword.isHelperTextEnabled =
-			!isEnoughLength || viewModel.isSecondStep.value == true
-	}
-
 	private fun onStepChanged(isSecondStep: Boolean) {
 		viewBinding.buttonCancel.isGone = isSecondStep
 		viewBinding.switchBiometric.isVisible = isSecondStep && isBiometricAvailable()
 		if (isSecondStep) {
-			viewBinding.layoutPassword.helperText = getString(R.string.repeat_password)
-			viewBinding.buttonNext.setText(R.string.confirm)
+			viewBinding.textViewSubtitle.text = getString(R.string.repeat_password)
 		} else {
-			viewBinding.layoutPassword.helperText = getString(R.string.password_length_hint)
-			viewBinding.buttonNext.setText(R.string.next)
+			viewBinding.textViewSubtitle.text = getString(R.string.protect_application_subtitle)
 		}
 	}
 

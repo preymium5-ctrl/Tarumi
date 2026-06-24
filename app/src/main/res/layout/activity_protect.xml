@@ -5,79 +5,329 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:padding="@dimen/screen_padding">
+	android:background="@drawable/bg_taru_home_root">
 
+	<!-- App logo -->
+	<com.google.android.material.card.MaterialCardView
+		android:id="@+id/img_logo"
+		android:layout_width="96dp"
+		android:layout_height="96dp"
+		android:layout_marginTop="80dp"
+		app:cardCornerRadius="48dp"
+		app:cardElevation="0dp"
+		app:cardBackgroundColor="@android:color/transparent"
+		app:strokeWidth="0dp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent">
+
+		<ImageView
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:scaleType="centerCrop"
+			android:src="@drawable/tarumi_icon_512" />
+
+	</com.google.android.material.card.MaterialCardView>
+
+	<!-- Title -->
 	<TextView
 		android:id="@+id/textView_title"
 		android:layout_width="0dp"
 		android:layout_height="wrap_content"
-		android:layout_marginTop="8dp"
-		android:drawablePadding="16dp"
+		android:layout_marginTop="20dp"
 		android:gravity="center_horizontal"
 		android:text="@string/app_name"
-		android:textAppearance="?textAppearanceHeadline5"
-		app:drawableTint="?colorPrimary"
-		app:drawableTopCompat="@drawable/ic_lock"
+		android:textAppearance="?textAppearanceHeadline4"
+		android:textColor="@color/taru_text_primary"
+		android:textStyle="bold"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toTopOf="parent" />
+		app:layout_constraintTop_toBottomOf="@id/img_logo" />
 
+	<!-- Subtitle -->
 	<TextView
 		android:id="@+id/textView_subtitle"
 		android:layout_width="0dp"
 		android:layout_height="wrap_content"
-		android:layout_marginTop="12dp"
+		android:layout_marginTop="16dp"
 		android:gravity="center_horizontal"
 		android:text="@string/enter_password"
 		android:textAppearance="?textAppearanceSubtitle1"
+		android:textColor="@color/taru_text_secondary"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
 		app:layout_constraintTop_toBottomOf="@id/textView_title" />
 
-	<com.google.android.material.textfield.TextInputLayout
-		android:id="@+id/layout_password"
-		style="?textInputOutlinedStyle"
-		android:layout_width="0dp"
+	<!-- PIN dots indicator -->
+	<LinearLayout
+		android:id="@+id/layout_dots"
+		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:layout_marginTop="30dp"
+		android:layout_marginTop="32dp"
+		android:orientation="horizontal"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@id/textView_subtitle"
-		app:passwordToggleEnabled="true"
-		app:startIconDrawable="@android:color/transparent">
+		app:layout_constraintTop_toBottomOf="@id/textView_subtitle">
 
-		<com.google.android.material.textfield.TextInputEditText
-			android:id="@+id/edit_password"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:gravity="center_horizontal"
-			android:imeOptions="actionDone"
-			android:importantForAutofill="no"
-			android:inputType="textPassword|textNoSuggestions"
-			android:maxLength="24"
-			android:singleLine="true"
-			android:textAlignment="center"
-			android:textSize="16sp"
-			tools:text="1234" />
+		<ImageView
+			android:layout_width="16dp"
+			android:layout_height="16dp"
+			android:layout_margin="8dp"
+			android:src="@drawable/bg_pin_dot_empty" />
+		<ImageView
+			android:layout_width="16dp"
+			android:layout_height="16dp"
+			android:layout_margin="8dp"
+			android:src="@drawable/bg_pin_dot_empty" />
+		<ImageView
+			android:layout_width="16dp"
+			android:layout_height="16dp"
+			android:layout_margin="8dp"
+			android:src="@drawable/bg_pin_dot_empty" />
+		<ImageView
+			android:layout_width="16dp"
+			android:layout_height="16dp"
+			android:layout_margin="8dp"
+			android:src="@drawable/bg_pin_dot_empty" />
+		<ImageView
+			android:layout_width="16dp"
+			android:layout_height="16dp"
+			android:layout_margin="8dp"
+			android:src="@drawable/bg_pin_dot_empty" />
+		<ImageView
+			android:layout_width="16dp"
+			android:layout_height="16dp"
+			android:layout_margin="8dp"
+			android:src="@drawable/bg_pin_dot_empty" />
 
-	</com.google.android.material.textfield.TextInputLayout>
+	</LinearLayout>
 
-	<com.google.android.material.button.MaterialButton
+	<!-- Passcode Keypad -->
+	<TableLayout
+		android:id="@+id/layout_keypad"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:stretchColumns="*"
+		app:layout_constraintTop_toBottomOf="@id/layout_dots"
+		app:layout_constraintBottom_toTopOf="@id/button_forgot"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintVertical_bias="0.5"
+		app:layout_constraintVertical_chainStyle="spread_inside">
+
+		<TableRow>
+			<TextView
+				android:id="@+id/btn_1"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="1"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<TextView
+				android:id="@+id/btn_2"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="2"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<TextView
+				android:id="@+id/btn_3"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="3"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+		</TableRow>
+
+		<TableRow>
+			<TextView
+				android:id="@+id/btn_4"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="4"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<TextView
+				android:id="@+id/btn_5"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="5"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<TextView
+				android:id="@+id/btn_6"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="6"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+		</TableRow>
+
+		<TableRow>
+			<TextView
+				android:id="@+id/btn_7"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="7"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<TextView
+				android:id="@+id/btn_8"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="8"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<TextView
+				android:id="@+id/btn_9"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="9"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+		</TableRow>
+
+		<TableRow>
+			<ImageButton
+				android:id="@+id/btn_left"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:paddingTop="26dp"
+				android:paddingBottom="18dp"
+				android:paddingStart="22dp"
+				android:paddingEnd="22dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:scaleType="centerInside"
+				app:tint="@color/taru_text_primary" />
+			<TextView
+				android:id="@+id/btn_0"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:gravity="center"
+				android:paddingTop="8dp"
+				android:text="0"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="18sp"
+				android:textStyle="bold" />
+			<ImageButton
+				android:id="@+id/btn_delete"
+				android:layout_width="60dp"
+				android:layout_height="60dp"
+				android:layout_margin="10dp"
+				android:paddingTop="26dp"
+				android:paddingBottom="18dp"
+				android:paddingStart="22dp"
+				android:paddingEnd="22dp"
+				android:background="@drawable/bg_pin_button"
+				android:clickable="true"
+				android:focusable="true"
+				android:scaleType="centerInside"
+				android:src="@drawable/ic_backspace"
+				app:tint="@color/taru_text_primary" />
+		</TableRow>
+
+	</TableLayout>
+
+	<!-- Forgot password text button -->
+	<Button
+		android:id="@+id/button_forgot"
+		style="@style/Widget.Material3.Button.TextButton"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:layout_marginBottom="8dp"
+		android:text="@string/forgot_password"
+		android:textColor="?attr/colorPrimary"
+		android:visibility="gone"
+		app:layout_constraintTop_toBottomOf="@id/layout_keypad"
+		app:layout_constraintBottom_toTopOf="@id/button_cancel"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		tools:visibility="visible" />
+
+	<!-- Cancel text button at bottom -->
+	<Button
 		android:id="@+id/button_cancel"
-		style="?materialButtonOutlinedStyle"
+		style="@style/Widget.Material3.Button.TextButton"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
+		android:layout_marginBottom="24dp"
 		android:text="@android:string/cancel"
+		android:textColor="@color/taru_text_secondary"
+		app:layout_constraintTop_toBottomOf="@id/button_forgot"
 		app:layout_constraintBottom_toBottomOf="parent"
-		app:layout_constraintStart_toStartOf="parent" />
-
-	<com.google.android.material.button.MaterialButton
-		android:id="@+id/button_next"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:enabled="false"
-		android:text="@string/next"
-		app:layout_constraintBottom_toBottomOf="parent"
-		app:layout_constraintEnd_toEndOf="parent" />
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintVertical_bias="1.0" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

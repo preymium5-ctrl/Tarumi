@@ -53,6 +53,7 @@
     <string name="local_storage_summary">Open downloaded and imported manga saved on this device.</string>
     <string name="favourites">Favorites</string>
     <string name="history">History</string>
+    <string name="security">Security</string>
     <string name="error_occurred">An error occurred</string>
     <string name="network_error">Network error</string>
     <string name="details">Details</string>
@@ -202,6 +203,15 @@
     <string name="protect_application_summary">Ask for password when starting Kotatsu</string>
     <string name="repeat_password">Repeat the password</string>
     <string name="passwords_mismatch">Mismatching passwords</string>
+    <string name="set_recovery_word">Set recovery word</string>
+    <string name="set_recovery_word_summary">Set a recovery word to reset your PIN if you forget it</string>
+    <string name="recovery_word_set">Recovery word is set</string>
+    <string name="recovery_word_not_set">Not set</string>
+    <string name="enter_recovery_word">Enter recovery word</string>
+    <string name="recovery_word_mismatch">Incorrect recovery word</string>
+    <string name="recovery_word_hint">Enter recovery word to reset PIN</string>
+    <string name="reset_success">PIN reset successfully. Please set a new PIN.</string>
+    <string name="recovery_word_not_configured">No recovery word has been configured in Security settings.</string>
     <string name="about">About</string>
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
@@ -339,6 +349,8 @@
     <string name="edit">Edit</string>
     <string name="edit_category">Edit category</string>
     <string name="tracking">Tracking</string>
+    <string name="auto_sync_prompt_title">Sync reading progress?</string>
+    <string name="auto_sync_prompt_message">Automatically update your tracking services when you read “%1$s”?\n\nIf the title is matched incorrectly, you can change it later with the Tracking button.</string>
     <string name="empty_favourite_categories">No favorite categories</string>
     <string name="logout">Log out</string>
     <string name="bookmark_add">Add bookmark</string>

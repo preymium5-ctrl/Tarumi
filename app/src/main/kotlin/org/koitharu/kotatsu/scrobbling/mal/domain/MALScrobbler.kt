@@ -21,6 +21,7 @@ class MALScrobbler @Inject constructor(
 	init {
 		statuses[ScrobblingStatus.PLANNED] = "plan_to_read"
 		statuses[ScrobblingStatus.READING] = "reading"
+		statuses[ScrobblingStatus.RE_READING] = "reading"
 		statuses[ScrobblingStatus.COMPLETED] = "completed"
 		statuses[ScrobblingStatus.ON_HOLD] = "on_hold"
 		statuses[ScrobblingStatus.DROPPED] = "dropped"

@@ -29,4 +29,28 @@ interface ScrobblerRepository {
 	suspend fun updateRate(rateId: Int, mangaId: Long, chapter: Int)
 
 	suspend fun updateRate(rateId: Int, mangaId: Long, rating: Float, status: String?, comment: String?)
+
+	suspend fun getExistingRate(scrobblerMangaId: Long): ExistingRate?
+
+	suspend fun getUserMangaList(): List<TrackerMangaEntry>
 }
+
+data class ExistingRate(
+	val id: Int,
+	val targetId: Long,
+	val status: String?,
+	val chapter: Int,
+	val comment: String?,
+	val rating: Float,
+)
+
+data class TrackerMangaEntry(
+	val id: Int,
+	val targetId: Long,
+	val title: String,
+	val coverUrl: String?,
+	val status: String?,
+	val chapter: Int,
+	val comment: String?,
+	val rating: Float,
+)

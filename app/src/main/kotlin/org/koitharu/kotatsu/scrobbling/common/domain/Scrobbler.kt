@@ -38,16 +38,24 @@ abstract class Scrobbler(
 	private val infoCache = LongSparseArray<ScrobblerMangaInfo>()
 	protected val statuses = EnumMap<ScrobblingStatus, String>(ScrobblingStatus::class.java)
 
-	val user: Flow<ScrobblerUser> = flow {
-		repository.cachedUser?.let {
-			emit(it)
+	val user: Flow<ScrobblerUser?> = flow {
+		val cached = repository.cachedUser
+		if (cached != null) {
+			emit(cached)
+		} else {
+			emit(null)
 		}
-		runCatchingCancellable {
-			repository.loadUser()
-		}.onSuccess {
-			emit(it)
-		}.onFailure {
-			it.printStackTraceDebug()
+		if (repository.isAuthorized) {
+			runCatchingCancellable {
+				repository.loadUser()
+			}.onSuccess {
+				emit(it)
+			}.onFailure {
+				it.printStackTraceDebug()
+				if (cached == null) {
+					emit(null)
+				}
+			}
 		}
 	}
 
@@ -67,11 +75,93 @@ abstract class Scrobbler(
 		return repository.findManga(query, offset)
 	}
 
+	fun getRemoteStatus(status: ScrobblingStatus): String? {
+		return statuses[status]
+	}
+
+	suspend fun getUserMangaList(): List<org.koitharu.kotatsu.scrobbling.common.data.TrackerMangaEntry> {
+		return repository.getUserMangaList()
+	}
+
 	suspend fun linkManga(mangaId: Long, targetId: Long) {
 		repository.createRate(mangaId, targetId)
 	}
 
-	suspend fun scrobble(manga: Manga, chapterId: Long) {
+	suspend fun isMangaLinked(mangaId: Long): Boolean {
+		return db.getScrobblingDao().find(scrobblerService.id, mangaId) != null
+	}
+
+	suspend fun ensureMangaLinked(manga: Manga, allowAutoLink: Boolean): Boolean {
+		if (isMangaLinked(manga.id)) return true
+		if (!allowAutoLink || !isEnabled) return false
+		val searchResults = runCatchingCancellable {
+			findManga(manga.title, 0)
+		}.getOrNull()
+		val match = searchResults?.firstOrNull { it.isBestMatch } ?: searchResults?.firstOrNull()
+		if (match != null) {
+			return runCatchingCancellable {
+				linkManga(manga.id, match.id)
+				true
+			}.getOrDefault(false)
+		}
+		return false
+	}
+
+	suspend fun getTrackedChapterOrNull(mangaId: Long): Int? {
+		val entity = db.getScrobblingDao().find(scrobblerService.id, mangaId) ?: return null
+		if (!isEnabled) return entity.chapter
+		return runCatchingCancellable {
+			val rate = repository.getExistingRate(entity.targetId)
+			if (rate != null) {
+				db.getScrobblingDao().upsert(
+					ScrobblingEntity(
+						scrobbler = entity.scrobbler,
+						id = rate.id,
+						mangaId = entity.mangaId,
+						targetId = entity.targetId,
+						status = rate.status,
+						chapter = rate.chapter,
+						comment = rate.comment,
+						rating = rate.rating,
+					)
+				)
+				rate.chapter
+			} else {
+				entity.chapter
+			}
+		}.getOrElse {
+			it.printStackTraceDebug()
+			entity.chapter
+		}
+	}
+
+	suspend fun getExistingRate(manga: Manga): org.koitharu.kotatsu.scrobbling.common.data.ExistingRate? {
+		if (!isEnabled) return null
+		val searchResults = runCatchingCancellable {
+			findManga(manga.title, 0)
+		}.getOrNull() ?: return null
+		val match = searchResults.firstOrNull { it.isBestMatch } ?: searchResults.firstOrNull() ?: return null
+		return runCatchingCancellable {
+			repository.getExistingRate(match.id)
+		}.getOrNull()
+	}
+
+	suspend fun linkMangaWithExistingRate(mangaId: Long, rate: org.koitharu.kotatsu.scrobbling.common.data.ExistingRate) {
+		db.getScrobblingDao().upsert(
+			ScrobblingEntity(
+				scrobbler = scrobblerService.id,
+				id = rate.id,
+				mangaId = mangaId,
+				targetId = rate.targetId,
+				status = rate.status,
+				chapter = rate.chapter,
+				comment = rate.comment,
+				rating = rate.rating,
+			)
+		)
+	}
+
+	suspend fun scrobble(manga: Manga, chapterId: Long, allowAutoLink: Boolean = false) {
 		var chapters = manga.chapters
 		if (chapters.isNullOrEmpty()) {
 			chapters = mangaRepositoryFactory.create(manga.source).getDetails(manga).chapters
@@ -87,17 +177,9 @@ abstract class Scrobbler(
 			chapters.indexOf(chapter) + 1
 		}
 		var entity = db.getScrobblingDao().find(scrobblerService.id, manga.id)
-		if (entity == null && isEnabled) {
-			val searchResults = runCatchingCancellable {
-				findManga(manga.title, 0)
-			}.getOrNull()
-			val match = searchResults?.firstOrNull { it.isBestMatch } ?: searchResults?.firstOrNull()
-			if (match != null) {
-				runCatchingCancellable {
-					linkManga(manga.id, match.id)
-					entity = db.getScrobblingDao().find(scrobblerService.id, manga.id)
-				}
-			}
+		if (entity == null && allowAutoLink) {
+			ensureMangaLinked(manga, allowAutoLink = true)
+			entity = db.getScrobblingDao().find(scrobblerService.id, manga.id)
 		}
 		if (entity == null) return
 		repository.updateRate(entity.id, entity.mangaId, number)
@@ -167,9 +249,9 @@ abstract class Scrobbler(
 	}
 }
 
-suspend fun Scrobbler.tryScrobble(manga: Manga, chapterId: Long): Boolean {
+suspend fun Scrobbler.tryScrobble(manga: Manga, chapterId: Long, allowAutoLink: Boolean = false): Boolean {
 	return runCatchingCancellable {
-		scrobble(manga, chapterId)
+		scrobble(manga, chapterId, allowAutoLink)
 	}.onFailure {
 		it.printStackTraceDebug()
 	}.isSuccess

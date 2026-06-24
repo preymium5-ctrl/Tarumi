@@ -22,6 +22,7 @@
 -dontwarn com.google.protobuf.ProtoField
 -dontwarn com.google.protobuf.ProtoPresenceBits
 -dontwarn com.google.protobuf.ProtoPresenceCheckedField
+-dontwarn org.koitharu.kotatsu.parsers.site.mangareader.id.KomikIndo
 
 -keep class org.koitharu.kotatsu.settings.NotificationSettingsLegacyFragment
 -keep class org.koitharu.kotatsu.settings.about.changelog.ChangelogFragment

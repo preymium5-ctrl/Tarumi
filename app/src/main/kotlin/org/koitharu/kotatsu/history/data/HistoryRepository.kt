@@ -12,6 +12,7 @@ import org.koitharu.kotatsu.core.db.entity.toMangaList
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.db.entity.toMangaTagsList
 import org.koitharu.kotatsu.core.model.MangaHistory
+import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.model.toMangaSources
@@ -20,15 +21,20 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ProgressIndicatorMode
 import org.koitharu.kotatsu.core.ui.util.ReversibleHandle
 import org.koitharu.kotatsu.core.util.ext.mapItems
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.history.domain.model.MangaWithHistory
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.domain.ListSortOrder
 import org.koitharu.kotatsu.list.domain.ReadingProgress
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.levenshteinDistance
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingConsentStore
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingConsentStore.Consent
 import org.koitharu.kotatsu.scrobbling.common.domain.Scrobbler
 import org.koitharu.kotatsu.scrobbling.common.domain.tryScrobble
 import org.koitharu.kotatsu.search.domain.SearchKind
@@ -41,6 +47,7 @@ class HistoryRepository @Inject constructor(
 	private val db: MangaDatabase,
 	private val settings: AppSettings,
 	private val scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
+	private val scrobblingConsentStore: ScrobblingConsentStore,
 	private val mangaRepository: MangaDataRepository,
 	private val localObserver: HistoryLocalObserver,
 	private val newChaptersUseCaseProvider: Provider<CheckNewChaptersUseCase>,
@@ -110,7 +117,15 @@ class HistoryRepository @Inject constructor(
 		}
 	}
 
-	suspend fun addOrUpdate(manga: Manga, chapterId: Long, page: Int, scroll: Int, percent: Float, force: Boolean) {
+	suspend fun addOrUpdate(
+		manga: Manga,
+		chapterId: Long,
+		page: Int,
+		scroll: Int,
+		percent: Float,
+		force: Boolean,
+		updateScrobbling: Boolean = true,
+	) {
 		if (!force && shouldSkip(manga)) {
 			return
 		}
@@ -132,8 +147,83 @@ class HistoryRepository @Inject constructor(
 				),
 			)
 			newChaptersUseCaseProvider.get()(manga, chapterId)
-			scrobblers.forEach { it.tryScrobble(manga, chapterId) }
+			val consent = scrobblingConsentStore.getConsent(manga.id)
+			if (updateScrobbling && consent != Consent.DISABLED) {
+				scrobblers.forEach { scrobbler ->
+					if (!scrobblingConsentStore.isServiceBlocked(manga.id, scrobbler.scrobblerService)) {
+						scrobbler.tryScrobble(
+							manga = manga,
+							chapterId = chapterId,
+							allowAutoLink = consent == Consent.ENABLED,
+						)
+					}
+				}
+			}
 		}
+	}
+
+	suspend fun shouldAskForScrobbling(mangaId: Long): Boolean {
+		if (scrobblingConsentStore.getConsent(mangaId) != Consent.UNDECIDED) return false
+		val enabledScrobblers = scrobblers.filter { it.isEnabled }
+		if (enabledScrobblers.isEmpty()) return false
+		return enabledScrobblers.none { it.isMangaLinked(mangaId) }
+	}
+
+	suspend fun setAutomaticScrobbling(manga: Manga, chapterId: Long, enabled: Boolean): MangaHistory? {
+		scrobblingConsentStore.setConsent(
+			mangaId = manga.id,
+			consent = if (enabled) Consent.ENABLED else Consent.DISABLED,
+		)
+		if (!enabled) {
+			return null
+		}
+		val linkedScrobblers = scrobblers.filter { scrobbler ->
+			scrobbler.isEnabled &&
+				!scrobblingConsentStore.isServiceBlocked(manga.id, scrobbler.scrobblerService) &&
+				runCatchingCancellable {
+					scrobbler.ensureMangaLinked(manga, allowAutoLink = true)
+				}.onFailure {
+					it.printStackTraceDebug()
+				}.getOrDefault(false)
+		}
+		return syncScrobblingProgress(manga, chapterId, linkedScrobblers)
+	}
+
+	suspend fun syncScrobblingProgress(
+		manga: Manga,
+		currentChapterId: Long?,
+		targetScrobblers: Collection<Scrobbler>,
+	): MangaHistory? {
+		if (targetScrobblers.isEmpty()) {
+			return null
+		}
+		val target = resolveSyncTarget(manga, currentChapterId, targetScrobblers) ?: return null
+		val history = getOne(manga)
+		val updatedHistory = if (target.historyChapter != null && (
+				history == null ||
+					target.readChapters > getChapterProgress(manga, history.chapterId) ||
+					manga.chapters?.findById(history.chapterId) == null
+				)
+		) {
+			addOrUpdate(
+				manga = manga,
+				chapterId = target.historyChapter.id,
+				page = 0,
+				scroll = 0,
+				percent = target.percent,
+				force = true,
+				updateScrobbling = false,
+			)
+			getOne(manga)
+		} else {
+			null
+		}
+		targetScrobblers.forEach { scrobbler ->
+			if (!scrobblingConsentStore.isServiceBlocked(manga.id, scrobbler.scrobblerService)) {
+				scrobbler.tryScrobble(manga, target.scrobbleChapter.id, allowAutoLink = false)
+			}
+		}
+		return updatedHistory
 	}
 
 	suspend fun getOne(manga: Manga): MangaHistory? {
@@ -215,6 +305,116 @@ class HistoryRepository @Inject constructor(
 		}
 	}
 
+	private suspend fun resolveSyncTarget(
+		manga: Manga,
+		currentChapterId: Long?,
+		targetScrobblers: Collection<Scrobbler>,
+	): ScrobblingSyncTarget? {
+		val chapters = getSyncChapters(manga, currentChapterId)
+		if (chapters.isEmpty()) {
+			return null
+		}
+		val history = getOne(manga)
+		val localReadChapters = history?.chapterId?.let { getChapterProgress(chapters, it) } ?: 0
+		val remoteReadChapters = targetScrobblers.maxOfOrNull { scrobbler ->
+			runCatchingCancellable {
+				scrobbler.getTrackedChapterOrNull(manga.id) ?: 0
+			}.onFailure {
+				it.printStackTraceDebug()
+			}.getOrDefault(0)
+		} ?: 0
+		val readChapters = maxOf(remoteReadChapters, localReadChapters)
+		val currentChapter = currentChapterId?.let { id -> chapters.findById(id) }
+			?: history?.chapterId?.let { id -> chapters.findById(id) }
+			?: chapters.firstOrNull()
+			?: return null
+		val scrobbleChapter = findScrobbleChapter(chapters, readChapters) ?: currentChapter
+		val historyChapter = if (remoteReadChapters > localReadChapters) {
+			findHistoryChapter(chapters, remoteReadChapters)
+		} else {
+			null
+		}
+		return ScrobblingSyncTarget(
+			readChapters = readChapters,
+			historyChapter = historyChapter,
+			scrobbleChapter = scrobbleChapter,
+			percent = if (chapters.isEmpty()) {
+				ReadingProgress.PROGRESS_NONE
+			} else {
+				(remoteReadChapters / chapters.size.toFloat()).coerceIn(0f, 1f)
+			},
+		)
+	}
+
+	private fun getSyncChapters(manga: Manga, currentChapterId: Long?): List<MangaChapter> {
+		val allChapters = manga.chapters.orEmpty()
+		val branch = currentChapterId?.let { id -> allChapters.findById(id)?.branch }
+			?: manga.getPreferredBranch(null)
+		return manga.getChapters(branch).ifEmpty { allChapters }
+	}
+
+	private fun parseChapterNumberFromName(name: String): Double? {
+		val match = Regex("""\b\d+(?:\.\d+)?\b""").find(name)
+		return match?.value?.toDoubleOrNull()
+	}
+
+	private fun findHistoryChapter(chapters: List<MangaChapter>, readChapters: Int): MangaChapter? {
+		if (chapters.isEmpty()) {
+			return null
+		}
+		val exactNumberMatch = chapters.firstOrNull { it.number.toInt() == readChapters }
+		if (exactNumberMatch != null) {
+			return exactNumberMatch
+		}
+		val exactNameMatch = chapters.firstOrNull { chapter ->
+			parseChapterNumberFromName(chapter.title.orEmpty())?.toInt() == readChapters
+		}
+		if (exactNameMatch != null) {
+			return exactNameMatch
+		}
+		if (hasChapterNumbers(chapters)) {
+			return chapters.firstOrNull { it.number.toInt() > readChapters } ?: chapters.last()
+		}
+		return chapters[readChapters.coerceIn(0, chapters.lastIndex)]
+	}
+
+	private fun findScrobbleChapter(chapters: List<MangaChapter>, readChapters: Int): MangaChapter? {
+		if (readChapters <= 0 || chapters.isEmpty()) {
+			return null
+		}
+		val exactNumberMatch = chapters.firstOrNull { it.number.toInt() == readChapters }
+		if (exactNumberMatch != null) {
+			return exactNumberMatch
+		}
+		val exactNameMatch = chapters.firstOrNull { chapter ->
+			parseChapterNumberFromName(chapter.title.orEmpty())?.toInt() == readChapters
+		}
+		if (exactNameMatch != null) {
+			return exactNameMatch
+		}
+		if (hasChapterNumbers(chapters)) {
+			return chapters.lastOrNull { it.number.toInt() <= readChapters } ?: chapters.first()
+		}
+		return chapters[(readChapters - 1).coerceIn(0, chapters.lastIndex)]
+	}
+
+	private fun getChapterProgress(manga: Manga, chapterId: Long): Int {
+		return getChapterProgress(getSyncChapters(manga, chapterId), chapterId)
+	}
+
+	private fun getChapterProgress(chapters: List<MangaChapter>, chapterId: Long): Int {
+		val chapter = chapters.findById(chapterId) ?: return 0
+		return if (chapter.number > 0f) {
+			chapter.number.toInt()
+		} else {
+			chapters.indexOf(chapter) + 1
+		}
+	}
+
+	private fun hasChapterNumbers(chapters: List<MangaChapter>): Boolean {
+		return chapters.any { it.number > 0f }
+	}
+
 	private suspend fun HistoryEntity.recoverIfNeeded(manga: Manga): HistoryEntity {
 		val chapters = manga.chapters
 		if (manga.isLocal || chapters.isNullOrEmpty() || chapters.findById(chapterId) != null) {
@@ -229,4 +429,11 @@ class HistoryRepository @Inject constructor(
 	}
 
 	private fun HistoryWithManga.toManga() = manga.toManga(tags.toMangaTags(), chapters)
+
+	private data class ScrobblingSyncTarget(
+		val readChapters: Int,
+		val historyChapter: MangaChapter?,
+		val scrobbleChapter: MangaChapter,
+		val percent: Float,
+	)
 }

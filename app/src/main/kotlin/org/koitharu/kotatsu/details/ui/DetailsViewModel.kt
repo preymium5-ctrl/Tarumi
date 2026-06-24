@@ -51,6 +51,10 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.ui.ReaderState
+import org.koitharu.kotatsu.core.util.ext.EventFlow
+import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingConsentStore
+import org.koitharu.kotatsu.scrobbling.common.data.ExistingRate
 import org.koitharu.kotatsu.scrobbling.common.domain.Scrobbler
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus
@@ -63,6 +67,7 @@ class DetailsViewModel @Inject constructor(
 	bookmarksRepository: BookmarksRepository,
 	settings: AppSettings,
 	private val scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
+	private val scrobblingConsentStore: ScrobblingConsentStore,
 	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>,
 	downloadScheduler: DownloadWorker.Scheduler,
 	interactor: DetailsInteractor,
@@ -87,6 +92,7 @@ class DetailsViewModel @Inject constructor(
 	private val intent = MangaIntent(savedStateHandle)
 	private var loadingJob: Job
 	val mangaId = intent.mangaId
+	val onPromptExternalTracking = MutableEventFlow<PromptExternalTrackingEvent>()
 
 	init {
 		mangaDetails.value = intent.manga?.let { MangaDetails(it) }
@@ -204,11 +210,54 @@ class DetailsViewModel @Inject constructor(
 			val manga = mangaDetails.firstOrNull { it != null && it.isLocal } ?: return@launchJob
 			remoteManga.value = interactor.findRemote(manga.toManga())
 		}
+		launchJob(Dispatchers.Default) {
+			val mangaDetail = mangaDetails.firstOrNull { !it?.chapters.isNullOrEmpty() } ?: return@launchJob
+			val manga = mangaDetail.toManga()
+			checkExternalTracking(manga)
+		}
 	}
 
 	fun reload() {
 		loadingJob.cancel()
 		loadingJob = doLoad(force = true)
+	}
+
+	private suspend fun checkExternalTracking(manga: Manga) {
+		if (scrobblingConsentStore.getConsent(manga.id) != ScrobblingConsentStore.Consent.UNDECIDED) {
+			return
+		}
+		for (scrobbler in scrobblers) {
+			if (scrobbler.isEnabled && !scrobbler.isMangaLinked(manga.id)) {
+				val existingRate = scrobbler.getExistingRate(manga)
+				if (existingRate != null) {
+					onPromptExternalTracking.call(PromptExternalTrackingEvent(scrobbler, manga, existingRate))
+					break
+				}
+			}
+		}
+	}
+
+	fun acceptExternalTracking(event: PromptExternalTrackingEvent) {
+		launchJob(Dispatchers.Default) {
+			val scrobbler = event.scrobbler
+			val manga = event.manga
+			val rate = event.rate
+			scrobbler.linkMangaWithExistingRate(manga.id, rate)
+			scrobblingConsentStore.setConsent(manga.id, ScrobblingConsentStore.Consent.ENABLED)
+			if (rate.chapter > 0) {
+				historyRepository.syncScrobblingProgress(
+					manga = manga,
+					currentChapterId = null,
+					targetScrobblers = listOf(scrobbler),
+				)
+			}
+		}
+	}
+
+	fun declineExternalTracking(event: PromptExternalTrackingEvent) {
+		launchJob(Dispatchers.Default) {
+			scrobblingConsentStore.setConsent(event.manga.id, ScrobblingConsentStore.Consent.DISABLED)
+		}
 	}
 
 	fun updateScrobbling(index: Int, rating: Float, status: ScrobblingStatus?) {
@@ -272,3 +321,9 @@ class DetailsViewModel @Inject constructor(
 		val url: String,
 	)
 }
+
+data class PromptExternalTrackingEvent(
+	val scrobbler: Scrobbler,
+	val manga: Manga,
+	val rate: ExistingRate,
+)

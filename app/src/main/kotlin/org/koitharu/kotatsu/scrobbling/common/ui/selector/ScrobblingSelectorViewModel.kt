@@ -30,6 +30,8 @@ import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.parsers.util.ifZero
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.scrobbling.common.domain.Scrobbler
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingConsentStore
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingConsentStore.Consent
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerManga
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus
 import org.koitharu.kotatsu.scrobbling.common.ui.selector.model.ScrobblerHint
@@ -40,6 +42,7 @@ class ScrobblingSelectorViewModel @Inject constructor(
 	savedStateHandle: SavedStateHandle,
 	scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
 	private val historyRepository: HistoryRepository,
+	private val scrobblingConsentStore: ScrobblingConsentStore,
 ) : BaseViewModel() {
 
 	val manga = savedStateHandle.require<ParcelableManga>(AppRouter.KEY_MANGA).manga
@@ -150,27 +153,34 @@ class ScrobblingSelectorViewModel @Inject constructor(
 		val targetId = selectedItemId.value
 		if (targetId == NO_ID) {
 			onClose.call(Unit)
+			return
 		}
 		doneJob = launchLoadingJob(Dispatchers.Default) {
 			val prevInfo = currentScrobbler.getScrobblingInfoOrNull(manga.id)
 			currentScrobbler.linkManga(manga.id, targetId)
+			scrobblingConsentStore.setConsent(manga.id, Consent.ENABLED)
+			scrobblingConsentStore.setServiceBlocked(
+				mangaId = manga.id,
+				service = currentScrobbler.scrobblerService,
+				blocked = false,
+			)
 			val history = historyRepository.getOne(manga)
+			val linkedInfo = currentScrobbler.getScrobblingInfoOrNull(manga.id)
 			currentScrobbler.updateScrobblingInfo(
 				mangaId = manga.id,
-				rating = prevInfo?.rating ?: 0f,
-				status = prevInfo?.status ?: when {
+				rating = prevInfo?.rating ?: linkedInfo?.rating ?: 0f,
+				status = prevInfo?.status ?: linkedInfo?.status ?: when {
 					history == null -> ScrobblingStatus.PLANNED
 					ReadingProgress.isCompleted(history.percent) -> ScrobblingStatus.COMPLETED
 					else -> ScrobblingStatus.READING
 				},
-				comment = prevInfo?.comment,
+				comment = prevInfo?.comment ?: linkedInfo?.comment,
 			)
-			if (history != null) {
-				currentScrobbler.scrobble(
-					manga = manga,
-					chapterId = history.chapterId,
-				)
-			}
+			historyRepository.syncScrobblingProgress(
+				manga = manga,
+				currentChapterId = history?.chapterId,
+				targetScrobblers = listOf(currentScrobbler),
+			)
 			onClose.call(Unit)
 		}
 	}

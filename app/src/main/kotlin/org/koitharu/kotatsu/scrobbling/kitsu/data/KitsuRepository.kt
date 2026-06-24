@@ -19,6 +19,8 @@ import org.koitharu.kotatsu.parsers.util.json.getStringOrNull
 import org.koitharu.kotatsu.parsers.util.json.mapJSON
 import org.koitharu.kotatsu.parsers.util.parseJson
 import org.koitharu.kotatsu.parsers.util.urlEncoded
+import org.koitharu.kotatsu.scrobbling.common.data.ExistingRate
+import org.koitharu.kotatsu.scrobbling.common.data.TrackerMangaEntry
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerRepository
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerStorage
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
@@ -195,6 +197,71 @@ class KitsuRepository(
 			.patch(payload.toKitsuRequestBody())
 		val response = okHttp.newCall(request.build()).await().parseJson().ensureSuccess().getJSONObject("data")
 		saveRate(response, mangaId)
+	}
+
+	override suspend fun getExistingRate(scrobblerMangaId: Long): ExistingRate? {
+		val entry = findExistingRate(scrobblerMangaId) ?: return null
+		val attrs = entry.getJSONObject("attributes")
+		val manga = entry.getJSONObject("relationships").getJSONObject("manga").getJSONObject("data")
+		return ExistingRate(
+			id = entry.getInt("id"),
+			targetId = manga.getAsLong("id"),
+			status = attrs.getString("status"),
+			chapter = attrs.optInt("progress", 0),
+			comment = attrs.getStringOrNull("notes"),
+			rating = (attrs.optDouble("ratingTwenty", 0.0).toFloat() / 20f).coerceIn(0f, 1f),
+		)
+	}
+
+	override suspend fun getUserMangaList(): List<TrackerMangaEntry> {
+		val userId = (cachedUser ?: loadUser()).id
+		val result = ArrayList<TrackerMangaEntry>()
+		var offset = 0
+		while (true) {
+			val request = Request.Builder()
+				.get()
+				.url("$BASE_WEB_URL/api/edge/library-entries?filter[userId]=$userId&include=manga&page[limit]=100&page[offset]=$offset")
+			val responseObj = okHttp.newCall(request.build()).await().parseJson().ensureSuccess()
+			val data = responseObj.optJSONArray("data") ?: break
+			if (data.length() == 0) break
+
+			val mangaMap = HashMap<Long, JSONObject>()
+			val included = responseObj.optJSONArray("included")
+			if (included != null) {
+				for (i in 0 until included.length()) {
+					val inc = included.getJSONObject(i)
+					if (inc.optString("type") == "manga") {
+						mangaMap[inc.getAsLong("id")] = inc
+					}
+				}
+			}
+
+			for (i in 0 until data.length()) {
+				val entry = data.getJSONObject(i)
+				val attrs = entry.getJSONObject("attributes")
+				val mangaRel = entry.getJSONObject("relationships").getJSONObject("manga").getJSONObject("data")
+				val targetId = mangaRel.getAsLong("id")
+
+				val mangaInfo = mangaMap[targetId]
+				val title = mangaInfo?.getJSONObject("attributes")?.optString("canonicalTitle") ?: "Manga"
+				val cover = mangaInfo?.getJSONObject("attributes")?.optJSONObject("posterImage")?.getStringOrNull("small")
+
+				result.add(
+					TrackerMangaEntry(
+						id = entry.getInt("id"),
+						targetId = targetId,
+						title = title,
+						coverUrl = cover,
+						status = attrs.getStringOrNull("status"),
+						chapter = attrs.optInt("progress", 0),
+						comment = attrs.getStringOrNull("notes"),
+						rating = (attrs.optDouble("ratingTwenty", 0.0).toFloat() / 20f).coerceIn(0f, 1f),
+					)
+				)
+			}
+			offset += 100
+		}
+		return result
 	}
 
 	private fun JSONObject.valuesToStringList(): List<String> {

@@ -16,6 +16,8 @@ import org.koitharu.kotatsu.parsers.util.json.getStringOrNull
 import org.koitharu.kotatsu.parsers.util.json.mapJSON
 import org.koitharu.kotatsu.parsers.util.parseJson
 import org.koitharu.kotatsu.parsers.util.toIntUp
+import org.koitharu.kotatsu.scrobbling.common.data.ExistingRate
+import org.koitharu.kotatsu.scrobbling.common.data.TrackerMangaEntry
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerRepository
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerStorage
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
@@ -189,6 +191,94 @@ class AniListRepository @Inject constructor(
 		)
 		saveRate(response.getJSONObject("data").getJSONObject("SaveMediaListEntry"), mangaId)
 	}
+
+	override suspend fun getExistingRate(scrobblerMangaId: Long): ExistingRate? {
+		val response = doRequest(
+			REQUEST_QUERY,
+			"""
+			Media(id: $scrobblerMangaId) {
+				mediaListEntry {
+					id
+					mediaId
+					status
+					notes
+					score
+					progress
+				}
+			}
+			""",
+		)
+		val media = response.getJSONObject("data").getJSONObject("Media")
+		if (media.isNull("mediaListEntry")) return null
+		val json = media.getJSONObject("mediaListEntry")
+		val scoreFormat = ScoreFormat.of(storage[KEY_SCORE_FORMAT])
+		return ExistingRate(
+			id = json.getInt("id"),
+			targetId = json.getLong("mediaId"),
+			status = json.getString("status"),
+			chapter = json.getInt("progress"),
+			comment = json.getString("notes"),
+			rating = scoreFormat.normalize(json.getDouble("score").toFloat()),
+		)
+	}
+
+	override suspend fun getUserMangaList(): List<TrackerMangaEntry> {
+		val userId = cachedUser?.id ?: loadUser().id
+		val response = doRequest(
+			REQUEST_QUERY,
+			"""
+			MediaListCollection(userId: $userId, type: MANGA) {
+				lists {
+					entries {
+						id
+						mediaId
+						status
+						notes
+						score
+						progress
+						media {
+							title {
+								userPreferred
+							}
+							coverImage {
+								medium
+							}
+						}
+					}
+				}
+			}
+			""",
+		)
+		val lists = response.getJSONObject("data")
+			.getJSONObject("MediaListCollection")
+			.getJSONArray("lists")
+		val scoreFormat = ScoreFormat.of(storage[KEY_SCORE_FORMAT])
+		val result = ArrayList<TrackerMangaEntry>()
+		for (i in 0 until lists.length()) {
+			val list = lists.getJSONObject(i)
+			val entries = list.getJSONArray("entries")
+			for (j in 0 until entries.length()) {
+				val entry = entries.getJSONObject(j)
+				val media = entry.getJSONObject("media")
+				val title = media.getJSONObject("title").getString("userPreferred")
+				val cover = media.getJSONObject("coverImage").getStringOrNull("medium")
+				result.add(
+					TrackerMangaEntry(
+						id = entry.getInt("id"),
+						targetId = entry.getLong("mediaId"),
+						title = title,
+						coverUrl = cover,
+						status = entry.getStringOrNull("status"),
+						chapter = entry.getInt("progress"),
+						comment = entry.getStringOrNull("notes"),
+						rating = scoreFormat.normalize(entry.getDouble("score").toFloat()),
+					)
+				)
+			}
+		}
+		return result
+	}
+
 
 	override suspend fun getMangaInfo(id: Long): ScrobblerMangaInfo {
 		val response = doRequest(

@@ -306,6 +306,7 @@ class ReaderActivity :
         viewModel.isInfoBarEnabled.observe(this, ::onReaderBarChanged)
         viewModel.isBookmarkAdded.observe(this, MenuInvalidator(this))
         viewModel.onAskNsfwIncognito.observeEvent(this) { askForIncognitoMode() }
+        viewModel.onAskScrobbling.observeEvent(this) { askForAutomaticScrobbling() }
         viewModel.onShowToast.observeEvent(this) { msgId ->
             val anchor = if (viewBinding.customReaderBottomProgressLayout?.isVisible == true) {
                 viewBinding.customReaderBottomProgressLayout
@@ -907,6 +908,22 @@ class ReaderActivity :
             setNegativeButton(R.string.disable, listener)
             setNeutralButton(android.R.string.cancel, listener)
             setOnCancelListener { finishAfterTransition() }
+            setCancelable(true)
+        }.show()
+    }
+
+    private fun askForAutomaticScrobbling() {
+        val manga = viewModel.getMangaOrNull() ?: return
+        buildAlertDialog(this, isCentered = true) {
+            setIcon(R.drawable.ic_sync)
+            setTitle(R.string.auto_sync_prompt_title)
+            setMessage(getString(R.string.auto_sync_prompt_message, manga.title))
+            setPositiveButton(android.R.string.yes) { _, _ ->
+                viewModel.setAutomaticScrobbling(true)
+            }
+            setNegativeButton(android.R.string.no) { _, _ ->
+                viewModel.setAutomaticScrobbling(false)
+            }
             setCancelable(true)
         }.show()
     }

@@ -6,6 +6,7 @@ import androidx.core.view.isVisible
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.list.AdapterDelegateClickListenerAdapter
+import org.koitharu.kotatsu.core.util.ext.resolveDp
 import org.koitharu.kotatsu.databinding.ItemMangaListDetailsBinding
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.MangaDetailedListModel
@@ -29,10 +30,45 @@ fun mangaListDetailedItemAD(
 				"Current ${item.currentChapterNumber} / ${item.totalChapterLabel}"
 			item.currentChapterNumber != null -> "Current ${item.currentChapterNumber}"
 			item.currentChapterTitle != null -> "Current ${item.currentChapterTitle}"
+			item.trackerChapter != null -> {
+				if (item.totalChapterLabel != null) {
+					"Current ${item.trackerChapter} / ${item.totalChapterLabel}"
+				} else {
+					"Current ${item.trackerChapter}"
+				}
+			}
 			else -> "Not started"
 		}
-		binding.textViewStatus.text = item.statusTitle ?: "Planned"
-		binding.textViewStatus.backgroundTintList = ColorStateList.valueOf(statusColor(item.statusTitle))
+
+		val context = binding.root.context
+		val colors = org.koitharu.kotatsu.favourites.ui.categories.FavoriteStatusColors.getStyle(context, item.statusTitle)
+
+		val ratingText = item.trackerRating?.let { rating ->
+			if (rating > 0f) {
+				val score = rating * 10f
+				val formattedScore = if (score % 1f == 0f) {
+					score.toInt().toString()
+				} else {
+					String.format(java.util.Locale.US, "%.1f", score)
+				}
+				" • ★ $formattedScore"
+			} else {
+				""
+			}
+		} ?: ""
+
+		binding.textViewStatus.text = (item.statusTitle ?: "Planned") + ratingText
+
+		val bg = binding.textViewStatus.background?.mutate() as? android.graphics.drawable.GradientDrawable
+		if (bg != null) {
+			bg.setColor(colors.background)
+			bg.setStroke(context.resources.resolveDp(1), colors.stroke)
+		}
+		binding.textViewStatus.setTextColor(colors.foreground)
+
+		val drawables = binding.textViewStatus.compoundDrawablesRelative
+		drawables[2]?.mutate()?.setTint(colors.foreground)
+
 		binding.textViewStatus.setOnClickListener { view ->
 			clickListener.onFavoriteClick(item.manga, view)
 		}
@@ -45,6 +81,13 @@ fun mangaListDetailedItemAD(
 			item.currentChapterNumber != null && item.totalChapterLabel != null ->
 				"${item.currentChapterNumber} / ${item.totalChapterLabel}"
 			item.currentChapterNumber != null -> item.currentChapterNumber
+			item.trackerChapter != null -> {
+				if (item.totalChapterLabel != null) {
+					"${item.trackerChapter} / ${item.totalChapterLabel}"
+				} else {
+					item.trackerChapter.toString()
+				}
+			}
 			else -> "Start"
 		}
 		binding.buttonContinueReading.setOnClickListener { view ->
@@ -63,10 +106,4 @@ fun mangaListDetailedItemAD(
 		binding.badge.number = item.counter
 		binding.badge.isVisible = item.counter > 0
 	}
-}
-
-private fun statusColor(title: String?): Int = when (title?.trim()?.lowercase()) {
-	"completed" -> Color.parseColor("#16854C")
-	"reading" -> Color.parseColor("#246B8A")
-	else -> Color.parseColor("#5F58B6")
 }

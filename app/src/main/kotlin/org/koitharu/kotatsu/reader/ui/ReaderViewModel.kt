@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -115,6 +116,7 @@ class ReaderViewModel @Inject constructor(
     private var bookmarkJob: Job? = null
     private var stateChangeJob: Job? = null
     private var visibleReadingStates: List<ReaderState> = emptyList()
+    private var scrobblingPromptChecked = false
 
     @Volatile
     private var customScrollProgress: Float? = null
@@ -128,6 +130,7 @@ class ReaderViewModel @Inject constructor(
     val onLoadingError = MutableEventFlow<Throwable>()
     val onShowToast = MutableEventFlow<Int>()
     val onAskNsfwIncognito = MutableEventFlow<Unit>()
+    val onAskScrobbling = MutableEventFlow<Unit>()
     val uiState = MutableStateFlow<ReaderUiState?>(null)
 
     val isIncognitoMode = MutableStateFlow(savedStateHandle.get<Boolean>(ReaderIntent.EXTRA_INCOGNITO))
@@ -382,7 +385,8 @@ class ReaderViewModel @Inject constructor(
         val pages = content.value.pages // capture immediately
         stateChangeJob = launchJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
-            loadingJob?.join()
+            // Wait for any in-progress loading, but with a timeout to avoid blocking forever
+            withTimeoutOrNull(5_000L) { loadingJob?.join() }
             if (pages.size != content.value.pages.size) {
                 return@launchJob // TODO
             }
@@ -453,6 +457,25 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun setAutomaticScrobbling(enabled: Boolean) {
+        val manga = getMangaOrNull() ?: return
+        val chapterId = readingState.value?.chapterId ?: return
+        launchJob(Dispatchers.Default) {
+            val syncedHistory = historyRepository.setAutomaticScrobbling(manga, chapterId, enabled)
+            if (syncedHistory != null && syncedHistory.chapterId != readingState.value?.chapterId) {
+                loadingJob?.cancelAndJoin()
+                customScrollProgress = null
+                val newState = ReaderState(syncedHistory)
+                content.value = ReaderContent(emptyList(), null)
+                chaptersLoader.loadSingleChapter(newState.chapterId)
+                readingState.value = newState
+                savedStateHandle[ReaderIntent.EXTRA_STATE] = newState
+                content.value = ReaderContent(chaptersLoader.snapshot(), newState)
+                notifyStateChanged()
+            }
+        }
+    }
+
     private fun loadImpl() {
         loadingJob = launchLoadingJob(Dispatchers.Default + EventExceptionHandler(onLoadingError)) {
             var exception: Exception? = null
@@ -495,6 +518,12 @@ class ReaderViewModel @Inject constructor(
                                 val percent = getPercent(it.chapterId, it.page, loadedPagesCount(it.chapterId))
                                 historyUpdateUseCase(manga, it, percent)
                             }
+                            if (!scrobblingPromptChecked) {
+                                scrobblingPromptChecked = true
+                                if (historyRepository.shouldAskForScrobbling(manga.id)) {
+                                    onAskScrobbling.call(Unit)
+                                }
+                            }
                         }
                         notifyStateChanged()
                         content.value = ReaderContent(chaptersLoader.snapshot(), readingState.value)
@@ -536,10 +565,19 @@ class ReaderViewModel @Inject constructor(
 
     @AnyThread
     private fun loadPrevNextChapter(currentId: Long, isNext: Boolean) {
+        // Skip if the adjacent chapter is already loaded
+        val details = mangaDetails.value ?: return
+        val allChapters = details.allChapters
+        val predicate: (org.koitharu.kotatsu.parsers.model.MangaChapter) -> Boolean = { it.id == currentId }
+        val idx = if (isNext) allChapters.indexOfFirst(predicate) else allChapters.indexOfLast(predicate)
+        if (idx < 0) return
+        val adjacentChapter = allChapters.getOrNull(if (isNext) idx + 1 else idx - 1) ?: return
+        if (chaptersLoader.hasPages(adjacentChapter.id)) return
+
         val prevJob = loadingJob
-        loadingJob = launchLoadingJob(Dispatchers.Default) {
-            prevJob?.join()
-            chaptersLoader.loadPrevNextChapter(mangaDetails.requireValue(), currentId, isNext)
+        loadingJob = launchLoadingJob(Dispatchers.Default + EventExceptionHandler(onLoadingError)) {
+            prevJob?.cancelAndJoin()
+            chaptersLoader.loadPrevNextChapter(details, currentId, isNext)
             content.value = ReaderContent(chaptersLoader.snapshot(), null)
         }
     }

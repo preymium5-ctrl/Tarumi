@@ -1,5 +1,7 @@
 package org.koitharu.kotatsu.details.ui
 
+import org.koitharu.kotatsu.favourites.ui.categories.FavoriteStatusColors
+
 import android.app.assist.AssistContent
 import android.content.Context
 import android.content.res.ColorStateList
@@ -389,40 +391,14 @@ class DetailsActivity :
 		applyFavoriteChipStyle(chip, status)
 
 		val statusText = status ?: getString(R.string.save)
-		val statusColor = when (status?.trim()?.lowercase()) {
-			"reading" -> 0xFF74A7FF.toInt()
-			"planned" -> 0xFF8D7BFF.toInt()
-			"completed" -> 0xFF62BE7B.toInt()
-			else -> getColor(R.color.blue_primary)
-		}
+		val statusColor = if (status == null) getColor(R.color.blue_primary) else FavoriteStatusColors.getColor(status)
 		viewBinding.textViewFollows?.text = statusText
 		viewBinding.textViewFollows?.setTextColor(statusColor)
 		viewBinding.imageViewBookmarkStats?.imageTintList = ColorStateList.valueOf(statusColor)
 	}
 
 	private fun applyFavoriteChipStyle(chip: Chip, status: String?) {
-		val colors = when (status?.trim()?.lowercase()) {
-			"reading" -> FavoriteStatusColors(
-				background = 0xFFE7F1FF.toInt(),
-				stroke = 0xFF74A7FF.toInt(),
-				foreground = 0xFF0B56B3.toInt(),
-			)
-			"planned" -> FavoriteStatusColors(
-				background = 0xFFF0ECFF.toInt(),
-				stroke = 0xFF8D7BFF.toInt(),
-				foreground = 0xFF5142C4.toInt(),
-			)
-			"completed" -> FavoriteStatusColors(
-				background = 0xFFEAF8EF.toInt(),
-				stroke = 0xFF62BE7B.toInt(),
-				foreground = 0xFF1F7A3F.toInt(),
-			)
-			else -> FavoriteStatusColors(
-				background = getColor(R.color.taru_surface_button),
-				stroke = getColor(R.color.taru_outline),
-				foreground = getColor(R.color.taru_text_primary),
-			)
-		}
+		val colors = FavoriteStatusColors.getStyle(this, status)
 		chip.chipBackgroundColor = ColorStateList.valueOf(colors.background)
 		chip.chipStrokeColor = ColorStateList.valueOf(colors.stroke)
 		chip.setTextColor(colors.foreground)
@@ -1072,11 +1048,7 @@ class DetailsActivity :
 		}.nullIfEmpty()
 	}
 
-	private data class FavoriteStatusColors(
-		val background: Int,
-		val stroke: Int,
-		val foreground: Int,
-	)
+
 
 	private class PrefetchObserver(
 		private val context: Context,

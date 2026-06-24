@@ -28,6 +28,14 @@ abstract class MangaDao {
 	abstract suspend fun findByPublicUrl(publicUrl: String): MangaWithTags?
 
 	@Transaction
+	@Query("SELECT * FROM manga WHERE title = :title OR alt_title = :title LIMIT 1")
+	abstract suspend fun findByTitle(title: String): MangaWithTags?
+
+	@Transaction
+	@Query("SELECT * FROM manga WHERE title LIKE :query OR alt_title LIKE :query LIMIT 1")
+	abstract suspend fun findByTitleLike(query: String): MangaWithTags?
+
+	@Transaction
 	@Query("SELECT * FROM manga WHERE source = :source")
 	abstract suspend fun findAllBySource(source: String): List<MangaWithTags>
 
@@ -51,6 +59,9 @@ abstract class MangaDao {
 
 	@Upsert
 	protected abstract suspend fun upsert(manga: MangaEntity)
+
+	@Insert(onConflict = OnConflictStrategy.REPLACE)
+	abstract suspend fun insert(manga: MangaEntity): Long
 
 	@Update(onConflict = OnConflictStrategy.IGNORE)
 	abstract suspend fun update(manga: MangaEntity): Int

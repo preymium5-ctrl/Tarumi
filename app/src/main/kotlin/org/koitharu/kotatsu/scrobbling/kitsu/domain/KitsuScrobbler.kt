@@ -17,6 +17,7 @@ class KitsuScrobbler @Inject constructor(
 	init {
 		statuses[ScrobblingStatus.PLANNED] = "planned"
 		statuses[ScrobblingStatus.READING] = "current"
+		statuses[ScrobblingStatus.RE_READING] = "current"
 		statuses[ScrobblingStatus.COMPLETED] = "completed"
 		statuses[ScrobblingStatus.ON_HOLD] = "on_hold"
 		statuses[ScrobblingStatus.DROPPED] = "dropped"

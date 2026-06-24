@@ -29,12 +29,18 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.levenshteinDistance
 import org.koitharu.kotatsu.search.domain.SearchKind
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingConsentStore
+import org.koitharu.kotatsu.scrobbling.common.domain.Scrobbler
 import javax.inject.Inject
 
 @Reusable
 class FavouritesRepository @Inject constructor(
 	private val db: MangaDatabase,
 	private val localObserver: LocalFavoritesObserver,
+	private val scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
+	private val scrobblingConsentStore: ScrobblingConsentStore,
 ) {
 
 	suspend fun getAllManga(): List<Manga> {
@@ -121,7 +127,7 @@ class FavouritesRepository @Inject constructor(
 	suspend fun ensureTarumiStatusCategories(categories: List<FavouriteCategory>): List<FavouriteCategory> {
 		val result = ArrayList(categories)
 		for (title in TARUMI_STATUS_TITLES) {
-			if (result.none { it.title.equals(title, ignoreCase = true) }) {
+			if (result.none { isStatusCategoryEquivalent(it.title, title) }) {
 				result += createCategory(
 					title = title,
 					sortOrder = ListSortOrder.NEWEST,
@@ -131,8 +137,17 @@ class FavouritesRepository @Inject constructor(
 			}
 		}
 		return listOf(TARUMI_REMOVE_CATEGORY) + TARUMI_STATUS_TITLES.mapNotNull { title ->
-			result.firstOrNull { it.title.equals(title, ignoreCase = true) }
+			result.firstOrNull { isStatusCategoryEquivalent(it.title, title) }
 		}
+	}
+
+	private fun isStatusCategoryEquivalent(categoryTitle: String, targetStatusTitle: String): Boolean {
+		if (categoryTitle.equals(targetStatusTitle, ignoreCase = true)) return true
+		if (targetStatusTitle.equals("Plan to read", ignoreCase = true)) {
+			val legacy = listOf("Planned", "Read later", "Planning to read", "Save")
+			return legacy.any { it.equals(categoryTitle, ignoreCase = true) }
+		}
+		return false
 	}
 
 	suspend fun setStatusCategory(
@@ -164,6 +179,22 @@ class FavouritesRepository @Inject constructor(
 						isPinned = false,
 					),
 				)
+			}
+		}
+		if (categoryId != TARUMI_REMOVE_CATEGORY.id) {
+			for (manga in mangas) {
+				if (scrobblingConsentStore.getConsent(manga.id) == ScrobblingConsentStore.Consent.UNDECIDED) {
+					scrobblingConsentStore.setConsent(manga.id, ScrobblingConsentStore.Consent.ENABLED)
+				}
+				for (scrobbler in scrobblers) {
+					if (scrobbler.isEnabled && !scrobblingConsentStore.isServiceBlocked(manga.id, scrobbler.scrobblerService)) {
+						runCatchingCancellable {
+							scrobbler.ensureMangaLinked(manga, allowAutoLink = true)
+						}.onFailure {
+							it.printStackTraceDebug()
+						}
+					}
+				}
 			}
 		}
 	}
@@ -309,8 +340,11 @@ class FavouritesRepository @Inject constructor(
 
 		val TARUMI_STATUS_TITLES = listOf(
 			"Reading",
-			"Planned",
+			"Plan to read",
 			"Completed",
+			"Rereading",
+			"Paused",
+			"Dropped",
 		)
 
 		val TARUMI_REMOVE_CATEGORY = FavouriteCategory(
@@ -324,6 +358,7 @@ class FavouritesRepository @Inject constructor(
 		)
 
 		private val TARUMI_LEGACY_STATUS_TITLES = listOf(
+			"Planned",
 			"Read later",
 			"Planning to read",
 			"Save",
@@ -430,6 +465,114 @@ class FavouritesRepository @Inject constructor(
 			for (id in ids) {
 				db.getFavouritesDao().recover(mangaId = id, categoryId = categoryId)
 			}
+		}
+	}
+
+	suspend fun syncLibraryFromTracker(scrobbler: Scrobbler) {
+		if (!scrobbler.isEnabled) return
+		val allCategories = db.getFavouriteCategoriesDao().findAll().map { it.toFavouriteCategory() }
+		val statusCategories = ensureTarumiStatusCategories(allCategories)
+		val statusCategoryMap = statusCategories.associateBy { it.title }
+		val statusCategoryIds = statusCategories.map { it.id }.toSet()
+
+		val trackerEntries = scrobbler.getUserMangaList()
+		val dao = db.getFavouritesDao()
+		val scrobblingDao = db.getScrobblingDao()
+		val mangaDao = db.getMangaDao()
+
+		for (entry in trackerEntries) {
+			val scrobblingEntity = scrobblingDao.findByTarget(scrobbler.scrobblerService.id, entry.targetId)
+			var mangaId: Long? = scrobblingEntity?.mangaId
+
+			if (mangaId == null) {
+				val localManga = mangaDao.findByTitle(entry.title) ?: mangaDao.findByTitleLike("%${entry.title}%")
+				if (localManga != null) {
+					mangaId = localManga.manga.id
+				}
+			}
+
+			if (mangaId == null) {
+				val dummyUrl = "dummy_tracker://${scrobbler.scrobblerService.id}/${entry.targetId}"
+				val placeholderManga = org.koitharu.kotatsu.core.db.entity.MangaEntity(
+					id = 0,
+					url = dummyUrl,
+					publicUrl = dummyUrl,
+					source = "TrackerPlaceholder",
+					largeCoverUrl = null,
+					coverUrl = entry.coverUrl.orEmpty(),
+					altTitles = null,
+					rating = -1f,
+					isNsfw = false,
+					contentRating = null,
+					state = null,
+					title = entry.title,
+					authors = null,
+				)
+				mangaId = mangaDao.insert(placeholderManga)
+			}
+
+			if (mangaId != null) {
+				val remoteStatus = entry.status
+				val scrobblingStatus = getScrobblingStatusFromRemote(scrobbler, remoteStatus)
+				val categoryName = getCategoryNameFromStatus(scrobblingStatus)
+				val targetCategory = categoryName?.let { statusCategoryMap[it] }
+
+				if (targetCategory != null) {
+					val entity = org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity(
+						scrobbler = scrobbler.scrobblerService.id,
+						id = entry.id,
+						mangaId = mangaId,
+						targetId = entry.targetId,
+						status = entry.status,
+						chapter = entry.chapter,
+						comment = entry.comment,
+						rating = entry.rating,
+					)
+					scrobblingDao.upsert(entity)
+
+					db.withTransaction {
+						for (catId in statusCategoryIds) {
+							dao.delete(mangaId = mangaId, categoryId = catId)
+						}
+						dao.insert(
+							FavouriteEntity(
+								mangaId = mangaId,
+								categoryId = targetCategory.id,
+								createdAt = System.currentTimeMillis(),
+								sortKey = 0,
+								deletedAt = 0L,
+								isPinned = false,
+							)
+						)
+					}
+
+					if (scrobblingConsentStore.getConsent(mangaId) == ScrobblingConsentStore.Consent.UNDECIDED) {
+						scrobblingConsentStore.setConsent(mangaId, ScrobblingConsentStore.Consent.ENABLED)
+					}
+				}
+			}
+		}
+	}
+
+	private fun getScrobblingStatusFromRemote(scrobbler: Scrobbler, remoteStatus: String?): org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus? {
+		if (remoteStatus == null) return null
+		for (status in org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.values()) {
+			if (scrobbler.getRemoteStatus(status).equals(remoteStatus, ignoreCase = true)) {
+				return status
+			}
+		}
+		return null
+	}
+
+	private fun getCategoryNameFromStatus(status: org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus?): String? {
+		return when (status) {
+			org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.READING -> "Reading"
+			org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.PLANNED -> "Plan to read"
+			org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.COMPLETED -> "Completed"
+			org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.RE_READING -> "Rereading"
+			org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.ON_HOLD -> "Paused"
+			org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus.DROPPED -> "Dropped"
+			else -> null
 		}
 	}
 }

@@ -27,12 +27,14 @@ import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerService
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerUser
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus
+import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class ScrobblerConfigViewModel @Inject constructor(
 	savedStateHandle: SavedStateHandle,
 	scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
+	private val favouritesRepository: FavouritesRepository,
 ) : BaseViewModel() {
 
 	private val scrobblerService = getScrobblerService(savedStateHandle)
@@ -60,6 +62,7 @@ class ScrobblerConfigViewModel @Inject constructor(
 		launchLoadingJob(Dispatchers.Default) {
 			val newUser = scrobbler.authorize(authCode)
 			user.value = newUser
+			favouritesRepository.syncLibraryFromTracker(scrobbler)
 		}
 	}
 

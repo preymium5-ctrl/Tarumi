@@ -1,5 +1,7 @@
 package org.koitharu.kotatsu.tracker.work
 
+import android.widget.RemoteViews
+
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -78,9 +80,15 @@ class TrackerNotificationHelper @Inject constructor(
 			sourceTitle,
 			applicationContext.getString(R.string.detected_at_pattern, detectedAt),
 		).joinToString(" - ")
+
+		val customView = RemoteViews(applicationContext.packageName, R.layout.notification_tracker_update)
+		customView.setTextViewText(R.id.notification_title, manga.title)
+		customView.setTextViewText(R.id.notification_text, notificationText)
+
 		with(builder) {
-			setContentText(notificationText)
-			setContentTitle(manga.title)
+			setCustomContentView(customView)
+			setCustomBigContentView(customView)
+			setStyle(NotificationCompat.DecoratedCustomViewStyle())
 			setNumber(newChapters.size)
 			setLargeIcon(
 				coil.execute(
@@ -92,20 +100,6 @@ class TrackerNotificationHelper @Inject constructor(
 			)
 			setSmallIcon(R.drawable.ic_stat_book_plus)
 			setGroup(GROUP_NEW_CHAPTERS)
-			val style = NotificationCompat.InboxStyle(this)
-			for (chapter in newChapters) {
-				style.addLine(
-					applicationContext.getString(
-						R.string.new_chapter_notification_line,
-						chapter.getLocalizedTitle(applicationContext.resources),
-						sourceTitle,
-						detectedAt,
-					),
-				)
-			}
-			style.setSummaryText(sourceTitle)
-			style.setBigContentTitle(summary)
-			setStyle(style)
 			val intent = newestChapter?.let { chapter ->
 				ReaderIntent.Builder(applicationContext)
 					.manga(manga)
@@ -137,23 +131,22 @@ class TrackerNotificationHelper @Inject constructor(
 		}
 		val newChaptersCount = notifications.sumOf { it.newChapters }
 		val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+		val title = applicationContext.resources.getQuantityStringSafe(
+			R.plurals.new_chapters,
+			newChaptersCount,
+			newChaptersCount,
+		)
+		val textContent = notifications.joinToString { it.manga.title }
+
+		val customView = RemoteViews(applicationContext.packageName, R.layout.notification_tracker_update)
+		customView.setTextViewText(R.id.notification_title, title)
+		customView.setTextViewText(R.id.notification_text, textContent)
+
 		with(builder) {
-			val title = applicationContext.resources.getQuantityStringSafe(
-				R.plurals.new_chapters,
-				newChaptersCount,
-				newChaptersCount,
-			)
-			setContentTitle(title)
-			setContentText(notifications.joinToString { it.manga.title })
+			setCustomContentView(customView)
+			setCustomBigContentView(customView)
+			setStyle(NotificationCompat.DecoratedCustomViewStyle())
 			setSmallIcon(R.drawable.ic_stat_book_plus)
-			val style = NotificationCompat.InboxStyle(this)
-			for (item in notifications) {
-				style.addLine(
-					applicationContext.getString(R.string.new_chapters_pattern, item.manga.title, item.newChapters),
-				)
-			}
-			style.setBigContentTitle(title)
-			setStyle(style)
 			setNumber(newChaptersCount)
 			setGroup(GROUP_NEW_CHAPTERS)
 			setGroupSummary(true)
@@ -176,6 +169,23 @@ class TrackerNotificationHelper @Inject constructor(
 			)
 			applyCommonSettings(this)
 		}
+		return builder.build()
+	}
+
+	fun createSyncNotification(): Notification {
+		val title = "Library Sync Successful"
+		val textContent = "All your reading statuses, categories and updates have been synchronized with your tracking services."
+		val customView = RemoteViews(applicationContext.packageName, R.layout.notification_tracker_sync)
+		customView.setTextViewText(R.id.notification_title, title)
+		customView.setTextViewText(R.id.notification_text, textContent)
+
+		val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+			.setStyle(NotificationCompat.DecoratedCustomViewStyle())
+			.setCustomContentView(customView)
+			.setCustomBigContentView(customView)
+			.setSmallIcon(R.drawable.ic_stat_book_plus)
+			.setVisibility(VISIBILITY_PRIVATE)
+		applyCommonSettings(builder)
 		return builder.build()
 	}
 

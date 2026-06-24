@@ -27,6 +27,7 @@ import org.koitharu.kotatsu.local.data.index.LocalMangaIndex
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.findById
+import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.tracker.domain.TrackingRepository
 import org.koitharu.kotatsu.tracker.domain.model.TrackingLogItem
 import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
@@ -41,6 +42,7 @@ class MangaListMapper @Inject constructor(
 	private val favouritesRepository: FavouritesRepository,
 	private val localMangaIndex: LocalMangaIndex,
 	private val dataRepository: MangaDataRepository,
+	private val db: MangaDatabase,
 ) {
 
 
@@ -140,6 +142,7 @@ class MangaListMapper @Inject constructor(
 			?: currentChapterIndex?.toString()
 			?: progress?.chapters?.takeIf { it > 0 }?.toString()
 		val latestChapterNumber = latestChapter?.numberString()
+		val scrobble = db.getScrobblingDao().findAllByMangaId(manga.id).firstOrNull()
 		return MangaDetailedListModel(
 			subtitle = manga.altTitles.firstOrNull(),
 			manga = manga,
@@ -162,6 +165,9 @@ class MangaListMapper @Inject constructor(
 			canContinue = history != null && (!ReadingProgress.isCompleted(history.percent) || counter > 0),
 			statusTitle = favouritesRepository.getStatusTitle(manga.id),
 			showRemoveAction = showRemoveAction,
+			trackerStatus = scrobble?.status,
+			trackerChapter = scrobble?.chapter?.takeIf { it > 0 },
+			trackerRating = scrobble?.rating,
 		)
 	}
 

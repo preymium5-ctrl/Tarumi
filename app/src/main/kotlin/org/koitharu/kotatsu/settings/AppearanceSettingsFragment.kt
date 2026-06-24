@@ -32,7 +32,6 @@ import org.koitharu.kotatsu.core.util.ext.toList
 import org.koitharu.kotatsu.parsers.util.mapToSet
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.parsers.util.toTitleCase
-import org.koitharu.kotatsu.settings.protect.ProtectSetupActivity
 import org.koitharu.kotatsu.settings.utils.ActivityListPreference
 import org.koitharu.kotatsu.settings.utils.MultiSummaryProvider
 import org.koitharu.kotatsu.settings.utils.PercentSummaryProvider
@@ -85,8 +84,6 @@ class AppearanceSettingsFragment :
         }
         findPreference<Preference>(AppSettings.KEY_SHORTCUTS)?.isVisible =
             appShortcutManager.isDynamicShortcutsAvailable()
-        findPreference<TwoStatePreference>(AppSettings.KEY_PROTECT_APP)
-            ?.isChecked = !settings.appPassword.isNullOrEmpty()
         findPreference<ListPreference>(AppSettings.KEY_SCREENSHOTS_POLICY)?.run {
             entryValues = ScreenshotsPolicy.entries.names()
             setDefaultValueCompat(ScreenshotsPolicy.ALLOW.name)
@@ -131,25 +128,11 @@ class AppearanceSettingsFragment :
                 bindNavSummary()
             }
 
-            AppSettings.KEY_APP_PASSWORD -> {
-                findPreference<TwoStatePreference>(AppSettings.KEY_PROTECT_APP)
-                    ?.isChecked = !settings.appPassword.isNullOrEmpty()
-            }
         }
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
         return when (preference.key) {
-            AppSettings.KEY_PROTECT_APP -> {
-                val pref = (preference as? TwoStatePreference ?: return false)
-                if (pref.isChecked) {
-                    pref.isChecked = false
-                    startActivity(Intent(preference.context, ProtectSetupActivity::class.java))
-                } else {
-                    settings.appPassword = null
-                }
-                true
-            }
 
             else -> super.onPreferenceTreeClick(preference)
         }

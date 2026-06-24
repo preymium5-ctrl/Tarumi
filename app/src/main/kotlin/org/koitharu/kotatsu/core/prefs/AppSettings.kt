@@ -341,6 +341,12 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			if (value != null) putString(KEY_APP_PASSWORD, value) else remove(KEY_APP_PASSWORD)
 		}
 
+	var appRecoveryWord: String?
+		get() = prefs.getString(KEY_APP_RECOVERY_WORD, null)
+		set(value) = prefs.edit {
+			if (value != null) putString(KEY_APP_RECOVERY_WORD, value) else remove(KEY_APP_RECOVERY_WORD)
+		}
+
 	var isAppPasswordNumeric: Boolean
 		get() = prefs.getBoolean(KEY_APP_PASSWORD_NUMERIC, false)
 		set(value) = prefs.edit { putBoolean(KEY_APP_PASSWORD_NUMERIC, value) }
@@ -884,6 +890,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_APP_PASSWORD_NUMERIC = "app_password_num"
 		const val KEY_PROTECT_APP = "protect_app"
 		const val KEY_PROTECT_APP_BIOMETRIC = "protect_app_bio"
+		const val KEY_APP_RECOVERY_WORD = "app_recovery_word"
 		const val KEY_ZOOM_MODE = "zoom_mode"
 		const val KEY_BACKUP = "backup"
 		const val KEY_RESTORE = "restore"

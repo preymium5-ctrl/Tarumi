@@ -201,7 +201,25 @@ class BackupRepository @Inject constructor(
                     }
 
                     BackupSection.BOOKMARKS -> input.readJsonArray<BookmarkBackup>(serializer()).restoreToDb {
-                        upsertManga(it.manga)
+                        // Tags are stored separately in BookmarkBackup (manga.tags is empty)
+                        // Merge them back so the manga-tag relationships are restored
+                        val mergedManga = MangaBackup(
+                            id = it.manga.id,
+                            title = it.manga.title,
+                            altTitles = it.manga.altTitles,
+                            url = it.manga.url,
+                            publicUrl = it.manga.publicUrl,
+                            rating = it.manga.rating,
+                            isNsfw = it.manga.isNsfw,
+                            contentRating = it.manga.contentRating,
+                            coverUrl = it.manga.coverUrl,
+                            largeCoverUrl = it.manga.largeCoverUrl,
+                            state = it.manga.state,
+                            authors = it.manga.authors,
+                            source = it.manga.source,
+                            tags = it.manga.tags + it.tags,
+                        )
+                        upsertManga(mergedManga)
                         getBookmarksDao().upsert(it.bookmarks.map { b -> b.toEntity() })
                     }
 
@@ -351,6 +369,14 @@ class BackupRepository @Inject constructor(
             }
             root.put(service.name, serviceObj)
         }
+        val consentPrefs = context.getSharedPreferences("scrobbling_consent", Context.MODE_PRIVATE)
+        val consentObj = JSONObject()
+        for ((key, value) in consentPrefs.all) {
+            if (value != null) {
+                consentObj.put(key, value)
+            }
+        }
+        root.put("scrobbling_consent", consentObj)
         return root.toString()
     }
 
@@ -367,6 +393,23 @@ class BackupRepository @Inject constructor(
                         while (keys.hasNext()) {
                             val key = keys.next()
                             putString(key, serviceObj.getString(key))
+                        }
+                    }
+                }
+            }
+            if (root.has("scrobbling_consent")) {
+                val consentObj = root.getJSONObject("scrobbling_consent")
+                val consentPrefs = context.getSharedPreferences("scrobbling_consent", Context.MODE_PRIVATE)
+                consentPrefs.edit {
+                    clear()
+                    val keys = consentObj.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val value = consentObj.get(key)
+                        if (value is Boolean) {
+                            putBoolean(key, value)
+                        } else {
+                            putString(key, value.toString())
                         }
                     }
                 }

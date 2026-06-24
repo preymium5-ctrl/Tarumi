@@ -73,6 +73,9 @@ import javax.inject.Provider
 import kotlin.math.roundToInt
 import androidx.appcompat.R as appcompatR
 
+import org.koitharu.kotatsu.scrobbling.common.domain.Scrobbler
+import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
+
 class TrackWorker @AssistedInject constructor(
 	@Assisted context: Context,
 	@Assisted workerParams: WorkerParameters,
@@ -84,6 +87,8 @@ class TrackWorker @AssistedInject constructor(
 	private val workManager: WorkManager,
 	private val localRepositoryLazy: Lazy<LocalMangaRepository>,
 	private val downloadSchedulerLazy: Lazy<DownloadWorker.Scheduler>,
+	private val scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
+	private val favouritesRepository: FavouritesRepository,
 ) : CoroutineWorker(context, workerParams) {
 
 	private val notificationManager by lazy { NotificationManagerCompat.from(applicationContext) }
@@ -121,6 +126,23 @@ class TrackWorker @AssistedInject constructor(
 			Log.i(LOG_TAG, "doWorkImpl: tracker disabled, skipping")
 			return Result.success()
 		}
+
+		var syncCount = 0
+		scrobblers.forEach { scrobbler ->
+			if (scrobbler.isEnabled) {
+				try {
+					favouritesRepository.syncLibraryFromTracker(scrobbler)
+					syncCount++
+				} catch (e: Exception) {
+					Log.w(LOG_TAG, "Failed to sync scrobbler ${scrobbler.scrobblerService.name}", e)
+				}
+			}
+		}
+		if (syncCount > 0 && applicationContext.checkNotificationPermission(null)) {
+			val syncNotification = notificationHelper.createSyncNotification()
+			notificationManager.notify("tracker_sync", 1001, syncNotification)
+		}
+
 		val limit = if (isFullRun) Int.MAX_VALUE else BATCH_SIZE
 		val tracks = getTracksUseCase(limit)
 		Log.i(LOG_TAG, "doWorkImpl: isFullRun=$isFullRun limit=$limit -> fetched ${tracks.size} track(s) to check")

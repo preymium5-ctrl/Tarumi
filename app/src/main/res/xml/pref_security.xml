@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/security">
+
+    <SwitchPreferenceCompat
+        android:key="protect_app"
+        android:persistent="false"
+        android:summary="@string/protect_application_summary"
+        android:title="@string/protect_application" />
+
+    <EditTextPreference
+        android:key="app_recovery_word"
+        android:title="@string/set_recovery_word"
+        android:summary="@string/set_recovery_word_summary"
+        android:dialogTitle="@string/set_recovery_word"
+        app:dependency="protect_app" />
+
+</PreferenceScreen>

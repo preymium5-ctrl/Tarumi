@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="60dp"
+    android:height="60dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Main Pad -->
+    <path
+        android:fillColor="?attr/colorSurfaceVariant"
+        android:strokeColor="?attr/colorOutlineVariant"
+        android:strokeWidth="2"
+        android:pathData="M 50 34 C 36 34, 26 44, 26 58 C 26 69, 36 74, 44 72 C 47 71, 49 69, 50 69 C 51 69, 53 71, 56 72 C 64 74, 74 69, 74 58 C 74 44, 64 34, 50 34 Z" />
+
+    <!-- Toes -->
+    <path
+        android:fillColor="?attr/colorSurfaceVariant"
+        android:strokeColor="?attr/colorOutlineVariant"
+        android:strokeWidth="2"
+        android:pathData="M 20 25 A 7 9 0 1 0 20 43 A 7 9 0 1 0 20 25 Z" />
+    <path
+        android:fillColor="?attr/colorSurfaceVariant"
+        android:strokeColor="?attr/colorOutlineVariant"
+        android:strokeWidth="2"
+        android:pathData="M 37 2 A 8 11 0 1 0 37 24 A 8 11 0 1 0 37 2 Z" />
+    <path
+        android:fillColor="?attr/colorSurfaceVariant"
+        android:strokeColor="?attr/colorOutlineVariant"
+        android:strokeWidth="2"
+        android:pathData="M 63 2 A 8 11 0 1 0 63 24 A 8 11 0 1 0 63 2 Z" />
+    <path
+        android:fillColor="?attr/colorSurfaceVariant"
+        android:strokeColor="?attr/colorOutlineVariant"
+        android:strokeWidth="2"
+        android:pathData="M 80 25 A 7 9 0 1 0 80 43 A 7 9 0 1 0 80 25 Z" />
+
+</vector>

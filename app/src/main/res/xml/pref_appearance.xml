@@ -130,12 +130,6 @@
 
     <PreferenceCategory android:title="@string/privacy">
 
-        <SwitchPreferenceCompat
-            android:key="protect_app"
-            android:persistent="false"
-            android:summary="@string/protect_application_summary"
-            android:title="@string/protect_application" />
-
         <ListPreference
             android:defaultValue="allow"
             android:entries="@array/screenshots_policy"

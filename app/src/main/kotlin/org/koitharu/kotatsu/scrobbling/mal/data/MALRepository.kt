@@ -14,6 +14,8 @@ import org.koitharu.kotatsu.parsers.util.await
 import org.koitharu.kotatsu.parsers.util.json.getStringOrNull
 import org.koitharu.kotatsu.parsers.util.json.mapJSONNotNull
 import org.koitharu.kotatsu.parsers.util.parseJson
+import org.koitharu.kotatsu.scrobbling.common.data.ExistingRate
+import org.koitharu.kotatsu.scrobbling.common.data.TrackerMangaEntry
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerRepository
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerStorage
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
@@ -164,6 +166,71 @@ class MALRepository @Inject constructor(
 		val response = okHttp.newCall(request).await().parseJson()
 		saveRate(response, mangaId, rateId.toLong())
 	}
+
+	override suspend fun getExistingRate(scrobblerMangaId: Long): ExistingRate? {
+		val url = BASE_API_URL.toHttpUrl().newBuilder()
+			.addPathSegment("manga")
+			.addPathSegment(scrobblerMangaId.toString())
+			.addQueryParameter("fields", "my_list_status")
+			.build()
+		val request = Request.Builder().url(url).get().build()
+		val response = okHttp.newCall(request).await().parseJson()
+		if (response.isNull("my_list_status")) return null
+		val status = response.getJSONObject("my_list_status")
+		return ExistingRate(
+			id = scrobblerMangaId.toInt(),
+			targetId = scrobblerMangaId,
+			status = status.getString("status"),
+			chapter = status.getInt("num_chapters_read"),
+			comment = status.getStringOrNull("comments"),
+			rating = status.getInt("score").toFloat() / 10f,
+		)
+	}
+
+
+	override suspend fun getUserMangaList(): List<TrackerMangaEntry> {
+		val result = ArrayList<TrackerMangaEntry>()
+		var offset = 0
+		while (true) {
+			val url = BASE_API_URL.toHttpUrl().newBuilder()
+				.addPathSegment("users")
+				.addPathSegment("@me")
+				.addPathSegment("mangalist")
+				.addQueryParameter("fields", "list_status{num_chapters_read,score,status,comments}")
+				.addQueryParameter("limit", "100")
+				.addQueryParameter("offset", offset.toString())
+				.build()
+			val request = Request.Builder().url(url).get().build()
+			val response = okHttp.newCall(request).await().parseJson()
+			val data = response.optJSONArray("data") ?: break
+			if (data.length() == 0) break
+			for (i in 0 until data.length()) {
+				val item = data.getJSONObject(i)
+				val node = item.getJSONObject("node")
+				val listStatus = item.getJSONObject("list_status")
+				val targetId = node.getLong("id")
+				val title = node.getString("title")
+				val cover = node.optJSONObject("main_picture")?.getStringOrNull("large")
+					?: node.optJSONObject("main_picture")?.getStringOrNull("medium")
+
+				result.add(
+					TrackerMangaEntry(
+						id = targetId.toInt(),
+						targetId = targetId,
+						title = title,
+						coverUrl = cover,
+						status = listStatus.getStringOrNull("status"),
+						chapter = listStatus.optInt("num_chapters_read", 0),
+						comment = listStatus.getStringOrNull("comments"),
+						rating = (listStatus.optDouble("score", 0.0).toFloat() / 10f).coerceIn(0f, 1f),
+					)
+				)
+			}
+			offset += 100
+		}
+		return result
+	}
+
 
 	private suspend fun saveRate(json: JSONObject, mangaId: Long, scrobblerMangaId: Long) {
 		val entity = ScrobblingEntity(
