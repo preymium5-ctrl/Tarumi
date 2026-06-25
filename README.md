@@ -5,34 +5,34 @@ online content sources. The main goal of the fork is to maintain existing featur
 
 ![Android 6.0](https://img.shields.io/badge/android-6.0+-brightgreen) [![Discord](https://img.shields.io/discord/898363402467045416?color=5865f2&label=discord)](https://discord.gg/sfPJSQNxfW) [![License](https://img.shields.io/github/license/KotatsuApp/Kotatsu)](https://github.com/KotatsuApp/Kotatsu/blob/devel/LICENSE)
 
-### 🌟 Main Features
+### Main Features
 
 <div align="left">
 
-*   **📖 Vast Library & Advanced Discovery**
+*   **Vast Library and Advanced Discovery**
     *   **1200+ Online Sources**: Access to massive global catalogs for Manga, Manhwa, and Manhua via our parser engine.
     *   **Smart Search & Filtering**: Multi-layered search system filtering by genre, status, update frequency, and source.
     *   **Personalized Recommendations**: Advanced discovery algorithm matching your exact reading preferences.
 
-*   **🎨 Premium Material You Interface**
+*   **Premium Material You Interface**
     *   **Gorgeous Dynamic Themes**: Adaptive color palettes including our signature warm **Coffee Theme**, Miku theme, Asuka theme, and customizable Monet dynamic colors.
     *   **Responsive Multi-Device Layout**: Fully optimized fluid UI for phones, foldables, tablets, and desktop configurations.
     *   **Customizable Content Feeds**: Toggle between clean card styles, compact lists, and trending carousels.
 
-*   **⚡ Next-Gen Reading Engine**
+*   **Next-Gen Reading Engine**
     *   **Hybrid Reading Modes**: Optimized layout pipelines for standard page-turning and continuous vertical Webtoon formats.
     *   **Offline Access**: Fast downloads with background queueing. Full support for local CBZ / ZIP archives.
     *   **Precision Navigation**: Intuitive page bookmarks, history logging, and immersive full-screen layouts.
 
-*   **🤖 AI Librarian Integration ("Ask AI")**
+*   **AI Librarian Integration ("Ask AI")**
     *   **Smart Chat Assistant**: Talk to **Tarumi**, your personal AI librarian, for direct manga recommendations, series overviews, or to find similar titles.
     *   **Safe Browsing**: Optional 18+ content filters to keep recommendation streams safe and focused.
 
-*   **🔒 Privacy & Security First**
+*   **Privacy and Security First**
     *   **Secure Access**: Password or biometric fingerprint-protected lockscreen featuring a custom cat paw keypad design.
     *   **Incognito Mode**: Pause reading history and recommendations tracking with a single tap.
 
-*   **🔄 Sync & Tracking Integrations**
+*   **Sync and Tracking Integrations**
     *   **Cross-Device Progress Sync**: Automatically back up and sync your reading progress, favorites, and settings across all your devices.
     *   **External Tracker Syncing**: Dynamic status and progress integrations with AniList, MyAnimeList, Kitsu, and Shikimori.
 
@@ -47,13 +47,6 @@ online content sources. The main goal of the fork is to maintain existing featur
     <img src="./metadata/en-US/images/phoneScreenshots/4.jpg" alt="Mobile view" width="250"/>
     <img src="./metadata/en-US/images/phoneScreenshots/5.jpg" alt="Mobile view" width="250"/>
     <img src="./metadata/en-US/images/phoneScreenshots/6.jpg" alt="Mobile view" width="250"/>
-</div>
-
-<br>
-
-<div align="center">
-    <img src="./metadata/en-US/images/tenInchScreenshots/1.png" alt="Tablet view" width="400"/>
-    <img src="./metadata/en-US/images/tenInchScreenshots/2.png" alt="Tablet view" width="400"/>
 </div>
 
 ### Contributing
