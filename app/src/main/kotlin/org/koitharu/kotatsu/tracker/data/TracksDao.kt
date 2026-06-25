@@ -15,11 +15,27 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 
 	@Transaction
 	@Query(
-		"SELECT * FROM tracks ORDER BY " +
-			"CASE WHEN last_result = 3 AND last_check_time <= :retryBefore THEN 0 ELSE 1 END ASC, " +
-			"last_check_time ASC LIMIT :limit OFFSET :offset",
+		"""
+		SELECT * FROM tracks
+		WHERE last_check_time = 0
+			OR last_chapter_date >= :minActivityTime
+			OR EXISTS(
+				SELECT 1 FROM history
+				WHERE history.manga_id = tracks.manga_id
+					AND history.deleted_at = 0
+					AND history.updated_at >= :minActivityTime
+			)
+			OR EXISTS(
+				SELECT 1 FROM favourites
+				WHERE favourites.manga_id = tracks.manga_id
+					AND favourites.deleted_at = 0
+					AND favourites.created_at >= :minActivityTime
+			)
+		ORDER BY last_check_time ASC
+		LIMIT :limit OFFSET :offset
+		""",
 	)
-	abstract suspend fun findAll(offset: Int, limit: Int, retryBefore: Long): List<TrackWithManga>
+	abstract suspend fun findAll(offset: Int, limit: Int, minActivityTime: Long): List<TrackWithManga>
 
 	@Transaction
 	@Query("SELECT * FROM tracks ORDER BY last_check_time DESC")
@@ -31,20 +47,8 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT * FROM tracks WHERE manga_id = :mangaId")
 	abstract suspend fun find(mangaId: Long): TrackEntity?
 
-	@Query(
-		"""
-		SELECT CASE 
-			WHEN EXISTS (
-				SELECT 1 FROM track_logs 
-				WHERE track_logs.manga_id = :mangaId 
-				  AND track_logs.unread = 1 
-				  AND track_logs.created_at > :timeLimit
-			) THEN (SELECT IFNULL(chapters_new, 0) FROM tracks WHERE manga_id = :mangaId)
-			ELSE 0 
-		END
-		"""
-	)
-	abstract suspend fun findNewChapters(mangaId: Long, timeLimit: Long): Int
+	@Query("SELECT IFNULL(chapters_new,0) FROM tracks WHERE manga_id = :mangaId")
+	abstract suspend fun findNewChapters(mangaId: Long): Int
 
 	@Query("SELECT COUNT(*) FROM tracks")
 	abstract suspend fun getTracksCount(): Int
@@ -52,20 +56,8 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT COUNT(*) FROM tracks WHERE chapters_new > 0")
 	abstract fun observeUpdateMangaCount(): Flow<Int>
 
-	@Query(
-		"""
-		SELECT CASE 
-			WHEN EXISTS (
-				SELECT 1 FROM track_logs 
-				WHERE track_logs.manga_id = :mangaId 
-				  AND track_logs.unread = 1 
-				  AND track_logs.created_at > :timeLimit
-			) THEN (SELECT IFNULL(chapters_new, 0) FROM tracks WHERE manga_id = :mangaId)
-			ELSE 0 
-		END
-		"""
-	)
-	abstract fun observeNewChapters(mangaId: Long, timeLimit: Long): Flow<Int>
+	@Query("SELECT IFNULL(chapters_new, 0) FROM tracks WHERE manga_id = :mangaId")
+	abstract fun observeNewChapters(mangaId: Long): Flow<Int>
 
 	@Transaction
 	@Query("SELECT * FROM tracks WHERE chapters_new > 0 ORDER BY last_chapter_date DESC")
@@ -94,6 +86,9 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 
 	@Query("UPDATE tracks SET chapters_new = 0 WHERE manga_id = :mangaId")
 	abstract suspend fun clearCounter(mangaId: Long)
+
+	@Query("UPDATE tracks SET chapters_new = 0 WHERE chapters_new > 0 AND last_chapter_date > 0 AND last_chapter_date < :minChapterDate")
+	abstract suspend fun clearStaleCounters(minChapterDate: Long)
 
 	@Query("DELETE FROM tracks WHERE manga_id = :mangaId")
 	abstract suspend fun delete(mangaId: Long)

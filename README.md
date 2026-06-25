@@ -5,34 +5,48 @@ online content sources. The main goal of the fork is to maintain existing featur
 
 ![Android 6.0](https://img.shields.io/badge/android-6.0+-brightgreen) [![Discord](https://img.shields.io/discord/898363402467045416?color=5865f2&label=discord)](https://discord.gg/sfPJSQNxfW) [![License](https://img.shields.io/github/license/KotatsuApp/Kotatsu)](https://github.com/KotatsuApp/Kotatsu/blob/devel/LICENSE)
 
-### Main Features
+### 🌟 Main Features
 
 <div align="left">
 
--   Online [manga catalogues](https://github.com/Kotatsu-Redo/kotatsu-parsers-redo) (with 1200+ manga sources)
--   Search manga by name, genres and more filters
--   Favorites organized by user-defined categories
--   Reading history, bookmarks and incognito mode support
--   Download manga and read it offline. Third-party CBZ archives are also supported
--   Clean and convenient Material You UI, optimized for phones, tablets and desktop
--   Standard and Webtoon-optimized customizable reader, gesture support on reading interface
--   Notifications about new chapters with updates feed, manga recommendations (with filters)
--   Integration with manga tracking services: Shikimori, AniList, MyAnimeList, Kitsu
--   Password / fingerprint-protected access to the app
--   Automatically sync app data with other devices on the same account
--   Support for older devices running Android 6.0+
+*   **📖 Vast Library & Advanced Discovery**
+    *   **1200+ Online Sources**: Access to massive global catalogs for Manga, Manhwa, and Manhua via our parser engine.
+    *   **Smart Search & Filtering**: Multi-layered search system filtering by genre, status, update frequency, and source.
+    *   **Personalized Recommendations**: Advanced discovery algorithm matching your exact reading preferences.
+
+*   **🎨 Premium Material You Interface**
+    *   **Gorgeous Dynamic Themes**: Adaptive color palettes including our signature warm **Coffee Theme**, Miku theme, Asuka theme, and customizable Monet dynamic colors.
+    *   **Responsive Multi-Device Layout**: Fully optimized fluid UI for phones, foldables, tablets, and desktop configurations.
+    *   **Customizable Content Feeds**: Toggle between clean card styles, compact lists, and trending carousels.
+
+*   **⚡ Next-Gen Reading Engine**
+    *   **Hybrid Reading Modes**: Optimized layout pipelines for standard page-turning and continuous vertical Webtoon formats.
+    *   **Offline Access**: Fast downloads with background queueing. Full support for local CBZ / ZIP archives.
+    *   **Precision Navigation**: Intuitive page bookmarks, history logging, and immersive full-screen layouts.
+
+*   **🤖 AI Librarian Integration ("Ask AI")**
+    *   **Smart Chat Assistant**: Talk to **Tarumi**, your personal AI librarian, for direct manga recommendations, series overviews, or to find similar titles.
+    *   **Safe Browsing**: Optional 18+ content filters to keep recommendation streams safe and focused.
+
+*   **🔒 Privacy & Security First**
+    *   **Secure Access**: Password or biometric fingerprint-protected lockscreen featuring a custom cat paw keypad design.
+    *   **Incognito Mode**: Pause reading history and recommendations tracking with a single tap.
+
+*   **🔄 Sync & Tracking Integrations**
+    *   **Cross-Device Progress Sync**: Automatically back up and sync your reading progress, favorites, and settings across all your devices.
+    *   **External Tracker Syncing**: Dynamic status and progress integrations with AniList, MyAnimeList, Kitsu, and Shikimori.
 
 </div>
 
 ### In-App Screenshots
 
 <div align="center">
-    <img src="./metadata/en-US/images/phoneScreenshots/1.png" alt="Mobile view" width="250"/>
-    <img src="./metadata/en-US/images/phoneScreenshots/2.png" alt="Mobile view" width="250"/>
-    <img src="./metadata/en-US/images/phoneScreenshots/3.png" alt="Mobile view" width="250"/>
-    <img src="./metadata/en-US/images/phoneScreenshots/4.png" alt="Mobile view" width="250"/>
-    <img src="./metadata/en-US/images/phoneScreenshots/5.png" alt="Mobile view" width="250"/>
-    <img src="./metadata/en-US/images/phoneScreenshots/6.png" alt="Mobile view" width="250"/>
+    <img src="./metadata/en-US/images/phoneScreenshots/1.jpg" alt="Mobile view" width="250"/>
+    <img src="./metadata/en-US/images/phoneScreenshots/2.jpg" alt="Mobile view" width="250"/>
+    <img src="./metadata/en-US/images/phoneScreenshots/3.jpg" alt="Mobile view" width="250"/>
+    <img src="./metadata/en-US/images/phoneScreenshots/4.jpg" alt="Mobile view" width="250"/>
+    <img src="./metadata/en-US/images/phoneScreenshots/5.jpg" alt="Mobile view" width="250"/>
+    <img src="./metadata/en-US/images/phoneScreenshots/6.jpg" alt="Mobile view" width="250"/>
 </div>
 
 <br>

@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
 import org.koitharu.kotatsu.core.db.MangaDatabase
-import org.koitharu.kotatsu.core.db.entity.toEntities
 import org.koitharu.kotatsu.core.db.entity.toManga
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -21,7 +20,6 @@ import org.koitharu.kotatsu.details.domain.ProgressUpdateUseCase
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.parsers.config.ConfigKey
 import org.koitharu.kotatsu.parsers.model.Manga
-import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.ifZero
 import org.koitharu.kotatsu.tracker.data.TrackEntity
@@ -30,12 +28,12 @@ import org.koitharu.kotatsu.tracker.data.toTrackingLogItem
 import org.koitharu.kotatsu.tracker.domain.model.MangaTracking
 import org.koitharu.kotatsu.tracker.domain.model.MangaUpdates
 import org.koitharu.kotatsu.tracker.domain.model.TrackingLogItem
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 private const val NO_ID = 0L
 private const val MAX_LOG_SIZE = 120
-private const val FAILED_TRACK_RETRY_DELAY_MS = 30 * 60 * 1000L
 
 @Reusable
 class TrackingRepository @Inject constructor(
@@ -49,13 +47,11 @@ class TrackingRepository @Inject constructor(
 	private var isGcCalled = AtomicBoolean(false)
 
 	suspend fun getNewChaptersCount(mangaId: Long): Int {
-		val timeLimit = System.currentTimeMillis() - 24 * 3600 * 1000L
-		return db.getTracksDao().findNewChapters(mangaId, timeLimit)
+		return db.getTracksDao().findNewChapters(mangaId)
 	}
 
 	fun observeNewChaptersCount(mangaId: Long): Flow<Int> {
-		val timeLimit = System.currentTimeMillis() - 24 * 3600 * 1000L
-		return db.getTracksDao().observeNewChapters(mangaId, timeLimit)
+		return db.getTracksDao().observeNewChapters(mangaId)
 	}
 
 	@Deprecated("")
@@ -82,9 +78,8 @@ class TrackingRepository @Inject constructor(
 			.onStart { gcIfNotCalled() }
 	}
 
-	suspend fun getTracks(offset: Int, limit: Int): List<MangaTracking> {
-		val retryBefore = System.currentTimeMillis() - FAILED_TRACK_RETRY_DELAY_MS
-		return db.getTracksDao().findAll(offset = offset, limit = limit, retryBefore = retryBefore)
+	suspend fun getTracks(offset: Int, limit: Int, minActivityTime: Long): List<MangaTracking> {
+		return db.getTracksDao().findAll(offset = offset, limit = limit, minActivityTime = minActivityTime)
 			.filter { track ->
 				// Check if source has disabled chapter updates via ConfigKey
 				val manga = track.manga.toManga(emptySet(), null)
@@ -152,15 +147,16 @@ class TrackingRepository @Inject constructor(
 
 	suspend fun clearCounters() = db.getTracksDao().clearCounters()
 
-	suspend fun markAsRead(trackLogId: Long) = db.getTrackLogsDao().markAsRead(trackLogId)
-
 	suspend fun markAllAsRead() = db.withTransaction {
 		db.getTrackLogsDao().markAllAsRead()
 		db.getTracksDao().clearCounters()
 	}
 
+	suspend fun markAsRead(trackLogId: Long) = db.getTrackLogsDao().markAsRead(trackLogId)
+
 	suspend fun gc() = db.withTransaction {
 		db.getTracksDao().gc()
+		db.getTracksDao().clearStaleCounters(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(MAX_STALE_UPDATE_DAYS))
 		db.getTrackLogsDao().run {
 			gc()
 			trim(MAX_LOG_SIZE)
@@ -171,21 +167,15 @@ class TrackingRepository @Inject constructor(
 		db.withTransaction {
 			val track = getOrCreateTrack(updates.manga.id).mergeWith(updates)
 			db.getTracksDao().upsert(track)
-			if (updates is MangaUpdates.Success && updates.isValid) {
-				val chapters = updates.manga.chapters
-				if (!chapters.isNullOrEmpty() && db.getMangaDao().find(updates.manga.id) != null) {
-					db.getChaptersDao().replaceAll(updates.manga.id, chapters.withIndex().toEntities(updates.manga.id))
-				}
-				if (updates.newChapters.isNotEmpty()) {
-					progressUpdateUseCase(updates.manga)
-					val logEntity = TrackLogEntity(
-						mangaId = updates.manga.id,
-						chapters = updates.newChapters.joinToString("\n") { x -> x.name },
-						createdAt = System.currentTimeMillis(),
-						isUnread = true,
-					)
-					db.getTrackLogsDao().insert(logEntity)
-				}
+			if (updates is MangaUpdates.Success && updates.isValid && updates.newChapters.isNotEmpty()) {
+				progressUpdateUseCase(updates.manga)
+				val logEntity = TrackLogEntity(
+					mangaId = updates.manga.id,
+					chapters = updates.newChapters.joinToString("\n") { x -> x.name },
+					createdAt = System.currentTimeMillis(),
+					isUnread = true,
+				)
+				db.getTrackLogsDao().insert(logEntity)
 			}
 		}
 	}
@@ -271,14 +261,13 @@ class TrackingRepository @Inject constructor(
 
 			is MangaUpdates.Success -> {
 				val chapters = updates.manga.getChapters(updates.branch)
-				val latestChapter = chapters.latestChapter()
 				TrackEntity(
 					mangaId = mangaId,
-					lastChapterId = latestChapter?.id ?: NO_ID,
+					lastChapterId = chapters.lastOrNull()?.id ?: NO_ID,
 					// Cap at the total chapter count: the unread counter can never exceed how many
 					// chapters exist, even if a transient detection glitch tries to inflate it.
 					newChapters = if (updates.isValid) {
-						(newChapters + updates.newChapters.size).coerceIn(0, chapters.orEmpty().size)
+						(newChapters + updates.newChapters.size).coerceIn(0, chapters.size)
 					} else {
 						0
 					},
@@ -291,16 +280,14 @@ class TrackingRepository @Inject constructor(
 		}
 	}
 
-	private fun List<MangaChapter>?.latestChapter(): MangaChapter? {
-		val chapters = orEmpty()
-		chapters.filter { it.uploadDate > 0L }.maxByOrNull { it.uploadDate }?.let { return it }
-		chapters.filter { it.number > 0 }.maxByOrNull { it.number }?.let { return it }
-		return chapters.lastOrNull()
-	}
-
 	private suspend fun gcIfNotCalled() {
 		if (isGcCalled.compareAndSet(false, true)) {
 			gc()
 		}
+	}
+
+	private companion object {
+
+		const val MAX_STALE_UPDATE_DAYS = 90L
 	}
 }

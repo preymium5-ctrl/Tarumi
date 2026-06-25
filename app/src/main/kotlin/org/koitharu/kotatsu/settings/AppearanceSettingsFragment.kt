@@ -111,6 +111,7 @@ class AppearanceSettingsFragment :
         when (key) {
             AppSettings.KEY_THEME -> {
                 AppCompatDelegate.setDefaultNightMode(settings.theme)
+                postRestart()
             }
 
             AppSettings.KEY_COLOR_THEME,

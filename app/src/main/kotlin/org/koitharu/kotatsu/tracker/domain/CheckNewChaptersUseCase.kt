@@ -6,13 +6,14 @@ import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
-import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.util.MultiMutex
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toInstantOrNull
 import org.koitharu.kotatsu.history.data.HistoryRepository
+import org.koitharu.kotatsu.list.domain.ReadingProgress
 import org.koitharu.kotatsu.local.data.LocalMangaRepository
+import org.koitharu.kotatsu.core.model.MangaHistory
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.util.findById
@@ -20,6 +21,7 @@ import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.tracker.domain.model.MangaTracking
 import org.koitharu.kotatsu.tracker.domain.model.MangaUpdates
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +31,6 @@ class CheckNewChaptersUseCase @Inject constructor(
 	private val historyRepository: HistoryRepository,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val localMangaRepository: LocalMangaRepository,
-	private val mangaDataRepository: MangaDataRepository,
 ) {
 
 	private val mutex = MultiMutex<Long>()
@@ -54,21 +55,26 @@ class CheckNewChaptersUseCase @Inject constructor(
 			val track = repository.getTrackOrNull(manga) ?: return@withLock
 			val branch = checkNotNull(details.chapters?.findById(currentChapterId)).branch
 			val chapters = details.getChapters(branch)
-			val latestChapter = chapters.latestChapter()
-			val detectedUpdates = compare(track, details, branch, currentChapterId)
-			val carriedUpdates = chapters.inferNewestChapters(track.newChapters)
-			val effectiveUpdates = (carriedUpdates + detectedUpdates.newChapters).distinctBy { it.id }
-			val isReadingNewChapter = effectiveUpdates.any { it.id == currentChapterId } ||
-				latestChapter?.id == currentChapterId
+			val chapterIndex = chapters.indexOfFirst { x -> x.id == currentChapterId }
+			val lastChapter = chapters.lastOrNull()
+			// Credit chapters that appeared since the previously tracked last chapter.
+			// Without this, opening the reader on an older chapter while a release
+			// dropped in the meantime would advance lastChapterId past the unseen
+			// chapter without ever flagging it as new, hiding it from the Updates tab.
+			val prevLastIndex = chapters.indexOfFirst { it.id == track.lastChapterId }
+			val addedSinceLastTrack = if (prevLastIndex >= 0) chapters.lastIndex - prevLastIndex else 0
+			val effectiveNew = track.newChapters + addedSinceLastTrack
+			val lastNewChapterIndex = chapters.size - effectiveNew
 			val tracking = MangaTracking(
 				manga = details,
-				lastChapterId = latestChapter?.id ?: 0L,
+				lastChapterId = lastChapter?.id ?: 0L,
 				lastCheck = Instant.now(),
-				lastChapterDate = latestChapter?.uploadDate?.toInstantOrNull() ?: track.lastChapterDate,
-				newChapters = if (isReadingNewChapter) {
-					0
-				} else {
-					effectiveUpdates.size.coerceAtMost(chapters.size)
+				lastChapterDate = lastChapter?.uploadDate?.toInstantOrNull() ?: track.lastChapterDate,
+				newChapters = when {
+					effectiveNew == 0 -> 0
+					chapterIndex < 0 -> effectiveNew
+					chapterIndex >= lastNewChapterIndex -> chapters.lastIndex - chapterIndex
+					else -> effectiveNew
 				},
 			)
 			repository.mergeWith(tracking)
@@ -79,9 +85,19 @@ class CheckNewChaptersUseCase @Inject constructor(
 
 	private suspend fun invokeImpl(track: MangaTracking): MangaUpdates = runCatchingCancellable {
 		val details = getFullManga(track.manga)
-		val historyChapterId = historyRepository.getOne(track.manga)?.chapterId ?: 0L
+		val history = historyRepository.getOne(track.manga)
+		val historyChapterId = history?.chapterId ?: 0L
 		val branch = getBranch(details, track.lastChapterId, historyChapterId)
-		compare(track, details, branch, historyChapterId)
+		val updates = compare(track, details, branch, historyChapterId)
+		if (updates.isValid && updates.newChapters.isNotEmpty()) {
+			updates.filterReadAndStaleChapters(
+				chapters = details.getChapters(branch).orEmpty(),
+				history = history,
+				similarHistories = historyRepository.findSimilarByTitle(details, SIMILAR_HISTORY_LIMIT),
+			)
+		} else {
+			updates
+		}
 	}.getOrElse { error ->
 		MangaUpdates.Failure(
 			manga = track.manga,
@@ -109,18 +125,8 @@ class CheckNewChaptersUseCase @Inject constructor(
 			},
 		)
 
-		manga.chapters.isNullOrEmpty() -> fetchDetailsWithCacheFallback(manga)
+		manga.chapters.isNullOrEmpty() -> fetchDetails(manga)
 		else -> manga
-	}
-
-	private suspend fun fetchDetailsWithCacheFallback(manga: Manga): Manga {
-		val cached = mangaDataRepository.findMangaById(manga.id, withChapters = true)
-			?.takeIf { !it.chapters.isNullOrEmpty() }
-		return runCatchingCancellable {
-			fetchDetails(manga)
-		}.getOrElse { error ->
-			cached ?: throw error
-		}
 	}
 
 	private suspend fun fetchDetails(manga: Manga): Manga {
@@ -161,8 +167,9 @@ class CheckNewChaptersUseCase @Inject constructor(
 		if (BuildConfig.DEBUG && chapters.findById(track.lastChapterId) == null) {
 			Log.e("Tracker", "Chapter ${track.lastChapterId} not found")
 		}
-		compareByDate(manga, branch, chapters, track.lastChapterDate?.toEpochMilli() ?: 0L)?.let { return it }
 		compareAgainst(manga, branch, chapters, track.lastChapterId)?.let { return it }
+		// lastChapterId is stale (not in the fresh list) -> prefer the date baseline.
+		compareByDate(manga, branch, chapters, track.lastChapterDate?.toEpochMilli() ?: 0L)?.let { return it }
 		// No usable id or date -> last resort: the user's reading position.
 		if (historyChapterId != 0L && historyChapterId != track.lastChapterId) {
 			compareAgainst(manga, branch, chapters, historyChapterId)?.let { return it }
@@ -172,9 +179,8 @@ class CheckNewChaptersUseCase @Inject constructor(
 	}
 
 	/**
-	 * Returns a result if [anchorChapterId] is a usable anchor in [chapters], or `null` if the
-	 * anchor is absent from the list. Sources disagree on chapter ordering, so prefer real upload
-	 * dates and chapter numbers before falling back to list direction.
+	 * Returns a result if [anchorChapterId] is a usable anchor in [chapters] (either it is the last
+	 * chapter, or there are some chapters after it), or `null` if the anchor is absent from the list.
 	 */
 	private fun compareAgainst(
 		manga: Manga,
@@ -182,41 +188,18 @@ class CheckNewChaptersUseCase @Inject constructor(
 		chapters: List<MangaChapter>,
 		anchorChapterId: Long,
 	): MangaUpdates.Success? {
-		val anchorIndex = chapters.indexOfFirst { it.id == anchorChapterId }
-		if (anchorIndex == -1) {
-			return null
-		}
-		val anchor = chapters[anchorIndex]
-		val newerByDate = if (anchor.uploadDate > 0L) {
-			chapters.filter { it.uploadDate > anchor.uploadDate }
-		} else {
-			emptyList()
-		}
-		if (newerByDate.isNotEmpty() && newerByDate.size < chapters.size) {
-			return MangaUpdates.Success(manga, branch, newerByDate, isValid = true)
-		}
-		val newerByNumber = if (anchor.number > 0) {
-			chapters.filter { it.number > anchor.number }
-		} else {
-			emptyList()
-		}
-		if (newerByNumber.isNotEmpty() && newerByNumber.size < chapters.size) {
-			return MangaUpdates.Success(manga, branch, newerByNumber, isValid = true)
-		}
-		val newChapters = when (chapters.isLikelyNewestFirst()) {
-			true -> chapters.take(anchorIndex)
-			false -> chapters.drop(anchorIndex + 1)
-			null -> chapters.drop(anchorIndex + 1)
-		}
-		return if (newChapters.isEmpty()) {
-			MangaUpdates.Success(
+		val newChapters = chapters.takeLastWhile { x -> x.id != anchorChapterId }
+		return when {
+			newChapters.isEmpty() -> MangaUpdates.Success(
 				manga = manga,
 				branch = branch,
 				newChapters = emptyList(),
-				isValid = true,
+				isValid = chapters.lastOrNull()?.id == anchorChapterId,
 			)
-		} else {
-			MangaUpdates.Success(manga, branch, newChapters, isValid = true)
+
+			newChapters.size == chapters.size -> null // anchor not found in the list
+
+			else -> MangaUpdates.Success(manga, branch, newChapters, isValid = true)
 		}
 	}
 
@@ -240,31 +223,66 @@ class CheckNewChaptersUseCase @Inject constructor(
 		}
 	}
 
-	private fun List<MangaChapter>.latestChapter(): MangaChapter? {
-		filter { it.uploadDate > 0L }.maxByOrNull { it.uploadDate }?.let { return it }
-		filter { it.number > 0 }.maxByOrNull { it.number }?.let { return it }
-		return lastOrNull()
+	private fun MangaUpdates.Success.filterReadAndStaleChapters(
+		chapters: List<MangaChapter>,
+		history: MangaHistory?,
+		similarHistories: List<MangaHistory>,
+	): MangaUpdates.Success {
+		if (!isValid || newChapters.isEmpty()) {
+			return this
+		}
+		val readChapters = maxOf(
+			history.getReadChaptersCount(chapters),
+			similarHistories.maxOfOrNull { it.estimatedReadChaptersCount() } ?: 0,
+		)
+		val minChapterDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(MAX_STALE_CHAPTER_DAYS)
+		val filtered = newChapters.filter { chapter ->
+			chapter.isAfterReadPosition(chapters, readChapters) && chapter.isRecentEnough(minChapterDate)
+		}
+		return if (filtered.size == newChapters.size) {
+			this
+		} else {
+			copy(newChapters = filtered)
+		}
 	}
 
-	private fun List<MangaChapter>.inferNewestChapters(count: Int): List<MangaChapter> {
-		if (count <= 0) {
-			return emptyList()
+	private fun MangaChapter.isAfterReadPosition(chapters: List<MangaChapter>, readChapters: Int): Boolean {
+		if (readChapters <= 0) {
+			return true
 		}
-		return when (isLikelyNewestFirst()) {
-			true -> take(count)
-			false, null -> takeLast(count)
+		val index = chapters.indexOfFirst { it.id == id }
+		return index < 0 || index >= readChapters
+	}
+
+	private fun MangaChapter.isRecentEnough(minChapterDate: Long): Boolean {
+		return uploadDate == 0L || uploadDate >= minChapterDate
+	}
+
+	private fun MangaHistory?.getReadChaptersCount(chapters: List<MangaChapter>): Int {
+		if (this == null) {
+			return 0
+		}
+		val index = chapters.indexOfFirst { it.id == chapterId }
+		return when {
+			index >= 0 -> index + 1
+			else -> estimatedReadChaptersCount().coerceAtMost(chapters.size)
 		}
 	}
 
-	private fun List<MangaChapter>.isLikelyNewestFirst(): Boolean? {
-		val datedChapters = filter { it.uploadDate > 0L }
-		if (datedChapters.size >= 2) {
-			return datedChapters.first().uploadDate > datedChapters.last().uploadDate
+	private fun MangaHistory.estimatedReadChaptersCount(): Int {
+		if (chaptersCount <= 0 || !ReadingProgress.isValid(percent)) {
+			return 0
 		}
-		val numberedChapters = filter { it.number > 0 }
-		if (numberedChapters.size >= 2) {
-			return numberedChapters.first().number > numberedChapters.last().number
+		return if (ReadingProgress.isCompleted(percent)) {
+			chaptersCount
+		} else {
+			(percent * chaptersCount).toInt().coerceIn(0, chaptersCount)
 		}
-		return null
+	}
+
+	private companion object {
+
+		const val SIMILAR_HISTORY_LIMIT = 8
+		const val MAX_STALE_CHAPTER_DAYS = 90L
 	}
 }

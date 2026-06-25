@@ -230,6 +230,31 @@ class HistoryRepository @Inject constructor(
 		return db.getHistoryDao().find(manga.id)?.recoverIfNeeded(manga)?.toMangaHistory()
 	}
 
+	suspend fun findSimilarByTitle(manga: Manga, limit: Int): List<MangaHistory> {
+		if (limit <= 0) {
+			return emptyList()
+		}
+		val titles = (sequenceOf(manga.title) + manga.altTitles.asSequence())
+			.map { it.trim() }
+			.filter { it.isNotEmpty() }
+			.distinct()
+		val result = linkedMapOf<Long, MangaHistory>()
+		for (title in titles) {
+			if (result.size >= limit) {
+				break
+			}
+			db.getHistoryDao().findSimilarByTitle(
+				mangaId = manga.id,
+				title = title,
+				altTitleQuery = "%$title%",
+				limit = limit - result.size,
+			).forEach { entity ->
+				result.putIfAbsent(entity.mangaId, entity.toMangaHistory())
+			}
+		}
+		return result.values.toList()
+	}
+
 	suspend fun getProgress(mangaId: Long, mode: ProgressIndicatorMode): ReadingProgress? {
 		val entity = db.getHistoryDao().find(mangaId) ?: return null
 		val fixedPercent = if (ReadingProgress.isCompleted(entity.percent)) 1f else entity.percent
