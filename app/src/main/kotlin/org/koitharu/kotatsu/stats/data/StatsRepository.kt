@@ -102,14 +102,19 @@ class StatsRepository @Inject constructor(
 		return db.getStatsDao().getReadPagesCount(mangaId)
 	}
 
-	suspend fun getSummaryStats(): ReadingStatsSummary {
+	suspend fun getSummaryStats(period: StatsPeriod, categories: Set<Long>): ReadingStatsSummary {
 		val dao = db.getStatsDao()
+		val fromDate = if (period == StatsPeriod.ALL) {
+			0L
+		} else {
+			System.currentTimeMillis() - TimeUnit.DAYS.toMillis(period.days.toLong())
+		}
 		val timestamps = dao.getReadTimestamps()
 		return ReadingStatsSummary(
 			streakDays = timestamps.currentReadingStreak(),
-			totalPages = dao.getTotalReadPagesCount(),
-			totalChapters = dao.getTotalReadChaptersCount(),
-			totalDuration = dao.getTotalDuration(),
+			totalPages = dao.getSummaryPages(fromDate, categories),
+			totalChapters = dao.getSummaryChapters(fromDate, categories),
+			totalDuration = dao.getSummaryDuration(fromDate, categories),
 			appDuration = settings.appUsageDuration,
 		)
 	}

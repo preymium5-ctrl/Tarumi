@@ -47,7 +47,7 @@ class StatsViewModel @Inject constructor(
 					repository.getReadingStats(p.first, p.second)
 				}
 				genreStats.value = repository.getGenreStats(p.first, p.second)
-				summary.value = repository.getSummaryStats()
+				summary.value = repository.getSummaryStats(p.first, p.second)
 			}
 		}
 	}

@@ -140,6 +140,33 @@ abstract class StatsDao {
 		query: SupportSQLiteQuery
 	): List<GenreChapterStat>
 
+	suspend fun getSummaryPages(fromDate: Long, favouriteCategories: Set<Long>): Int {
+		val conditions = buildStatsConditions(fromDate, null, favouriteCategories)
+		val query = SimpleSQLiteQuery("SELECT IFNULL(SUM(pages), 0) FROM stats WHERE $conditions")
+		return getSummaryPagesImpl(query)
+	}
+
+	suspend fun getSummaryChapters(fromDate: Long, favouriteCategories: Set<Long>): Int {
+		val conditions = buildStatsConditions(fromDate, null, favouriteCategories)
+		val query = SimpleSQLiteQuery("SELECT IFNULL(SUM(chapters), 0) FROM stats WHERE $conditions")
+		return getSummaryChaptersImpl(query)
+	}
+
+	suspend fun getSummaryDuration(fromDate: Long, favouriteCategories: Set<Long>): Long {
+		val conditions = buildStatsConditions(fromDate, null, favouriteCategories)
+		val query = SimpleSQLiteQuery("SELECT IFNULL(SUM(duration), 0) FROM stats WHERE $conditions")
+		return getSummaryDurationImpl(query)
+	}
+
+	@RawQuery
+	protected abstract suspend fun getSummaryPagesImpl(query: SupportSQLiteQuery): Int
+
+	@RawQuery
+	protected abstract suspend fun getSummaryChaptersImpl(query: SupportSQLiteQuery): Int
+
+	@RawQuery
+	protected abstract suspend fun getSummaryDurationImpl(query: SupportSQLiteQuery): Long
+
 	@Query("SELECT * FROM stats ORDER BY started_at LIMIT :limit OFFSET :offset")
 	protected abstract suspend fun findAll(offset: Int, limit: Int): List<StatsEntity>
 	fun dumpEnabled(): Flow<StatsEntity> = flow {

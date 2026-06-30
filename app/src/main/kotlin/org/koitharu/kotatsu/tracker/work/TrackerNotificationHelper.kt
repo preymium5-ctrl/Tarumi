@@ -1,7 +1,5 @@
 package org.koitharu.kotatsu.tracker.work
 
-import android.widget.RemoteViews
-
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -81,14 +79,10 @@ class TrackerNotificationHelper @Inject constructor(
 			applicationContext.getString(R.string.detected_at_pattern, detectedAt),
 		).joinToString(" - ")
 
-		val customView = RemoteViews(applicationContext.packageName, R.layout.notification_tracker_update)
-		customView.setTextViewText(R.id.notification_title, manga.title)
-		customView.setTextViewText(R.id.notification_text, notificationText)
-
 		with(builder) {
-			setCustomContentView(customView)
-			setCustomBigContentView(customView)
-			setStyle(NotificationCompat.DecoratedCustomViewStyle())
+			setContentTitle(manga.title)
+			setContentText(notificationText)
+			setStyle(NotificationCompat.BigTextStyle().bigText(notificationText))
 			setNumber(newChapters.size)
 			setLargeIcon(
 				coil.execute(
@@ -138,14 +132,10 @@ class TrackerNotificationHelper @Inject constructor(
 		)
 		val textContent = notifications.joinToString { it.manga.title }
 
-		val customView = RemoteViews(applicationContext.packageName, R.layout.notification_tracker_update)
-		customView.setTextViewText(R.id.notification_title, title)
-		customView.setTextViewText(R.id.notification_text, textContent)
-
 		with(builder) {
-			setCustomContentView(customView)
-			setCustomBigContentView(customView)
-			setStyle(NotificationCompat.DecoratedCustomViewStyle())
+			setContentTitle(title)
+			setContentText(textContent)
+			setStyle(NotificationCompat.BigTextStyle().bigText(textContent))
 			setSmallIcon(R.drawable.ic_stat_book_plus)
 			setNumber(newChaptersCount)
 			setGroup(GROUP_NEW_CHAPTERS)
@@ -175,14 +165,11 @@ class TrackerNotificationHelper @Inject constructor(
 	fun createSyncNotification(): Notification {
 		val title = "Library Sync Successful"
 		val textContent = "All your reading statuses, categories and updates have been synchronized with your tracking services."
-		val customView = RemoteViews(applicationContext.packageName, R.layout.notification_tracker_sync)
-		customView.setTextViewText(R.id.notification_title, title)
-		customView.setTextViewText(R.id.notification_text, textContent)
 
 		val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-			.setStyle(NotificationCompat.DecoratedCustomViewStyle())
-			.setCustomContentView(customView)
-			.setCustomBigContentView(customView)
+			.setContentTitle(title)
+			.setContentText(textContent)
+			.setStyle(NotificationCompat.BigTextStyle().bigText(textContent))
 			.setSmallIcon(R.drawable.ic_stat_book_plus)
 			.setVisibility(VISIBILITY_PRIVATE)
 		applyCommonSettings(builder)

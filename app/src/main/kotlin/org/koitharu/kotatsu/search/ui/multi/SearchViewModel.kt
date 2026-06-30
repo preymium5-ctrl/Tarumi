@@ -49,7 +49,7 @@ import org.koitharu.kotatsu.search.domain.SearchV2Helper
 import java.util.Locale
 import javax.inject.Inject
 
-private const val MAX_PARALLELISM = 4
+private const val MAX_PARALLELISM = 20
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(

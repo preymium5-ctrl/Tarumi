@@ -23,6 +23,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.SourceDiagnosticsStore
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.awaitUniqueWorkInfoByName
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.model.MangaChapter
@@ -39,6 +40,7 @@ class RecentUpdatesWorker @AssistedInject constructor(
 	@Assisted params: WorkerParameters,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val diagnosticsStore: SourceDiagnosticsStore,
+	private val settings: AppSettings,
 ) : CoroutineWorker(appContext, params) {
 
 	private val homeFeedCache = HomeFeedCache(appContext)
@@ -49,6 +51,9 @@ class RecentUpdatesWorker @AssistedInject constructor(
 	}
 
 	override suspend fun doWork(): Result {
+		if (settings.isPerformanceMode) {
+			return Result.success()
+		}
 		return runCatchingCancellable {
 			val snapshot = homeFeedCache.load()
 			val updates = loadRecentUpdates()

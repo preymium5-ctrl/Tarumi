@@ -120,6 +120,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		get() = viewBinding.bottomNav
 
 	override fun onCreate(savedInstanceState: Bundle?) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			if (settings.isPerformanceMode) {
+				splashScreen.setOnExitAnimationListener { provider ->
+					provider.remove()
+				}
+			}
+		}
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityMainBinding.inflate(layoutInflater))
 		setSupportActionBar(viewBinding.searchBar)

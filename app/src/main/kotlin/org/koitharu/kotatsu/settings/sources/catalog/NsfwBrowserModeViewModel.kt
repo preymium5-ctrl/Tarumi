@@ -44,7 +44,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	init {
 		val sources = sourcesRepository.allMangaSources
 			.asSequence()
-			.filter { it.contentType == ContentType.HENTAI && it.isEnglishSource() }
+			.filter { it.contentType == ContentType.HENTAI }
 			.sortedBy { it.getTitle(context) }
 			.toList()
 		val selected = sources.firstOrNull { it.name == initialSourceName } ?: sources.firstOrNull()
@@ -278,7 +278,7 @@ class NsfwBrowserModeViewModel @Inject constructor(
 	}
 
 	private fun Manga.matchesEnglishCatalogSource(source: MangaParserSource): Boolean {
-		if (source.name !in ENGLISH_ONLY_BROWSER_SOURCES) {
+		if (source.isEnglishSource()) {
 			return true
 		}
 		if (chapters.orEmpty().any { chapter ->
@@ -355,12 +355,6 @@ class NsfwBrowserModeViewModel @Inject constructor(
 		const val PAGE_SIZE = 25
 		private const val SOURCE_PAGE_HINT = 50
 		private const val DETAILS_CHUNK_SIZE = 5
-		private val ENGLISH_ONLY_BROWSER_SOURCES = setOf(
-			"NHENTAI",
-			"NHENTAI_TO",
-			"NHENTAI_XXX",
-			"HITOMILA",
-		)
 	}
 }
 
