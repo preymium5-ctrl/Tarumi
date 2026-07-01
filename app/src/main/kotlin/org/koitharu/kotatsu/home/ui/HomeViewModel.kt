@@ -901,11 +901,11 @@ class HomeViewModel @Inject constructor(
 			MangaParserSource.WEEBCENTRAL,
 			MangaParserSource.FLAMECOMICS,
 			MangaParserSource.MANGAFIRE_EN,
-			MangaParserSource.MANHUAFAST,
+			MangaParserSource.MANHWAZ,
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(
-			MangaParserSource.MANHUAFAST,
+			MangaParserSource.MANHWAZ,
 		)
 
 		val MANGA_RECOMMENDATION_SOURCES = listOf(

@@ -129,7 +129,7 @@ class MangaSourcesRepository @Inject constructor(
 			mapNotNullTo(ArrayList(size)) { it.mangaSource as? MangaParserSource }
 		}
 		if (locale != null) {
-			sources.retainAll { it.locale == locale }
+			sources.retainAll { it.locale == locale || it.locale.isEmpty() || it.locale == "all" }
 		}
 		if (excludeBroken) {
 			sources.removeAll { it.isBroken }

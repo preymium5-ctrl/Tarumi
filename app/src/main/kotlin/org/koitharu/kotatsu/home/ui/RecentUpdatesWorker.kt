@@ -246,7 +246,7 @@ class RecentUpdatesWorker @AssistedInject constructor(
 			MangaParserSource.WEEBCENTRAL,
 			MangaParserSource.FLAMECOMICS,
 			MangaParserSource.MANGAFIRE_EN,
-			MangaParserSource.MANHUAFAST,
+			MangaParserSource.MANHWAZ,
 		)
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }
