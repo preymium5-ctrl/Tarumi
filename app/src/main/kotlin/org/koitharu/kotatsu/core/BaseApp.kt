@@ -74,7 +74,7 @@ open class BaseApp : Application(), Configuration.Provider {
 	lateinit var localStorageChanges: MutableSharedFlow<LocalManga?>
 
 	@Inject
-	lateinit var analyticsTracker: AnalyticsTracker
+	lateinit var analyticsTrackerProvider: Provider<AnalyticsTracker>
 
 	override val workManagerConfiguration: Configuration
 		get() = Configuration.Builder()
@@ -115,7 +115,7 @@ open class BaseApp : Application(), Configuration.Provider {
 		override fun onStart(owner: LifecycleOwner) {
 			settings.startAppUsageSession()
 			processLifecycleScope.launch(Dispatchers.IO) {
-				analyticsTracker.trackAppSession()
+				analyticsTrackerProvider.get().trackAppSession()
 			}
 		}
 
