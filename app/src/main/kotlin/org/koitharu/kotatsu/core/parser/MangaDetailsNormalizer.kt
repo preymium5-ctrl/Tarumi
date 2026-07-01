@@ -312,5 +312,6 @@ private val SOURCE_TYPE_DEFAULTS = mapOf(
 	"mangafireen" to ComicTypeHint.MANGA,
 	"mangafire" to ComicTypeHint.MANGA,
 	"manhuafast" to ComicTypeHint.MANHUA,
+	"manhwaz" to ComicTypeHint.MANHWA,
 	"demonicscans" to ComicTypeHint.MANHWA,
 )
