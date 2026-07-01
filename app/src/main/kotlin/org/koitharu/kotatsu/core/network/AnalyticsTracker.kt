@@ -55,10 +55,10 @@ class AnalyticsTracker @Inject constructor(
 				.url("https://api.mixpanel.com/track")
 				.post(body)
 				.build()
-			android.util.Log.d("AnalyticsTracker", "Sending event to Mixpanel: $payload")
+			android.util.Log.w("AnalyticsTracker", "Sending event to Mixpanel: $payload")
 			val response = okHttpClient.newCall(request).execute()
 			val responseBody = response.body?.string()
-			android.util.Log.d("AnalyticsTracker", "Mixpanel response: code=${response.code}, body=$responseBody")
+			android.util.Log.w("AnalyticsTracker", "Mixpanel response: code=${response.code}, body=$responseBody")
 			response.close()
 		} catch (e: Throwable) {
 			android.util.Log.e("AnalyticsTracker", "Failed to send event to Mixpanel", e)
