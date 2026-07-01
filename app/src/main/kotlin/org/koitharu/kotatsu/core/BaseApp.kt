@@ -113,6 +113,7 @@ open class BaseApp : Application(), Configuration.Provider {
 	private inner class AppUsageObserver : DefaultLifecycleObserver {
 
 		override fun onStart(owner: LifecycleOwner) {
+			android.util.Log.w("AnalyticsTracker", "AppUsageObserver.onStart() triggered")
 			settings.startAppUsageSession()
 			processLifecycleScope.launch(Dispatchers.IO) {
 				analyticsTrackerProvider.get().trackAppSession()
