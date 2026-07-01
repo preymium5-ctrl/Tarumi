@@ -175,12 +175,16 @@ private fun Manga.normalizeTags(description: String?): Set<MangaTag> {
 }
 
 private fun Manga.inferComicType(description: String?): ComicTypeHint? {
+	val fromSource = inferComicTypeFromSource()
+	if (fromSource == ComicTypeHint.MANHWA || fromSource == ComicTypeHint.MANHUA) {
+		return fromSource
+	}
 	val labels = metadataLabels(description)
 	return when {
 		labels.any { it.hasWholeWord("manhua") || it.contains("chinese webcomic") } -> ComicTypeHint.MANHUA
 		labels.any { it.hasWholeWord("manhwa") || it.hasWholeWord("webtoon") || it.contains("korean webcomic") } -> ComicTypeHint.MANHWA
 		labels.any { it.hasWholeWord("manga") || it.hasWholeWord("one-shot") || it.hasWholeWord("doujinshi") } -> ComicTypeHint.MANGA
-		else -> inferComicTypeFromSource()
+		else -> fromSource
 	}
 }
 

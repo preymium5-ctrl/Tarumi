@@ -62,12 +62,12 @@ fun Manga.detectComicType(): ComicType {
 	}
 
 	return when {
+		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHUA -> ComicType.MANHUA
+		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHWA -> ComicType.MANHWA
+		source == MangaParserSource.DEMONICSCANS -> ComicType.MANHWA
 		hasManhuaLabel -> ComicType.MANHUA
 		hasManhwaLabel -> ComicType.MANHWA
 		hasMangaLabel -> ComicType.MANGA
-		source == MangaParserSource.DEMONICSCANS -> ComicType.MANHWA
-		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHUA -> ComicType.MANHUA
-		source != MangaParserSource.WEEBCENTRAL && sourceType == ContentType.MANHWA -> ComicType.MANHWA
 		source != MangaParserSource.WEEBCENTRAL &&
 			(sourceType == ContentType.MANGA || sourceType == ContentType.ONE_SHOT || sourceType == ContentType.DOUJINSHI) -> ComicType.MANGA
 		else -> ComicType.COMIC
