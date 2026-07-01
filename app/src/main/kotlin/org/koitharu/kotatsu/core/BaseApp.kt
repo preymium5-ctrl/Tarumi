@@ -95,6 +95,33 @@ open class BaseApp : Application(), Configuration.Provider {
 			Security.insertProviderAt(Conscrypt.newProvider(), 1)
 		}
 		setupActivityLifecycleCallbacks()
+		registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+			private var startedActivityCount = 0
+
+			override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) {}
+
+			override fun onActivityStarted(activity: android.app.Activity) {
+				if (startedActivityCount == 0) {
+					android.util.Log.w("AnalyticsTracker", "App came to foreground (ActivityLifecycleCallbacks)")
+					processLifecycleScope.launch(Dispatchers.IO) {
+						analyticsTrackerProvider.get().trackAppSession()
+					}
+				}
+				startedActivityCount++
+			}
+
+			override fun onActivityResumed(activity: android.app.Activity) {}
+
+			override fun onActivityPaused(activity: android.app.Activity) {}
+
+			override fun onActivityStopped(activity: android.app.Activity) {
+				startedActivityCount = (startedActivityCount - 1).coerceAtLeast(0)
+			}
+
+			override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) {}
+
+			override fun onActivityDestroyed(activity: android.app.Activity) {}
+		})
 		ProcessLifecycleOwner.get().lifecycle.addObserver(AppUsageObserver())
 		processLifecycleScope.launch {
 			ACRA.errorReporter.putCustomData("isOriginalApp", appValidator.isOriginalApp.getOrNull().toString())
@@ -113,11 +140,7 @@ open class BaseApp : Application(), Configuration.Provider {
 	private inner class AppUsageObserver : DefaultLifecycleObserver {
 
 		override fun onStart(owner: LifecycleOwner) {
-			android.util.Log.w("AnalyticsTracker", "AppUsageObserver.onStart() triggered")
 			settings.startAppUsageSession()
-			processLifecycleScope.launch(Dispatchers.IO) {
-				analyticsTrackerProvider.get().trackAppSession()
-			}
 		}
 
 		override fun onStop(owner: LifecycleOwner) {
