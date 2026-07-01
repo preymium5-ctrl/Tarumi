@@ -20,9 +20,9 @@ import javax.inject.Singleton
 @Singleton
 class AnalyticsTracker @Inject constructor(
 	@ApplicationContext private val context: Context,
-	private val settings: AppSettings,
-	@BaseHttpClient private val okHttpClient: OkHttpClient
+	private val settings: AppSettings
 ) {
+	private val okHttpClient = OkHttpClient()
 
 	@WorkerThread
 	fun trackAppSession() {
