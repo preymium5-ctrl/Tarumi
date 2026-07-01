@@ -31,6 +31,7 @@ import org.koitharu.kotatsu.core.os.RomCompat
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.util.ext.processLifecycleScope
+import org.koitharu.kotatsu.core.network.AnalyticsTracker
 import org.koitharu.kotatsu.core.work.AppWorkerFactory
 import org.koitharu.kotatsu.local.data.LocalStorageChanges
 import org.koitharu.kotatsu.local.data.index.LocalMangaIndex
@@ -72,6 +73,9 @@ open class BaseApp : Application(), Configuration.Provider {
 	@LocalStorageChanges
 	lateinit var localStorageChanges: MutableSharedFlow<LocalManga?>
 
+	@Inject
+	lateinit var analyticsTracker: AnalyticsTracker
+
 	override val workManagerConfiguration: Configuration
 		get() = Configuration.Builder()
 			.setWorkerFactory(workerFactory)
@@ -110,6 +114,9 @@ open class BaseApp : Application(), Configuration.Provider {
 
 		override fun onStart(owner: LifecycleOwner) {
 			settings.startAppUsageSession()
+			processLifecycleScope.launch(Dispatchers.IO) {
+				analyticsTracker.trackAppSession()
+			}
 		}
 
 		override fun onStop(owner: LifecycleOwner) {

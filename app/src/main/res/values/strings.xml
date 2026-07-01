@@ -1143,4 +1143,5 @@
     <string name="cols_auto">Auto</string>
     <string name="cols_4">4 Columns</string>
     <string name="cols_5">5 Columns</string>
+    <string name="mixpanel_project_token" translatable="false">YOUR_MIXPANEL_PROJECT_TOKEN_HERE</string>
 </resources>
