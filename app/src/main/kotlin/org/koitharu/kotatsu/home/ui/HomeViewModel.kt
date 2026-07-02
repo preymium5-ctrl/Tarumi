@@ -905,7 +905,7 @@ class HomeViewModel @Inject constructor(
 		)
 
 		val MANHUA_RECOMMENDATION_SOURCES = listOf(
-			MangaParserSource.MANHWAZ,
+			MangaParserSource.MANHUAPLUS,
 		)
 
 		val MANGA_RECOMMENDATION_SOURCES = listOf(

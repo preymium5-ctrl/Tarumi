@@ -10,16 +10,12 @@
 	android:orientation="vertical">
 
 	<!-- Header Area -->
-	<com.google.android.material.card.MaterialCardView
+	<FrameLayout
 		android:layout_width="72dp"
 		android:layout_height="72dp"
 		android:layout_gravity="center_horizontal"
 		android:layout_marginTop="28dp"
-		app:cardCornerRadius="36dp"
-		app:cardElevation="0dp"
-		app:strokeColor="@color/taru_outline"
-		app:strokeWidth="1dp"
-		app:cardBackgroundColor="@color/taru_surface_soft">
+		android:background="@drawable/bg_taru_update_bubble">
 
 		<ImageView
 			android:layout_width="38dp"
@@ -28,7 +24,7 @@
 			android:contentDescription="@null"
 			android:src="@drawable/ic_app_update"
 			app:tint="@color/taru_accent" />
-	</com.google.android.material.card.MaterialCardView>
+	</FrameLayout>
 
 	<TextView
 		android:id="@+id/textView_title"
