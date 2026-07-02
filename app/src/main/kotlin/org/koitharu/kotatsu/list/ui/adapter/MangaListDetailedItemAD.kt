@@ -57,17 +57,19 @@ fun mangaListDetailedItemAD(
 			}
 		} ?: ""
 
+		val statusColor = org.koitharu.kotatsu.favourites.ui.categories.FavoriteStatusColors.getColor(item.statusTitle ?: "Planned")
+
 		binding.textViewStatus.text = (item.statusTitle ?: "Planned") + ratingText
 
 		val bg = binding.textViewStatus.background?.mutate() as? android.graphics.drawable.GradientDrawable
 		if (bg != null) {
-			bg.setColor(colors.background)
-			bg.setStroke(context.resources.resolveDp(1), colors.stroke)
+			bg.setColor(statusColor)
+			bg.setStroke(context.resources.resolveDp(1), statusColor)
 		}
-		binding.textViewStatus.setTextColor(colors.foreground)
+		binding.textViewStatus.setTextColor(Color.WHITE)
 
 		val drawables = binding.textViewStatus.compoundDrawablesRelative
-		drawables[2]?.mutate()?.setTint(colors.foreground)
+		drawables[2]?.mutate()?.setTint(Color.WHITE)
 
 		binding.textViewStatus.setOnClickListener { view ->
 			clickListener.onFavoriteClick(item.manga, view)
