@@ -143,8 +143,8 @@ class FavouritesRepository @Inject constructor(
 
 	private fun isStatusCategoryEquivalent(categoryTitle: String, targetStatusTitle: String): Boolean {
 		if (categoryTitle.equals(targetStatusTitle, ignoreCase = true)) return true
-		if (targetStatusTitle.equals("Plan to read", ignoreCase = true)) {
-			val legacy = listOf("Planned", "Read later", "Planning to read", "Save")
+		if (targetStatusTitle.equals("Planned", ignoreCase = true)) {
+			val legacy = listOf("Plan to read", "Read later", "Planning to read", "Save")
 			return legacy.any { it.equals(categoryTitle, ignoreCase = true) }
 		}
 		return false
@@ -340,7 +340,7 @@ class FavouritesRepository @Inject constructor(
 
 		val TARUMI_STATUS_TITLES = listOf(
 			"Reading",
-			"Plan to read",
+			"Planned",
 			"Completed",
 			"Rereading",
 			"Paused",
@@ -358,7 +358,7 @@ class FavouritesRepository @Inject constructor(
 		)
 
 		private val TARUMI_LEGACY_STATUS_TITLES = listOf(
-			"Planned",
+			"Plan to read",
 			"Read later",
 			"Planning to read",
 			"Save",

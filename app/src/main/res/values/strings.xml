@@ -182,7 +182,7 @@
     <string name="done">Done</string>
     <string name="all_favourites">All favorites</string>
     <string name="favourites_category_empty">Empty category</string>
-    <string name="read_later">Read later</string>
+    <string name="read_later">Planned</string>
     <string name="planning_to_read">Planning to read</string>
     <string name="save_status">Save</string>
     <string name="updates">Notifications</string>
