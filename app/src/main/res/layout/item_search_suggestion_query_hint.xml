@@ -15,9 +15,9 @@
 	android:paddingStart="16dp"
 	android:paddingEnd="16dp"
 	android:singleLine="true"
-	android:fontFamily="sans-serif"
+	android:fontFamily="@font/outfit"
 	android:textColor="@color/taru_text_primary"
 	android:textSize="14sp"
 	app:drawableStartCompat="@drawable/ic_suggestion"
-	app:tint="@color/taru_text_muted"
+	android:drawableTint="@color/taru_text_muted"
 	tools:text="@tools:sample/lorem[6]" />
