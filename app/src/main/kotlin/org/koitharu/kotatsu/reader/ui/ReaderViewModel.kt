@@ -578,7 +578,7 @@ class ReaderViewModel @Inject constructor(
         loadingJob = launchLoadingJob(Dispatchers.Default + EventExceptionHandler(onLoadingError)) {
             prevJob?.cancelAndJoin()
             chaptersLoader.loadPrevNextChapter(details, currentId, isNext)
-            content.value = ReaderContent(chaptersLoader.snapshot(), null)
+            content.value = ReaderContent(chaptersLoader.snapshot(), readingState.value)
         }
     }
 
