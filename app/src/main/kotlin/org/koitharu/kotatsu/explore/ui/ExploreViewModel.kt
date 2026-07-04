@@ -129,10 +129,6 @@ class ExploreViewModel @Inject constructor(
 		areSourcesExpanded.value = !areSourcesExpanded.value
 	}
 
-	fun toggleGridMode() {
-		settings.isSourcesGridMode = !settings.isSourcesGridMode
-	}
-
 	fun disableSources(sources: Collection<MangaSource>) {
 		launchJob(Dispatchers.Default) {
 			val preset = activePresetFlow.value

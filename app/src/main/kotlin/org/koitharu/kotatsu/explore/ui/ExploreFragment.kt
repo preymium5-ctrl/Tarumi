@@ -82,7 +82,7 @@ class ExploreFragment :
 			addItemDecoration(TypedListSpacingDecoration(context, false))
 			checkNotNull(sourceSelectionController).attachToRecyclerView(this)
 		}
-		addMenuProvider(ExploreMenuProvider(requireContext(), router, viewModel))
+		addMenuProvider(ExploreMenuProvider(requireContext(), router))
 		viewModel.content.observe(viewLifecycleOwner, checkNotNull(exploreAdapter))
 		viewModel.onError.observeEvent(viewLifecycleOwner, SnackbarErrorObserver(binding.recyclerView, this))
 		viewModel.onOpenManga.observeEvent(viewLifecycleOwner, ::onOpenManga)
@@ -260,7 +260,6 @@ class ExploreFragment :
 		} else {
 			LinearLayoutManager(requireContext())
 		}
-		activity?.invalidateOptionsMenu()
 	}
 
 	private fun showSuggestionsTip() {

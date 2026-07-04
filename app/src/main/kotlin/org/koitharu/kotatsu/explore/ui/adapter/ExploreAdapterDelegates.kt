@@ -28,7 +28,6 @@ import org.koitharu.kotatsu.list.ui.adapter.ListItemType
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.MangaCompactListModel
 import org.koitharu.kotatsu.parsers.model.Manga
-import org.koitharu.kotatsu.parsers.model.MangaParserSource
 
 fun exploreButtonsAD(
 	clickListener: View.OnClickListener,
@@ -111,14 +110,6 @@ fun exploreSourceListItemAD(
 		binding.textViewTitle.drawableStart = if (item.source.isPinned) iconPinned else null
 		binding.textViewSubtitle.text = item.source.getSummary(context)
 		binding.imageViewIcon.setImageAsync(item.source)
-
-		val isBroken = (item.source.mangaSource as? MangaParserSource)?.isBroken ?: false
-		val statusColor = if (isBroken) {
-			ContextCompat.getColor(context, R.color.common_red)
-		} else {
-			ContextCompat.getColor(context, R.color.common_green)
-		}
-		binding.viewStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(statusColor)
 	}
 }
 
@@ -152,13 +143,5 @@ fun exploreSourceGridItemAD(
 		binding.textViewTitle.text = title
 		binding.textViewTitle.drawableStart = if (item.source.isPinned) iconPinned else null
 		binding.imageViewIcon.setImageAsync(item.source)
-
-		val isBroken = (item.source.mangaSource as? MangaParserSource)?.isBroken ?: false
-		val statusColor = if (isBroken) {
-			ContextCompat.getColor(context, R.color.common_red)
-		} else {
-			ContextCompat.getColor(context, R.color.common_green)
-		}
-		binding.viewStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(statusColor)
 	}
 }
