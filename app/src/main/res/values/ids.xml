@@ -22,4 +22,5 @@
 	<item name="nav_stats" type="id" />
 	<item name="nav_ask_ai" type="id" />
 	<item name="nav_settings" type="id" />
+	<item name="action_toggle_layout" type="id" />
 </resources>

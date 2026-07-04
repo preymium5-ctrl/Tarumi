@@ -1144,4 +1144,6 @@
     <string name="cols_4">4 Columns</string>
     <string name="cols_5">5 Columns</string>
     <string name="mixpanel_project_token" translatable="false">68136189e5bcbddd42bafc1d418cdb37</string>
+    <string name="view_list">List view</string>
+    <string name="view_grid">Grid view</string>
 </resources>

@@ -12,14 +12,29 @@ import org.koitharu.kotatsu.explore.ui.preset.SourcePresetListActivity
 class ExploreMenuProvider(
 	private val context: Context,
 	private val router: AppRouter,
+	private val viewModel: ExploreViewModel,
 ) : MenuProvider {
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 		menuInflater.inflate(R.menu.opt_explore, menu)
+		val isGrid = viewModel.isGrid.value
+		val toggleItem = menu.add(
+			Menu.NONE,
+			R.id.action_toggle_layout,
+			Menu.NONE,
+			if (isGrid) R.string.view_list else R.string.view_grid
+		)
+		toggleItem.setIcon(if (isGrid) R.drawable.ic_list else R.drawable.ic_grid)
+		toggleItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
 	}
 
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
 		return when (menuItem.itemId) {
+			R.id.action_toggle_layout -> {
+				viewModel.toggleGridMode()
+				true
+			}
+
 			R.id.action_manage -> {
 				router.openSourcesSettings()
 				true
