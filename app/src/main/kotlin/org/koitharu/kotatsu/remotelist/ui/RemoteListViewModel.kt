@@ -101,6 +101,9 @@ private val EXPANDED_QUERY_SEEDS = listOf(
 private val FORCE_AUTO_CAPTCHA_SOURCES = setOf(
 	"HENTAI3Z",
 	"HENTAI3ZCC",
+	// ManhuaFast is behind aggressive Cloudflare; always try auto-solve first.
+	"MANHUAFAST",
+	"MANGAFASTNET",
 )
 
 @HiltViewModel

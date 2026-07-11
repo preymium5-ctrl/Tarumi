@@ -45,6 +45,7 @@ import org.koitharu.kotatsu.core.db.migrations.Migration25To26
 import org.koitharu.kotatsu.core.db.migrations.Migration26To27
 import org.koitharu.kotatsu.core.db.migrations.Migration27To28
 import org.koitharu.kotatsu.core.db.migrations.Migration28To29
+import org.koitharu.kotatsu.core.db.migrations.Migration29To30
 import org.koitharu.kotatsu.core.db.migrations.Migration2To3
 import org.koitharu.kotatsu.core.db.migrations.Migration3To4
 import org.koitharu.kotatsu.core.db.migrations.Migration4To5
@@ -66,6 +67,7 @@ import org.koitharu.kotatsu.local.data.index.LocalMangaIndexDao
 import org.koitharu.kotatsu.local.data.index.LocalMangaIndexEntity
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingDao
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
+import org.koitharu.kotatsu.stats.data.StatsChapterEntity
 import org.koitharu.kotatsu.stats.data.StatsDao
 import org.koitharu.kotatsu.stats.data.StatsEntity
 import org.koitharu.kotatsu.suggestions.data.SuggestionDao
@@ -74,14 +76,14 @@ import org.koitharu.kotatsu.tracker.data.TrackEntity
 import org.koitharu.kotatsu.tracker.data.TrackLogEntity
 import org.koitharu.kotatsu.tracker.data.TracksDao
 
-const val DATABASE_VERSION = 29
+const val DATABASE_VERSION = 30
 
 @Database(
 	entities = [
 		MangaEntity::class, TagEntity::class, HistoryEntity::class, MangaTagsEntity::class, ChapterEntity::class,
 		FavouriteCategoryEntity::class, FavouriteEntity::class, MangaPrefsEntity::class, TrackEntity::class,
 		TrackLogEntity::class, SuggestionEntity::class, BookmarkEntity::class, ScrobblingEntity::class,
-		MangaSourceEntity::class, StatsEntity::class, LocalMangaIndexEntity::class,
+		MangaSourceEntity::class, StatsEntity::class, StatsChapterEntity::class, LocalMangaIndexEntity::class,
 		SourcePresetEntity::class,
 	],
 	version = DATABASE_VERSION,
@@ -151,6 +153,7 @@ fun getDatabaseMigrations(context: Context): Array<Migration> = arrayOf(
 	Migration26To27(),
 	Migration27To28(),
 	Migration28To29(),
+	Migration29To30(),
 )
 
 fun MangaDatabase(context: Context): MangaDatabase = Room

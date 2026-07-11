@@ -133,9 +133,24 @@ abstract class ChaptersPagesViewModel(
 	private val currentChapterProgress = combine(
 		readingState.map { it?.chapterId ?: 0L }.distinctUntilChanged(),
 		currentHistory,
-	) { currentChapterId, history ->
+		mangaDetails,
+		selectedBranch,
+	) { currentChapterId, history, details, branch ->
 		val chapterId = currentChapterId.takeIf { it != 0L } ?: history?.chapterId ?: 0L
-		chapterId to (history?.takeIf { it.chapterId == chapterId }?.percent ?: -1f)
+		// history.percent is overall manga progress — convert to in-chapter share for the ring.
+		val chapterProgress = if (history != null && history.chapterId == chapterId && details != null) {
+			val chapters = branch?.let { details.chapters[it] } ?: details.allChapters
+			val index = chapters.indexOfFirst { it.id == chapterId }
+			if (index >= 0 && chapters.isNotEmpty()) {
+				val residual = history.percent * chapters.size - index
+				residual.coerceIn(0f, 1f)
+			} else {
+				-1f
+			}
+		} else {
+			-1f
+		}
+		chapterId to chapterProgress
 	}
 
 	val chapters = combine(

@@ -43,10 +43,18 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 				.ifNullOrEmpty { key.defaultValue }
 				.sanitizeHeaderValue()
 
-			is ConfigKey.Domain -> prefs.getString(key.key, key.defaultValue)
-				?.trim()
-				?.takeIf { DomainValidator.isValidDomain(it) }
-				?: key.defaultValue
+			is ConfigKey.Domain -> {
+				var domain = prefs.getString(key.key, key.defaultValue)
+					?.trim()
+					?.takeIf { DomainValidator.isValidDomain(it) }
+					?: key.defaultValue
+				// manhuafast.com / .net are currently offline; auto-switch to the working temporary mirror.
+				if (sourceName in MANHUAFAST_SOURCES && domain in DEAD_MANHUAFAST_DOMAINS) {
+					domain = key.defaultValue
+					prefs.edit { putString(key.key, domain) }
+				}
+				domain
+			}
 
 			is ConfigKey.ShowSuspiciousContent -> prefs.getBoolean(key.key, key.defaultValue)
 			is ConfigKey.SplitByTranslations -> prefs.getBoolean(key.key, key.defaultValue)
@@ -89,6 +97,20 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 		private val FORCE_AUTO_CAPTCHA_SOURCES = setOf(
 			"HENTAI3Z",
 			"HENTAI3ZCC",
+			"MANHUAFAST",
+			"MANGAFASTNET",
+		)
+
+		private val MANHUAFAST_SOURCES = setOf(
+			"MANHUAFAST",
+			"MANGAFASTNET",
+		)
+
+		private val DEAD_MANHUAFAST_DOMAINS = setOf(
+			"manhuafast.com",
+			"manhuafast.net",
+			"www.manhuafast.com",
+			"www.manhuafast.net",
 		)
 	}
 }

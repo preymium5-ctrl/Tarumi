@@ -63,7 +63,13 @@ fun MangaDetails.mapChapters(
 		}
 	}
 	if (!localMap.isNullOrEmpty()) {
-		for (chapter in localMap.values) {
+		// Keep leftover local-only chapters in reading order (by number), not arbitrary map order.
+		// Appending unsorted leftovers + reverse made "current" jump to the bottom and scrambled lists.
+		val leftovers = localMap.values.sortedWith(
+			compareBy<org.koitharu.kotatsu.parsers.model.MangaChapter> { it.number }
+				.thenBy { it.title.orEmpty() },
+		)
+		for (chapter in leftovers) {
 			if (chapter.id == currentChapterId) {
 				isUnread = true
 			}

@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
+import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -48,6 +49,7 @@ import org.koitharu.kotatsu.local.data.LocalStorageChanges
 import org.koitharu.kotatsu.local.domain.DeleteLocalMangaUseCase
 import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.ui.ReaderState
@@ -292,7 +294,15 @@ class DetailsViewModel @Inject constructor(
 		detailsLoadUseCase.invoke(intent, force)
 			.onEachWhile {
 				if (it.allChapters.isNotEmpty()) {
-					selectedBranch.value = null
+					// Pick the scanlation the user was reading (or the preferred one).
+					// Leaving this null breaks Start/Continue: HistoryInfo looks up chapters[null]
+					// while named branches never use a null key.
+					val manga = it.toManga()
+					val h = history.value
+					val historyBranch = h?.let { hist -> it.allChapters.findById(hist.chapterId)?.branch }
+					selectedBranch.value = historyBranch
+						?: manga.getPreferredBranch(h)
+						?: it.chapters.keys.firstOrNull()
 					true
 				} else {
 					false

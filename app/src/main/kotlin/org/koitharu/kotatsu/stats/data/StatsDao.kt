@@ -1,8 +1,10 @@
 package org.koitharu.kotatsu.stats.data
 
-import androidx.room.Dao
 import androidx.room.ColumnInfo
+import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.MapColumn
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.Upsert
@@ -13,7 +15,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import org.koitharu.kotatsu.core.db.entity.MangaEntity
-import kotlin.collections.forEach
 
 @Dao
 abstract class StatsDao {
@@ -45,11 +46,32 @@ abstract class StatsDao {
 	@Query("DELETE FROM stats")
 	abstract suspend fun clear()
 
+	@Query("DELETE FROM stats_chapters")
+	abstract suspend fun clearChapters()
+
 	@Query("SELECT COUNT(*) FROM stats WHERE manga_id = :mangaId")
 	abstract fun observeRowCount(mangaId: Long): Flow<Int>
 
 	@Upsert
 	abstract suspend fun upsert(entity: StatsEntity)
+
+	/**
+	 * Records a chapter as read. Returns true when this chapter was not tracked before
+	 * (so callers can increment session chapter counters only for first-time opens).
+	 */
+	suspend fun tryInsertChapter(mangaId: Long, chapterId: Long, readAt: Long): Boolean {
+		val inserted = insertChapter(
+			StatsChapterEntity(
+				mangaId = mangaId,
+				chapterId = chapterId,
+				readAt = readAt,
+			),
+		)
+		return inserted != -1L
+	}
+
+	@Insert(onConflict = OnConflictStrategy.IGNORE)
+	protected abstract suspend fun insertChapter(entity: StatsChapterEntity): Long
 
 	suspend fun getDurationStats(
 		fromDate: Long,
@@ -74,13 +96,31 @@ abstract class StatsDao {
 		return getDurationStatsImpl(query)
 	}
 
+	/**
+	 * Chapters read per manga for the period.
+	 *
+	 * Raw SUM(stats.chapters) over-counts whenever the same chapter is opened in multiple
+	 * sessions. Cap each manga by history progress (percent × total chapters) so a title
+	 * you only finished ~64 chapters of cannot show 100+.
+	 *
+	 * When unique chapter rows exist for the period, prefer MAX(unique, capped-sum) so new
+	 * accurate tracking is used without under-counting older inflated-but-capped data.
+	 */
 	suspend fun getChapterStats(
 		fromDate: Long,
 		favouriteCategories: Set<Long>
 	): Map<MangaEntity, Long> {
 		val conditions = buildStatsConditions(fromDate, null, favouriteCategories)
 		val query = SimpleSQLiteQuery(
-			"SELECT manga.*, SUM(chapters) AS c FROM stats LEFT JOIN manga ON manga.manga_id = stats.manga_id WHERE $conditions GROUP BY manga.manga_id ORDER BY c DESC",
+			"""
+			SELECT manga.*, ${chapterCountExpression(fromDate)} AS c
+			FROM stats
+			LEFT JOIN manga ON manga.manga_id = stats.manga_id
+			LEFT JOIN history ON history.manga_id = stats.manga_id
+			WHERE $conditions
+			GROUP BY manga.manga_id
+			ORDER BY c DESC
+			""".trimIndent(),
 		)
 		return getChapterStatsImpl(query)
 	}
@@ -89,15 +129,20 @@ abstract class StatsDao {
 		fromDate: Long,
 		favouriteCategories: Set<Long>
 	): List<GenreChapterStat> {
-		val conditions = buildStatsConditions(fromDate, null, favouriteCategories) + " AND stats.chapters > 0"
+		val conditions = buildStatsConditions(fromDate, null, favouriteCategories)
 		val query = SimpleSQLiteQuery(
 			"""
-			SELECT tags.title AS title, SUM(stats.chapters) AS chapters
-			FROM stats
-			LEFT JOIN manga ON manga.manga_id = stats.manga_id
-			LEFT JOIN manga_tags ON manga_tags.manga_id = stats.manga_id
+			SELECT tags.title AS title, SUM(manga_chapters.chapters) AS chapters
+			FROM (
+				SELECT stats.manga_id AS manga_id, ${chapterCountExpression(fromDate)} AS chapters
+				FROM stats
+				LEFT JOIN history ON history.manga_id = stats.manga_id
+				WHERE $conditions
+				GROUP BY stats.manga_id
+			) AS manga_chapters
+			LEFT JOIN manga_tags ON manga_tags.manga_id = manga_chapters.manga_id
 			LEFT JOIN tags ON tags.tag_id = manga_tags.tag_id
-			WHERE $conditions AND tags.title IS NOT NULL
+			WHERE tags.title IS NOT NULL AND manga_chapters.chapters > 0
 			GROUP BY tags.tag_id
 			ORDER BY chapters DESC
 			LIMIT 8
@@ -105,6 +150,27 @@ abstract class StatsDao {
 		)
 		return getGenreChapterStatsImpl(query)
 	}
+
+	/**
+	 * Per-manga chapter count expression used inside GROUP BY stats.manga_id queries.
+	 * history and stats must be available in the outer query.
+	 */
+	private fun chapterCountExpression(fromDate: Long): String = """
+		MAX(
+			IFNULL((
+				SELECT COUNT(*) FROM stats_chapters sc
+				WHERE sc.manga_id = stats.manga_id AND sc.read_at >= $fromDate
+			), 0),
+			MIN(
+				IFNULL(SUM(stats.chapters), 0),
+				CASE
+					WHEN history.chapters > 0 AND history.percent >= 0
+					THEN MAX(1, CAST(ROUND(history.percent * history.chapters) AS INTEGER))
+					ELSE IFNULL(SUM(stats.chapters), 0)
+				END
+			)
+		)
+	""".trimIndent()
 
 	private fun buildStatsConditions(
 		fromDate: Long,
@@ -148,7 +214,18 @@ abstract class StatsDao {
 
 	suspend fun getSummaryChapters(fromDate: Long, favouriteCategories: Set<Long>): Int {
 		val conditions = buildStatsConditions(fromDate, null, favouriteCategories)
-		val query = SimpleSQLiteQuery("SELECT IFNULL(SUM(chapters), 0) FROM stats WHERE $conditions")
+		// Sum of per-manga capped chapter counts — never raw SUM which double-counts re-reads.
+		val query = SimpleSQLiteQuery(
+			"""
+			SELECT IFNULL(SUM(manga_chapters.chapters), 0) FROM (
+				SELECT stats.manga_id AS manga_id, ${chapterCountExpression(fromDate)} AS chapters
+				FROM stats
+				LEFT JOIN history ON history.manga_id = stats.manga_id
+				WHERE $conditions
+				GROUP BY stats.manga_id
+			) AS manga_chapters
+			""".trimIndent(),
+		)
 		return getSummaryChaptersImpl(query)
 	}
 

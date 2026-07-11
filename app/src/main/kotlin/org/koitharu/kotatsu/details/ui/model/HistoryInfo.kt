@@ -1,8 +1,10 @@
 package org.koitharu.kotatsu.details.ui.model
 
 import org.koitharu.kotatsu.core.model.MangaHistory
+import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.data.ReadingTime
+import org.koitharu.kotatsu.parsers.util.findById
 
 data class HistoryInfo(
 	val totalChapters: Int,
@@ -20,10 +22,22 @@ data class HistoryInfo(
 		get() = currentChapter >= 0
 
 	val percent: Float
-		get() = if (history != null && (canContinue || isChapterMissing)) {
-			history.percent
-		} else {
-			0f
+		get() {
+			if (history == null || !(canContinue || isChapterMissing)) {
+				return 0f
+			}
+			val stored = history.percent.coerceIn(0f, 1f)
+			// history.percent may still be chapter-local (old builds / offline). Convert when needed.
+			if (currentChapter >= 0 && totalChapters > 0) {
+				val floor = currentChapter.toFloat() / totalChapters
+				val ceil = (currentChapter + 1f) / totalChapters
+				return if (stored in floor..ceil || (stored >= floor && currentChapter >= totalChapters - 1)) {
+					stored
+				} else {
+					((currentChapter + stored) / totalChapters).coerceIn(0f, 1f)
+				}
+			}
+			return stored
 		}
 }
 
@@ -34,23 +48,49 @@ fun HistoryInfo(
 	isIncognitoMode: Boolean,
 	estimatedTime: ReadingTime?,
 ): HistoryInfo {
-	val chapters = if (manga?.chapters?.isEmpty() == true) {
-		emptyList()
-	} else {
-		manga?.chapters?.get(branch)
+	if (manga == null) {
+		return HistoryInfo(
+			totalChapters = -1,
+			currentChapter = -2,
+			history = history,
+			isIncognitoMode = isIncognitoMode,
+			isChapterMissing = false,
+			canDownload = false,
+			estimatedTime = estimatedTime,
+		)
 	}
-	val currentChapter = if (history != null && !chapters.isNullOrEmpty()) {
+
+	// When no branch is selected, resolve the preferred scanlation so Start/Continue stays enabled
+	// and progress maps to the correct chapter list (named branches never live under map[null]).
+	val mangaObj = manga.toManga()
+	val resolvedBranch = when {
+		branch != null && manga.chapters.containsKey(branch) -> branch
+		history != null -> manga.allChapters.findById(history.chapterId)?.branch
+			?: mangaObj.getPreferredBranch(history)
+		else -> mangaObj.getPreferredBranch(null)
+	}
+
+	val chapters = when {
+		manga.chapters.isEmpty() -> emptyList()
+		resolvedBranch != null -> manga.chapters[resolvedBranch] ?: manga.allChapters
+		// All chapters have null branch, or mixed with no preferred match
+		manga.chapters.containsKey(null) -> manga.chapters[null].orEmpty().ifEmpty { manga.allChapters }
+		else -> manga.allChapters
+	}
+
+	val currentChapter = if (history != null && chapters.isNotEmpty()) {
 		chapters.indexOfFirst { it.id == history.chapterId }
 	} else {
 		-2
 	}
+
 	return HistoryInfo(
-		totalChapters = chapters?.size ?: -1,
+		totalChapters = chapters.size,
 		currentChapter = currentChapter,
 		history = history,
 		isIncognitoMode = isIncognitoMode,
-		isChapterMissing = history != null && manga?.isLoaded == true && manga.allChapters.none { it.id == history.chapterId },
-		canDownload = manga?.isLocal == false,
+		isChapterMissing = history != null && manga.isLoaded && manga.allChapters.none { it.id == history.chapterId },
+		canDownload = !manga.isLocal,
 		estimatedTime = estimatedTime,
 	)
 }

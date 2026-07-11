@@ -7,6 +7,8 @@ import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.RetainedLifecycleCoroutineScope
@@ -25,6 +27,7 @@ class StatsCollector @Inject constructor(
 
 	private val viewModelScope = RetainedLifecycleCoroutineScope(lifecycle)
 	private val stats = LongSparseArray<Entry>(1)
+	private val chapterMutex = Mutex()
 
 	@Synchronized
 	fun onStateChanged(
@@ -48,17 +51,20 @@ class StatsCollector @Inject constructor(
 					startedAt = now,
 					duration = 0,
 					pages = visiblePages.size,
-					chapters = visibleChapters.size.coerceAtLeast(1),
+					// Chapters are recorded asynchronously as unique global reads.
+					chapters = 0,
 				),
 				pages = visiblePages,
-				chapters = visibleChapters,
+				// Session-local set only tracks what we already attempted to persist this session.
+				chapters = HashSet(),
 			)
 			stats[mangaId] = newEntry
 			commit(newEntry.stats)
+			recordUniqueChapters(mangaId, visibleChapters, now)
 			return
 		}
 		val pagesDelta = visiblePages.count { entry.pages.add(it) }
-		val chaptersDelta = visibleChapters.count { entry.chapters.add(it) }
+		val newChapterIds = visibleChapters.filter { entry.chapters.add(it) }
 		val newEntry = entry.copy(
 			state = state,
 			stats = StatsEntity(
@@ -66,11 +72,14 @@ class StatsCollector @Inject constructor(
 				startedAt = entry.stats.startedAt,
 				duration = now - entry.stats.startedAt,
 				pages = entry.stats.pages + pagesDelta,
-				chapters = entry.stats.chapters + chaptersDelta,
+				chapters = entry.stats.chapters,
 			),
 		)
 		stats[mangaId] = newEntry
 		commit(newEntry.stats)
+		if (newChapterIds.isNotEmpty()) {
+			recordUniqueChapters(mangaId, newChapterIds, now)
+		}
 	}
 
 	@Synchronized
@@ -85,6 +94,41 @@ class StatsCollector @Inject constructor(
 			)
 		}
 		stats.remove(mangaId)
+	}
+
+	/**
+	 * Persist unique chapter IDs and bump the session chapter counter only for first-time opens.
+	 * This prevents re-opening the same chapter across sessions from inflating "chapters read".
+	 */
+	private fun recordUniqueChapters(mangaId: Long, chapterIds: Collection<Long>, readAt: Long) {
+		if (chapterIds.isEmpty()) return
+		viewModelScope.launch(Dispatchers.Default) {
+			chapterMutex.withLock {
+				var added = 0
+				for (chapterId in chapterIds) {
+					runCatchingCancellable {
+						if (db.getStatsDao().tryInsertChapter(mangaId, chapterId, readAt)) {
+							added++
+						}
+					}.onFailure {
+						it.printStackTraceDebug()
+					}
+				}
+				if (added > 0) {
+					synchronized(this@StatsCollector) {
+						val entry = stats[mangaId] ?: return@synchronized
+						val updated = entry.copy(
+							stats = entry.stats.copy(
+								chapters = entry.stats.chapters + added,
+								duration = System.currentTimeMillis() - entry.stats.startedAt,
+							),
+						)
+						stats[mangaId] = updated
+						commit(updated.stats)
+					}
+				}
+			}
+		}
 	}
 
 	private fun commit(entity: StatsEntity) {

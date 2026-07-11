@@ -102,7 +102,12 @@ data class MangaDetails(
             result += local ?: chapter
         }
         if (!localMap.isNullOrEmpty()) {
-            result.addAll(localMap.values)
+            // Preserve reading order for local-only leftovers (id mismatch after re-download / offline).
+            result.addAll(
+                localMap.values.sortedWith(
+                    compareBy<MangaChapter> { it.number }.thenBy { it.title.orEmpty() },
+                ),
+            )
         }
         return result
     }

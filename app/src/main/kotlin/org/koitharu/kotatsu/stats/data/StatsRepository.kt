@@ -140,6 +140,7 @@ class StatsRepository @Inject constructor(
 
 	suspend fun clearStats() {
 		db.getStatsDao().clear()
+		db.getStatsDao().clearChapters()
 		settings.clearAppUsageStats()
 	}
 

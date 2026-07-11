@@ -21,8 +21,6 @@ import kotlinx.coroutines.plus
 import okio.utf8Size
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.LocalizedAppContext
-import org.koitharu.kotatsu.core.model.appUrl
-import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.lifecycleScope
@@ -51,6 +49,7 @@ class DiscordRpc @Inject constructor(
 	private val appId = context.getString(R.string.discord_app_id)
 	private val appName = context.getString(R.string.app_name)
 	private val appIcon = context.getString(R.string.app_icon_url)
+	private val appReleasesUrl = context.getString(R.string.url_github_releases)
 	private val mpCache = Collections.synchronizedMap(ArrayMap<String, String>())
 	private var lastUpdate = 0L
 
@@ -104,11 +103,11 @@ class DiscordRpc @Inject constructor(
 						smallText = context.getString(R.string.discord_rpc_description),
 						smallImage = appIcon,
 					),
+					// Single button only — link friends to Tarumi GitHub releases (no source site).
 					buttons = listOf(
 						context.getString(R.string.read_on_s, appName),
-						context.getString(R.string.read_on_s, manga.source.getTitle(context)),
 					),
-					metadata = Metadata(listOf(manga.appUrl.toString(), manga.publicUrl)),
+					metadata = Metadata(listOf(appReleasesUrl)),
 				),
 				idle = false,
 			)

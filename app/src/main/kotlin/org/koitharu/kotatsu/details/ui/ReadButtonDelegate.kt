@@ -27,6 +27,7 @@ import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.details.ui.model.HistoryInfo
+import org.koitharu.kotatsu.reader.ui.ReaderState
 
 class ReadButtonDelegate(
 	private val splitButton: MaterialSplitButton,
@@ -107,20 +108,25 @@ class ReadButtonDelegate(
 
 	private fun openReader(isIncognitoMode: Boolean) {
 		val manga = viewModel.getMangaOrNull() ?: return
-		if (viewModel.historyInfo.value.isChapterMissing) {
+		val historyInfo = viewModel.historyInfo.value
+		if (historyInfo.isChapterMissing) {
 			Snackbar.make(buttonRead, R.string.chapter_is_missing, Snackbar.LENGTH_SHORT)
-				.show() // TODO
-		} else {
-			val intentBuilder = ReaderIntent.Builder(context)
-				.manga(manga)
-				.branch(viewModel.selectedBranchValue)
-			if (isIncognitoMode) {
-				intentBuilder.incognito()
-			}
-			router.openReader(intentBuilder.build())
-			if (isIncognitoMode) {
-				Toast.makeText(context, R.string.incognito_mode, Toast.LENGTH_SHORT).show()
-			}
+				.show()
+			return
+		}
+		val intentBuilder = ReaderIntent.Builder(context)
+			.manga(manga)
+			.branch(viewModel.selectedBranchValue)
+		// Pass saved history so offline/continue opens at the last page, not chapter 1.
+		if (historyInfo.canContinue && historyInfo.history != null) {
+			intentBuilder.state(ReaderState(historyInfo.history))
+		}
+		if (isIncognitoMode) {
+			intentBuilder.incognito()
+		}
+		router.openReader(intentBuilder.build())
+		if (isIncognitoMode) {
+			Toast.makeText(context, R.string.incognito_mode, Toast.LENGTH_SHORT).show()
 		}
 	}
 

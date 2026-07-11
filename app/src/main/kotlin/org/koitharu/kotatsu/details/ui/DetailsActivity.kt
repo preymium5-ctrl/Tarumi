@@ -865,7 +865,8 @@ class DetailsActivity :
 			info.canContinue -> getString(R.string.continue_reading_chapter_pattern, info.getCurrentChapterLabel())
 			else -> getString(R.string.start_reading)
 		}
-		viewBinding.buttonStartReading?.isEnabled = !isLoading && info.isValid && info.totalChapters != 0
+		// totalChapters == -1 means branch not resolved yet; == 0 means empty branch.
+		viewBinding.buttonStartReading?.isEnabled = !isLoading && info.isValid && info.totalChapters > 0
 		textViewChapters.text = when {
 			isLoading -> getString(R.string.loading_)
 			info.currentChapter >= 0 -> getString(
