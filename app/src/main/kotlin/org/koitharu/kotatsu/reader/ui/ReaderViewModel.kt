@@ -645,7 +645,8 @@ class ReaderViewModel @Inject constructor(
             .toList()
     }
 
-    private fun computeChapterPercent(chapterId: Long, pageIndex: Int, pagesCountOverride: Int? = null): Float {
+    /** Progress within the current chapter only (0..1 of pages), not whole-title progress. */
+    private fun computePercent(chapterId: Long, pageIndex: Int, pagesCountOverride: Int? = null): Float {
         val pagesCount = pagesCountOverride ?: chaptersLoader.getPagesCount(chapterId)
         if (pagesCount == 0) {
             return PROGRESS_NONE
@@ -665,28 +666,10 @@ class ReaderViewModel @Inject constructor(
         return (pageIndex / (pagesCount - 1).toFloat()).coerceIn(0f, 1f)
     }
 
-    /**
-     * Overall manga progress for history (0..1 across the active branch), not just the current chapter.
-     * Storing chapter-local % made offline/details progress show e.g. 80% after finishing one chapter.
-     */
     private fun getPercent(chapterId: Long, pageIndex: Int, pagesCountOverride: Int? = null): Float {
-        val chapterLocal = customScrollProgress?.let {
+        return customScrollProgress?.let {
             if (it >= 0.95f) 1f else it
-        } ?: computeChapterPercent(chapterId, pageIndex, pagesCountOverride)
-
-        val branchChapters = manga.value?.chapters.orEmpty().let { all ->
-            val branch = all.find { it.id == chapterId }?.branch
-            all.filter { it.branch == branch }
-        }
-        if (branchChapters.isEmpty()) {
-            return chapterLocal
-        }
-        val chapterIndex = branchChapters.indexOfFirst { it.id == chapterId }
-        if (chapterIndex < 0) {
-            return chapterLocal
-        }
-        val ppc = 1f / branchChapters.size
-        return (ppc * chapterIndex + ppc * chapterLocal.coerceIn(0f, 1f)).coerceIn(0f, 1f)
+        } ?: computePercent(chapterId, pageIndex, pagesCountOverride)
     }
 
     private fun loadedPagesCount(chapterId: Long): Int? {

@@ -21,23 +21,12 @@ data class HistoryInfo(
 	val canContinue
 		get() = currentChapter >= 0
 
+	/** Progress within the current chapter (pages), not across the whole series. */
 	val percent: Float
-		get() {
-			if (history == null || !(canContinue || isChapterMissing)) {
-				return 0f
-			}
-			val stored = history.percent.coerceIn(0f, 1f)
-			// history.percent may still be chapter-local (old builds / offline). Convert when needed.
-			if (currentChapter >= 0 && totalChapters > 0) {
-				val floor = currentChapter.toFloat() / totalChapters
-				val ceil = (currentChapter + 1f) / totalChapters
-				return if (stored in floor..ceil || (stored >= floor && currentChapter >= totalChapters - 1)) {
-					stored
-				} else {
-					((currentChapter + stored) / totalChapters).coerceIn(0f, 1f)
-				}
-			}
-			return stored
+		get() = if (history != null && (canContinue || isChapterMissing)) {
+			history.percent.coerceIn(0f, 1f)
+		} else {
+			0f
 		}
 }
 

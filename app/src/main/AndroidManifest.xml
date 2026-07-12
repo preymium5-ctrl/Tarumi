@@ -868,6 +868,9 @@
 				<data android:host="www.manhuazonghe.com" />
 				<data android:host="manhuaes.com" />
 				<data android:host="manhuafast.com" />
+				<data android:host="divascans.org" />
+				<data android:host="www.divascans.org" />
+				<data android:host="media.divascans.org" />
 				<data android:host="manhuaga.com" />
 				<data android:host="manhuahot.com" />
 				<data android:host="manhuaplus.com" />
