@@ -910,23 +910,20 @@ class DetailsActivity :
 			val title = tag.title?.toString() ?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
 			title?.startsWith("Rank", ignoreCase = true) == true
 		}
-		if (viewBinding.cardChapters != null) {
-			viewBinding.chipsTags.isVisible = cleanTags.isNotEmpty()
-			viewBinding.chipsTags.setChips(cleanTags)
-			viewBinding.textChipGenres?.isGone = true
-		} else {
-			viewBinding.chipsTags.isGone = true
-			val summary = cleanTags
-				.asSequence()
-				.mapNotNull { tag ->
-					tag.title?.toString()?.takeIf { it.isNotBlank() }
-						?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
-				}
-				.take(4)
-				.joinToString(separator = " / ") { it.uppercase(Locale.getDefault()) }
-			viewBinding.textChipGenres?.text = summary
-			viewBinding.textChipGenres?.isVisible = summary.isNotEmpty()
-		}
+		// Always show the full genre/tag chip list on the details screen.
+		viewBinding.chipsTags.isVisible = cleanTags.isNotEmpty()
+		viewBinding.chipsTags.setChips(cleanTags)
+		val summary = cleanTags
+			.asSequence()
+			.mapNotNull { tag ->
+				tag.title?.toString()?.takeIf { it.isNotBlank() }
+					?: tag.titleResId.takeIf { it != 0 }?.let(resources::getString)
+			}
+			.take(6)
+			.joinToString(separator = " / ") { it.uppercase(Locale.getDefault()) }
+		viewBinding.textChipGenres?.text = summary
+		// Compact summary chip is optional; prefer the full chips list.
+		viewBinding.textChipGenres?.isVisible = false
 	}
 
 	private fun loadCover(imageUrl: String?) {

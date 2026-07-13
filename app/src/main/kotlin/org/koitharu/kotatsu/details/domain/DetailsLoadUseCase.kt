@@ -113,7 +113,8 @@ class DetailsLoadUseCase @Inject constructor(
             )
             emit(mangaDetails)
             if (remoteDetails != null) {
-                mangaDataRepository.updateChapters(mangaDetails.toManga())
+                // Persist full metadata (tags, description, …) not only chapters.
+                mangaDataRepository.storeManga(mangaDetails.toManga(), replaceExisting = true)
             }
         }
     }
@@ -152,17 +153,26 @@ class DetailsLoadUseCase @Inject constructor(
             isLoaded = true,
         )
         emit(mangaDetails)
-        mangaDataRepository.updateChapters(mangaDetails.toManga())
+        // Persist full metadata so tags stay complete the next time this title opens.
+        mangaDataRepository.storeManga(mangaDetails.toManga(), replaceExisting = true)
     }
 
     private suspend fun getDetails(seed: Manga, force: Boolean) = runCatchingCancellable {
         val startedAt = System.currentTimeMillis()
         val repository = mangaRepositoryFactory.create(seed.source)
+        // When online (or user forced reload), skip reading the memory cache so
+        // incomplete list-page tags are not stuck forever. Offline keeps cache.
+        val cachePolicy = if (force || networkState.isOnline()) {
+            CachePolicy.WRITE_ONLY
+        } else {
+            CachePolicy.ENABLED
+        }
         val parsedDetails = if (repository is CachingMangaRepository) {
-            repository.getDetails(seed, if (force) CachePolicy.WRITE_ONLY else CachePolicy.ENABLED)
+            repository.getDetails(seed, cachePolicy)
         } else {
             repository.getDetails(seed)
         }.normalizeDetailsMetadata().normalizeSourceMetadata()
+            .withCompleteTags(seed)
         val smartMatch = parsedDetails.smartMatchMissingMetadata()
         val details = smartMatch.manga
         diagnosticsStore.recordDetails(
@@ -185,6 +195,41 @@ class DetailsLoadUseCase @Inject constructor(
         } else {
             null
         }
+    }
+
+    /**
+     * Many list endpoints return empty/partial tags. Prefer non-empty details tags,
+     * and union with seed tags so opening a title still shows a complete set.
+     */
+    private fun Manga.withCompleteTags(seed: Manga): Manga {
+        if (tags.isEmpty() && seed.tags.isEmpty()) {
+            return this
+        }
+        if (tags.isEmpty()) {
+            return copy(tags = seed.tags)
+        }
+        if (seed.tags.isEmpty()) {
+            return this
+        }
+        val merged = LinkedHashMap<String, MangaTag>(tags.size + seed.tags.size)
+        fun putBest(tag: MangaTag) {
+            val key = tag.key.ifBlank { tag.title }.lowercase(java.util.Locale.ROOT)
+            val existing = merged[key]
+            if (existing == null) {
+                merged[key] = tag
+                return
+            }
+            // Prefer a human title over a raw slug/key.
+            val existingIsSlug = existing.title.equals(existing.key, ignoreCase = true)
+            val candidateIsSlug = tag.title.equals(tag.key, ignoreCase = true)
+            if (existingIsSlug && !candidateIsSlug) {
+                merged[key] = tag
+            }
+        }
+        // Details first (freshest), then seed fills gaps.
+        tags.forEach(::putBest)
+        seed.tags.forEach(::putBest)
+        return if (merged.values.toSet() == tags) this else copy(tags = merged.values.toSet())
     }
 
     private fun Manga.descriptionForDisplay(): String? {
