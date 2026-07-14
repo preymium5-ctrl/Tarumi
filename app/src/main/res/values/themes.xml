@@ -84,6 +84,17 @@
 	<!--== Default Theme ==-->
 	<style name="Theme.Kotatsu" parent="Base.Theme.Kotatsu" />
 
+	<!-- Cold-start video intro (muted ~3s). No static app logo. -->
+	<style name="Theme.Kotatsu.Splash" parent="Theme.Material3.DayNight.NoActionBar">
+		<item name="android:windowBackground">@drawable/bg_splash_root</item>
+		<item name="android:statusBarColor">@android:color/transparent</item>
+		<item name="android:navigationBarColor">@android:color/transparent</item>
+		<item name="android:windowLightStatusBar">false</item>
+		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
+		<item name="windowActionBar">false</item>
+		<item name="windowNoTitle">true</item>
+	</style>
+
 	<!-- Used by CloudFlareHiddenActivity: same WebView pipeline, no visible UI. -->
 	<style name="Theme.Kotatsu.CloudFlareHidden" parent="Theme.Kotatsu">
 		<item name="android:windowBackground">@android:color/transparent</item>

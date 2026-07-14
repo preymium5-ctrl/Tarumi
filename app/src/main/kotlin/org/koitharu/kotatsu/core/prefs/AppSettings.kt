@@ -61,6 +61,11 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
 		set(value) = prefs.edit { putBoolean(KEY_PERFORMANCE_MODE, value) }
 
+	/** Home “Recent Updates” section. Off = hidden and no network fetch. */
+	var isRecentUpdatesEnabled: Boolean
+		get() = prefs.getBoolean(KEY_RECENT_UPDATES_ENABLED, true)
+		set(value) = prefs.edit { putBoolean(KEY_RECENT_UPDATES_ENABLED, value) }
+
 	val analyticsInstallationId: String
 		get() = prefs.getString(KEY_ANALYTICS_INSTALLATION_ID, null) ?: run {
 			val uuid = java.util.UUID.randomUUID().toString()
@@ -1011,6 +1016,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_DISCORD_TOKEN = "discord_token"
 		const val KEY_ACTIVE_SOURCE_PRESET = "active_source_preset"
 		const val KEY_PERFORMANCE_MODE = "performance_mode"
+		const val KEY_RECENT_UPDATES_ENABLED = "home_recent_updates_enabled"
 		const val KEY_ANALYTICS_INSTALLATION_ID = "analytics_installation_id"
 
 		const val KEY_REMOTE_GRID_ASPECT_RATIO = "remote_grid_aspect_ratio"

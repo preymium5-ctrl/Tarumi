@@ -240,21 +240,18 @@
 				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
 				app:drawableTint="@color/taru_text_secondary" />
 
-			<HorizontalScrollView
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/smartRecommendationList"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginTop="18dp"
 				android:clipToPadding="false"
+				android:nestedScrollingEnabled="false"
+				android:orientation="horizontal"
 				android:overScrollMode="never"
-				android:scrollbars="none">
-
-				<LinearLayout
-					android:id="@+id/smartRecommendationList"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:orientation="horizontal"
-					android:paddingEnd="16dp" />
-			</HorizontalScrollView>
+				android:paddingEnd="16dp"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_home_recommendation_cover" />
 
 			<FrameLayout
 				android:id="@+id/smartRecommendationLoading"
@@ -292,21 +289,18 @@
 				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
 				app:drawableTint="@color/taru_text_secondary" />
 
-			<HorizontalScrollView
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/manhuaRecommendationList"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginTop="18dp"
 				android:clipToPadding="false"
+				android:nestedScrollingEnabled="false"
+				android:orientation="horizontal"
 				android:overScrollMode="never"
-				android:scrollbars="none">
-
-				<LinearLayout
-					android:id="@+id/manhuaRecommendationList"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:orientation="horizontal"
-					android:paddingEnd="16dp" />
-			</HorizontalScrollView>
+				android:paddingEnd="16dp"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_home_recommendation_cover" />
 
 			<FrameLayout
 				android:id="@+id/manhuaRecommendationLoading"
@@ -344,21 +338,18 @@
 				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
 				app:drawableTint="@color/taru_text_secondary" />
 
-			<HorizontalScrollView
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/mangaRecommendationList"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginTop="18dp"
 				android:clipToPadding="false"
+				android:nestedScrollingEnabled="false"
+				android:orientation="horizontal"
 				android:overScrollMode="never"
-				android:scrollbars="none">
-
-				<LinearLayout
-					android:id="@+id/mangaRecommendationList"
-					android:layout_width="wrap_content"
-					android:layout_height="wrap_content"
-					android:orientation="horizontal"
-					android:paddingEnd="16dp" />
-			</HorizontalScrollView>
+				android:paddingEnd="16dp"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_home_recommendation_cover" />
 
 			<FrameLayout
 				android:id="@+id/mangaRecommendationLoading"
@@ -376,6 +367,7 @@
 			</FrameLayout>
 		</LinearLayout>
 
+		<!-- Entire block (title + list) hidden when Recent Updates is turned off. -->
 		<LinearLayout
 			android:id="@+id/recentUpdatesSection"
 			android:layout_width="match_parent"
@@ -385,13 +377,27 @@
 			android:paddingHorizontal="4dp"
 			android:paddingBottom="4dp">
 
-			<TextView
+			<LinearLayout
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:fontFamily="sans-serif"
-				android:text="@string/recent_updates"
-				android:textColor="@color/taru_text_primary"
-				android:textSize="30sp" />
+				android:gravity="center_vertical"
+				android:orientation="horizontal">
+
+				<TextView
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:fontFamily="sans-serif"
+					android:text="@string/recent_updates"
+					android:textColor="@color/taru_text_primary"
+					android:textSize="30sp" />
+
+				<com.google.android.material.materialswitch.MaterialSwitch
+					android:id="@+id/switchRecentUpdates"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:contentDescription="@string/recent_updates_enabled" />
+			</LinearLayout>
 
 			<TextView
 				android:layout_width="match_parent"
@@ -403,36 +409,43 @@
 				android:textColor="@color/taru_text_muted"
 				android:textSize="15sp" />
 
-			<FrameLayout
-				android:id="@+id/recentUpdatesLoading"
+			<LinearLayout
+				android:id="@+id/recentUpdatesContent"
 				android:layout_width="match_parent"
-				android:layout_height="96dp"
-				android:layout_marginTop="20dp"
-				android:visibility="gone"
-				tools:visibility="visible">
+				android:layout_height="wrap_content"
+				android:orientation="vertical">
 
-				<com.google.android.material.progressindicator.CircularProgressIndicator
-					android:layout_width="wrap_content"
+				<FrameLayout
+					android:id="@+id/recentUpdatesLoading"
+					android:layout_width="match_parent"
+					android:layout_height="96dp"
+					android:layout_marginTop="20dp"
+					android:visibility="gone"
+					tools:visibility="visible">
+
+					<com.google.android.material.progressindicator.CircularProgressIndicator
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:layout_gravity="center"
+						android:indeterminate="true"
+						app:indicatorSize="28dp" />
+				</FrameLayout>
+
+				<LinearLayout
+					android:id="@+id/recentUpdatesList"
+					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
-					android:layout_gravity="center"
-					android:indeterminate="true"
-					app:indicatorSize="28dp" />
-			</FrameLayout>
+					android:layout_marginTop="20dp"
+					android:orientation="vertical" />
 
-			<LinearLayout
-				android:id="@+id/recentUpdatesList"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="20dp"
-				android:orientation="vertical" />
-
-			<LinearLayout
-				android:id="@+id/recentUpdatesPagination"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="24dp"
-				android:gravity="center"
-				android:orientation="vertical" />
+				<LinearLayout
+					android:id="@+id/recentUpdatesPagination"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="24dp"
+					android:gravity="center"
+					android:orientation="vertical" />
+			</LinearLayout>
 		</LinearLayout>
 	</LinearLayout>
 </ScrollView>

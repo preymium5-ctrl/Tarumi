@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/splash_root"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_splash_root"
+	android:fitsSystemWindows="false">
+
+	<!-- Holds frame 0 until VideoView is ready (avoids logo / black flash). -->
+	<ImageView
+		android:id="@+id/image_splash_placeholder"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:contentDescription="@null"
+		android:scaleType="centerCrop"
+		android:src="@drawable/splash_open_first_frame" />
+
+	<!-- Full-screen muted intro clip (exactly ~3s, no audio track). -->
+	<VideoView
+		android:id="@+id/video_splash"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:layout_gravity="center" />
+
+</FrameLayout>

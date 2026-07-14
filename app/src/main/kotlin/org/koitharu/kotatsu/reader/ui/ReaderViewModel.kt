@@ -235,10 +235,25 @@ class ReaderViewModel @Inject constructor(
             prevJob?.cancelAndJoin()
             val state = readingState.value ?: return@launchLoadingJob
             val manga = getMangaOrNull() ?: return@launchLoadingJob
+            // Drop parser page-list cache + decoded page files so we re-fetch from network.
             contentCache.clear(manga.source)
-            pageLoader.invalidate(clearCache = false)
-            chaptersLoader.loadSingleChapter(state.chapterId)
-            content.value = ReaderContent(chaptersLoader.snapshot(), state)
+            pageLoader.invalidate(clearCache = true)
+            // Clear UI content first so the reader is forced to rebind (same page IDs
+            // otherwise look like a no-op and the old bitmaps stay on screen).
+            content.value = ReaderContent(emptyList(), state)
+            val ok = chaptersLoader.loadSingleChapter(state.chapterId)
+            if (!ok) {
+                // Fall back to a full reload of the reader pipeline.
+                loadImpl()
+                return@launchLoadingJob
+            }
+            // Keep page index if possible, but clamp if chapter length changed.
+            val pages = chaptersLoader.snapshot()
+            val clamped = state.copy(
+                page = state.page.coerceIn(0, (pages.size - 1).coerceAtLeast(0)),
+            )
+            readingState.value = clamped
+            content.value = ReaderContent(pages, clamped)
             notifyStateChanged()
         }
     }

@@ -147,6 +147,27 @@ class CoverImageView @JvmOverloads constructor(
 			.build(),
 	)
 
+	/**
+	 * Home rails: prefer small cover URL and cap decode size to the view (or ~128dp)
+	 * so low-end devices do not keep full-resolution bitmaps for every card.
+	 */
+	fun setHomeCoverAsync(manga: Manga?) {
+		val coverUrl = manga?.coverUrl?.takeIf { it.isNotEmpty() }
+			?: manga?.largeCoverUrl?.takeIf { it.isNotEmpty() }
+		val maxPx = (HOME_COVER_MAX_DP * resources.displayMetrics.density).toInt().coerceAtLeast(96)
+		enqueueRequest(
+			newRequestBuilder(applyTrim = !isAnimatedUrl(coverUrl))
+				.data(coverUrl)
+				.mangaExtra(manga)
+				.size(Size(maxPx, (maxPx * 1.5f).toInt()))
+				.build(),
+		)
+	}
+
+	private companion object {
+		const val HOME_COVER_MAX_DP = 128
+	}
+
 	fun setImageAsync(
 		coverUrl: String?,
 		source: MangaSource,

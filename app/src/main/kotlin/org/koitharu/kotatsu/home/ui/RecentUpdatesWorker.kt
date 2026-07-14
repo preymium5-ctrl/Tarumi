@@ -51,7 +51,7 @@ class RecentUpdatesWorker @AssistedInject constructor(
 	}
 
 	override suspend fun doWork(): Result {
-		if (settings.isPerformanceMode) {
+		if (settings.isPerformanceMode || !settings.isRecentUpdatesEnabled) {
 			return Result.success()
 		}
 		return runCatchingCancellable {
@@ -154,8 +154,10 @@ class RecentUpdatesWorker @AssistedInject constructor(
 				if (chapters.isEmpty()) {
 					continue
 				}
+				// Slim: keep only 3 chapters + no description for the 2000-title cache.
+				val slim = details.copy(description = null, chapters = chapters)
 				groups += RecentUpdateGroup(
-					manga = details,
+					manga = slim,
 					chapters = chapters,
 					sourceTitle = source.title,
 					sortDate = chapters.maxOf(MangaChapter::uploadDate),
@@ -235,18 +237,13 @@ class RecentUpdatesWorker @AssistedInject constructor(
 		const val PAGE_DELAY_MS = 750L
 		const val DETAIL_DELAY_MS = 80L
 		const val DETAIL_CONCURRENCY = 2
-		const val RECENT_CACHE_VERSION = 9
+		const val RECENT_CACHE_VERSION = 13
 
 		val RECENT_SOURCES = listOf(
 			MangaParserSource.MANGAPLUSPARSER_EN,
-			MangaParserSource.AQUAMANGA,
 			MangaParserSource.ASURASCANS,
-			MangaParserSource.ASURASCANS_US,
-			MangaParserSource.ASURASCANSGG,
-			MangaParserSource.WEEBCENTRAL,
-			MangaParserSource.FLAMECOMICS,
+			MangaParserSource.AQUAMANGA,
 			MangaParserSource.MANGAFIRE_EN,
-			MangaParserSource.MANHWAZ,
 		)
 
 		val CHAPTER_COMPARATOR = compareByDescending<MangaChapter> { it.uploadDate }

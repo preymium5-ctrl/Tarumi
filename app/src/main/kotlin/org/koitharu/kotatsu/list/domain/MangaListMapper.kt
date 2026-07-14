@@ -132,16 +132,31 @@ class MangaListMapper @Inject constructor(
 		val chapters = mangaWithChapters.chapters.orEmpty()
 		val branch = mangaWithChapters.getPreferredBranch(history)
 		val branchChapters = mangaWithChapters.getChapters(branch).orEmpty().ifEmpty { chapters }
-		val currentChapter = history?.let { chapters.findById(it.chapterId) }
+		val currentChapter = history?.let { h ->
+			branchChapters.findById(h.chapterId) ?: chapters.findById(h.chapterId)
+		}
 		val latestChapter = branchChapters.latestChapter()
 		val currentChapterIndex = currentChapter?.let { chapter ->
 			branchChapters.indexOfFirst { it.id == chapter.id }.takeIf { it >= 0 }?.plus(1)
 		}
-		val totalChapters = mangaWithChapters.chaptersCount().takeIf { it > 0 } ?: history?.chaptersCount ?: progress?.totalChapters ?: 0
+		// Prefer the freshest total: chapter cache can lag behind the tracker NEW counter
+		// until details are re-fetched, while history.chaptersCount is updated on track hits.
+		val listChapterCount = mangaWithChapters.chaptersCount()
+		val historyChapterCount = history?.chaptersCount ?: 0
+		val progressChapterCount = progress?.totalChapters ?: 0
+		// When NEW chapters exist but the local list is still short, grow the total by the
+		// unread counter so "current / total" matches the new release.
+		val trackedTotal = if (counter > 0 && listChapterCount > 0) {
+			maxOf(listChapterCount, (currentChapterIndex ?: 0) + counter)
+		} else {
+			0
+		}
+		val totalChapters = maxOf(listChapterCount, historyChapterCount, progressChapterCount, trackedTotal)
 		val currentChapterNumber = currentChapter?.numberString()
 			?: currentChapterIndex?.toString()
 			?: progress?.chapters?.takeIf { it > 0 }?.toString()
 		val latestChapterNumber = latestChapter?.numberString()
+			?: totalChapters.takeIf { it > 0 && (listChapterCount == 0 || totalChapters > listChapterCount) }?.toString()
 		val scrobble = db.getScrobblingDao().findAllByMangaId(manga.id).firstOrNull()
 		return MangaDetailedListModel(
 			subtitle = manga.altTitles.firstOrNull(),
@@ -153,7 +168,8 @@ class MangaListMapper @Inject constructor(
 			isSaved = isSaved(manga.id, options),
 			tags = mapTags(manga.tags),
 			isPinned = isPinned,
-			latestChapterTitle = latestChapter?.getLocalizedTitle(context.resources),
+			latestChapterTitle = latestChapter?.getLocalizedTitle(context.resources)
+				?: latestChapterNumber?.let { "Chapter $it" },
 			currentChapterTitle = currentChapter?.getLocalizedTitle(context.resources),
 			latestChapterAge = latestChapter?.uploadDate?.toInstantOrNull()
 				?.let { calculateTimeAgo(it, showMonths = true)?.format(context) },

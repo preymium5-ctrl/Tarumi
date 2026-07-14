@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Match the video's first frame so cold-start has no logo / blank gap. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+	<item>
+		<shape android:shape="rectangle">
+			<solid android:color="#0E0C12" />
+		</shape>
+	</item>
+	<item>
+		<bitmap
+			android:gravity="fill"
+			android:src="@drawable/splash_open_first_frame" />
+	</item>
+</layer-list>

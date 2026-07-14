@@ -176,21 +176,32 @@ private fun Manga.normalizeTags(description: String?): Set<MangaTag> {
 
 private fun Manga.inferComicType(description: String?): ComicTypeHint? {
 	val fromSource = inferComicTypeFromSource()
+	// Trust explicit manhwa/manhua source typing over noisy SEO text.
 	if (fromSource == ComicTypeHint.MANHWA || fromSource == ComicTypeHint.MANHUA) {
 		return fromSource
 	}
 	val labels = metadataLabels(description)
+	// Manhwa/webtoon before manhua — manhua-first order mislabeled many manhwa titles.
 	return when {
-		labels.any { it.hasWholeWord("manhua") || it.contains("chinese webcomic") } -> ComicTypeHint.MANHUA
-		labels.any { it.hasWholeWord("manhwa") || it.hasWholeWord("webtoon") || it.contains("korean webcomic") } -> ComicTypeHint.MANHWA
-		labels.any { it.hasWholeWord("manga") || it.hasWholeWord("one-shot") || it.hasWholeWord("doujinshi") } -> ComicTypeHint.MANGA
+		labels.any {
+			it.hasWholeWord("manhwa") || it.hasWholeWord("webtoon") || it.contains("korean webcomic")
+		} -> ComicTypeHint.MANHWA
+		labels.any {
+			it.hasWholeWord("manhua") || it.contains("chinese webcomic")
+		} -> ComicTypeHint.MANHUA
+		labels.any {
+			it.hasWholeWord("manga") || it.hasWholeWord("one-shot") || it.hasWholeWord("doujinshi")
+		} -> ComicTypeHint.MANGA
 		else -> fromSource
 	}
 }
 
 private fun Manga.inferComicTypeFromSource(): ComicTypeHint? {
 	val parserSource = source as? MangaParserSource ?: return null
-	if (parserSource == MangaParserSource.DEMONICSCANS) {
+	val key = parserSource.name.normalizedSourceKey()
+	if (key.contains("asura") || key.contains("demonic") || key.contains("flame") ||
+		key.contains("manhwaz") || key == "aquamanga" || key.contains("manhuafast")
+	) {
 		return ComicTypeHint.MANHWA
 	}
 	return when (parserSource.contentType) {
@@ -205,7 +216,7 @@ private fun Manga.inferComicTypeFromSource(): ComicTypeHint? {
 
 private fun Manga.metadataLabels(description: String? = this.description): List<String> = buildList {
 	add(title)
-	add(source.name)
+	// Avoid source.name — identifiers like MANHUAFAsT force false manhua matches.
 	val cleanDescription = if (source == MangaParserSource.DEMONICSCANS) {
 		description?.removeDemonicGenericTypeText()
 	} else {

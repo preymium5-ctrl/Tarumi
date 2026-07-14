@@ -147,6 +147,12 @@
             android:summary="@string/performance_mode_summary"
             android:title="@string/performance_mode" />
 
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="home_recent_updates_enabled"
+            android:summary="@string/recent_updates_enabled_summary"
+            android:title="@string/recent_updates_enabled" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

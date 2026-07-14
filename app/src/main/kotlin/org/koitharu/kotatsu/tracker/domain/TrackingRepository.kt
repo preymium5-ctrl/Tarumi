@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.onStart
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.entity.toManga
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
+import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -40,6 +41,7 @@ class TrackingRepository @Inject constructor(
 	private val db: MangaDatabase,
 	private val settings: AppSettings,
 	private val progressUpdateUseCase: ProgressUpdateUseCase,
+	private val mangaDataRepository: MangaDataRepository,
 	@ApplicationContext private val context: Context,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 ) {
@@ -167,15 +169,22 @@ class TrackingRepository @Inject constructor(
 		db.withTransaction {
 			val track = getOrCreateTrack(updates.manga.id).mergeWith(updates)
 			db.getTracksDao().upsert(track)
-			if (updates is MangaUpdates.Success && updates.isValid && updates.newChapters.isNotEmpty()) {
-				progressUpdateUseCase(updates.manga)
-				val logEntity = TrackLogEntity(
-					mangaId = updates.manga.id,
-					chapters = updates.newChapters.joinToString("\n") { x -> x.name },
-					createdAt = System.currentTimeMillis(),
-					isUnread = true,
-				)
-				db.getTrackLogsDao().insert(logEntity)
+			if (updates is MangaUpdates.Success) {
+				// Keep library/bookmark chapter totals & latest chapter in sync with the
+				// source. NEW badges used to update while the chapter list stayed stale.
+				if (!updates.manga.chapters.isNullOrEmpty()) {
+					mangaDataRepository.storeManga(updates.manga, replaceExisting = true)
+				}
+				if (updates.isValid && updates.newChapters.isNotEmpty()) {
+					progressUpdateUseCase(updates.manga)
+					val logEntity = TrackLogEntity(
+						mangaId = updates.manga.id,
+						chapters = updates.newChapters.joinToString("\n") { x -> x.name },
+						createdAt = System.currentTimeMillis(),
+						isUnread = true,
+					)
+					db.getTrackLogsDao().insert(logEntity)
+				}
 			}
 		}
 	}

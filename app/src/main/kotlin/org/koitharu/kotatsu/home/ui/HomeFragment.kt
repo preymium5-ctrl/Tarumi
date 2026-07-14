@@ -12,6 +12,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import org.koitharu.kotatsu.R
@@ -38,6 +40,10 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 	private val viewModel by viewModels<HomeViewModel>()
 	private var featuredComics = emptyList<Manga>()
 	private var featuredIndex = 0
+	private var smartAdapter: HomeRailAdapter? = null
+	private var manhuaAdapter: HomeRailAdapter? = null
+	private var mangaAdapter: HomeRailAdapter? = null
+	private val lazySectionsLoaded = HashSet<HomeSection>()
 
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentHomeBinding {
 		return FragmentHomeBinding.inflate(inflater, container, false)
@@ -47,6 +53,23 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		super.onViewBindingCreated(binding, savedInstanceState)
 		binding.buttonContinueReadingAll.setOnClickListener { router.openContinueReading() }
 		binding.buttonContinueReadingSeeAll.setOnClickListener { router.openContinueReading() }
+
+		smartAdapter = HomeRailAdapter { manga -> router.openDetails(manga) }.also {
+			setupRail(binding.smartRecommendationList, it)
+		}
+		manhuaAdapter = HomeRailAdapter { manga -> router.openDetails(manga) }.also {
+			setupRail(binding.manhuaRecommendationList, it)
+		}
+		mangaAdapter = HomeRailAdapter { manga -> router.openDetails(manga) }.also {
+			setupRail(binding.mangaRecommendationList, it)
+		}
+
+		// Lazy-load off-screen rails when the user scrolls near them.
+		binding.homeRoot.setOnScrollChangeListener { _, _, _, _, _ ->
+			maybeLoadVisibleSections(binding)
+		}
+		binding.homeRoot.post { maybeLoadVisibleSections(binding) }
+
 		viewModel.continueReadingComics.observe(viewLifecycleOwner, ::renderContinueReading)
 		viewModel.featuredComics.observe(viewLifecycleOwner, ::renderFeaturedComics)
 		viewModel.trendingComics.observe(viewLifecycleOwner, ::renderTrendingComics)
@@ -54,24 +77,43 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			binding.smartRecommendationLoading.isVisible = isLoading && viewModel.smartRecommendations.value.isEmpty()
 		}
 		viewModel.smartRecommendations.observe(viewLifecycleOwner) { comics ->
-			renderRecommendationRail(binding.smartRecommendationList, binding.smartRecommendationLoading, comics)
+			renderRecommendationRail(binding.smartRecommendationList, binding.smartRecommendationLoading, smartAdapter, comics)
 		}
 		viewModel.manhuaRecommendationsLoading.observe(viewLifecycleOwner) { isLoading ->
 			binding.manhuaRecommendationLoading.isVisible = isLoading && viewModel.manhuaRecommendations.value.isEmpty()
 		}
 		viewModel.manhuaRecommendations.observe(viewLifecycleOwner) { comics ->
-			renderRecommendationRail(binding.manhuaRecommendationList, binding.manhuaRecommendationLoading, comics)
+			renderRecommendationRail(binding.manhuaRecommendationList, binding.manhuaRecommendationLoading, manhuaAdapter, comics)
 		}
 		viewModel.mangaRecommendationsLoading.observe(viewLifecycleOwner) { isLoading ->
 			binding.mangaRecommendationLoading.isVisible = isLoading && viewModel.mangaRecommendations.value.isEmpty()
 		}
 		viewModel.mangaRecommendations.observe(viewLifecycleOwner) { comics ->
-			renderRecommendationRail(binding.mangaRecommendationList, binding.mangaRecommendationLoading, comics)
+			renderRecommendationRail(binding.mangaRecommendationList, binding.mangaRecommendationLoading, mangaAdapter, comics)
 		}
-		if (viewModel.isPerformanceMode) {
-			binding.recentUpdatesSection.isVisible = false
-		} else {
+		// Recent Updates: whole block (title + summary + list) hidden when toggle is off.
+		binding.switchRecentUpdates.setOnCheckedChangeListener(null)
+		viewModel.isRecentUpdatesEnabled.observe(viewLifecycleOwner) { enabled ->
+			val showSection = enabled && !viewModel.isPerformanceMode
+			binding.recentUpdatesSection.isVisible = showSection
+			binding.switchRecentUpdates.isChecked = enabled
+			if (showSection) {
+				// Content under the header follows normal loading.
+			} else {
+				binding.recentUpdatesLoading.isVisible = false
+				binding.recentUpdatesList.isVisible = false
+				binding.recentUpdatesPagination.isVisible = false
+			}
+		}
+		binding.switchRecentUpdates.setOnCheckedChangeListener { _, isChecked ->
+			viewModel.setRecentUpdatesEnabled(isChecked)
+		}
+		if (!viewModel.isPerformanceMode) {
 			viewModel.recentUpdatesLoading.observe(viewLifecycleOwner) { isLoading ->
+				if (!viewModel.isRecentUpdatesEnabled.value) {
+					binding.recentUpdatesSection.isVisible = false
+					return@observe
+				}
 				val hasUpdates = viewModel.recentUpdates.value.isNotEmpty()
 				binding.recentUpdatesLoading.isVisible = isLoading && !hasUpdates
 				binding.recentUpdatesList.isVisible = hasUpdates
@@ -79,9 +121,51 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			}
 			combine(viewModel.recentUpdates, viewModel.recentUpdatesPage, ::Pair)
 				.observe(viewLifecycleOwner) { (updates, page) ->
-					renderRecentUpdates(updates, page)
+					if (viewModel.isRecentUpdatesEnabled.value) {
+						renderRecentUpdates(updates, page)
+					}
 				}
+		} else {
+			binding.recentUpdatesSection.isVisible = false
 		}
+	}
+
+	private fun setupRail(list: RecyclerView, adapter: HomeRailAdapter) {
+		list.layoutManager = LinearLayoutManager(list.context, RecyclerView.HORIZONTAL, false)
+		list.setHasFixedSize(true)
+		list.itemAnimator = null
+		list.adapter = adapter
+	}
+
+	private fun maybeLoadVisibleSections(binding: FragmentHomeBinding) {
+		fun nearVisible(section: View): Boolean {
+			if (!section.isShown) return false
+			val loc = IntArray(2)
+			section.getLocationOnScreen(loc)
+			val screenH = resources.displayMetrics.heightPixels
+			// Load a bit before the section enters the viewport.
+			return loc[1] < screenH + (screenH / 3)
+		}
+		if (nearVisible(binding.smartRecommendationSection)) {
+			requestSection(HomeSection.SMART)
+		}
+		if (nearVisible(binding.manhuaRecommendationSection)) {
+			requestSection(HomeSection.MANHUA)
+		}
+		if (nearVisible(binding.mangaRecommendationSection)) {
+			requestSection(HomeSection.MANGA)
+		}
+		if (!viewModel.isPerformanceMode &&
+			viewModel.isRecentUpdatesEnabled.value &&
+			nearVisible(binding.recentUpdatesSection)
+		) {
+			requestSection(HomeSection.RECENT)
+		}
+	}
+
+	private fun requestSection(section: HomeSection) {
+		if (!lazySectionsLoaded.add(section)) return
+		viewModel.ensureSectionLoaded(section)
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -115,8 +199,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			).apply {
 				if (index > 0) topMargin = rowSpacingPx
 			}
-			itemView.findViewById<CoverImageView>(R.id.imageView_cover)
-				.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
+			itemView.findViewById<CoverImageView>(R.id.imageView_cover).setHomeCoverAsync(manga)
 			itemView.findViewById<TextView>(R.id.textView_title).text = manga.title
 			itemView.findViewById<TextView>(R.id.textView_subtitle).text = item.continueReadingSubtitle()
 			itemView.contentDescription = manga.title
@@ -143,8 +226,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		binding.comicsCarousel.removeAllViews()
 		for ((index, manga) in featuredComics.withIndex()) {
 			val itemView = inflater.inflate(R.layout.item_home_carousel_cover, binding.comicsCarousel, false)
-			itemView.findViewById<CoverImageView>(R.id.imageView_cover)
-				.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
+			itemView.findViewById<CoverImageView>(R.id.imageView_cover).setHomeCoverAsync(manga)
 			itemView.contentDescription = manga.title
 			itemView.setOnClickListener {
 				if (index == featuredIndex) {
@@ -280,8 +362,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
 				if (col > 0) lp.marginStart = colSpacingPx
 				itemView.layoutParams = lp
-				itemView.findViewById<CoverImageView>(R.id.imageView_cover)
-					.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
+				itemView.findViewById<CoverImageView>(R.id.imageView_cover).setHomeCoverAsync(manga)
 				itemView.findViewById<android.widget.TextView>(R.id.textView_title).text = manga.title
 
 				val chapterView = itemView.findViewById<android.widget.TextView>(R.id.textView_chapter)
@@ -319,31 +400,17 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		}
 	}
 
-	private fun renderRecommendationRail(container: LinearLayout, loadingView: View, comics: List<Manga>) {
-		loadingView.isVisible = comics.isEmpty()
-		container.isVisible = comics.isNotEmpty()
-		if (comics.isEmpty()) {
-			return
+	private fun renderRecommendationRail(
+		list: RecyclerView,
+		loadingView: View,
+		adapter: HomeRailAdapter?,
+		comics: List<Manga>,
+	) {
+		list.isVisible = comics.isNotEmpty()
+		if (comics.isNotEmpty()) {
+			loadingView.isVisible = false
 		}
-		val context = container.context
-		val inflater = LayoutInflater.from(context)
-		container.removeAllViews()
-		for ((index, manga) in comics.withIndex()) {
-			val itemView = inflater.inflate(R.layout.item_home_recommendation_cover, container, false)
-			itemView.layoutParams = LinearLayout.LayoutParams(
-				128.dp(container),
-				LinearLayout.LayoutParams.WRAP_CONTENT,
-			).apply {
-				if (index > 0) marginStart = 14.dp(container)
-			}
-			itemView.findViewById<CoverImageView>(R.id.imageView_cover)
-				.setImageAsync(manga.largeCoverUrl?.ifEmpty { manga.coverUrl } ?: manga.coverUrl, manga)
-			itemView.findViewById<TextView>(R.id.textView_title).text = manga.title
-			itemView.findViewById<TextView>(R.id.textView_type).text = manga.detectComicType().label
-			itemView.contentDescription = manga.title
-			itemView.setOnClickListener { router.openDetails(manga) }
-			container.addView(itemView)
-		}
+		adapter?.submitList(comics)
 	}
 
 	private fun renderRecentUpdates(updates: List<RecentUpdateGroup>, page: Int) {
@@ -364,8 +431,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			).apply {
 				if (index > 0) topMargin = rowSpacingPx
 			}
-			itemView.findViewById<CoverImageView>(R.id.imageView_cover)
-				.setImageAsync(item.manga.largeCoverUrl?.ifEmpty { item.manga.coverUrl } ?: item.manga.coverUrl, item.manga)
+			itemView.findViewById<CoverImageView>(R.id.imageView_cover).setHomeCoverAsync(item.manga)
 			itemView.findViewById<TextView>(R.id.textView_title).text = item.manga.title
 			itemView.findViewById<LinearLayout>(R.id.layoutChapters).apply {
 				removeAllViews()
@@ -418,8 +484,12 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		val binding = viewBinding ?: return
 		val context = binding.recentUpdatesPagination.context
 		binding.recentUpdatesPagination.removeAllViews()
-		val pageCount = ((totalItems + RECENT_PAGE_SIZE - 1) / RECENT_PAGE_SIZE)
-			.coerceIn(1, RECENT_PAGE_COUNT)
+		// Dynamic pages across the full library (up to 2000); only inflate compact controls.
+		val pageCount = if (totalItems <= 0) {
+			1
+		} else {
+			((totalItems + RECENT_PAGE_SIZE - 1) / RECENT_PAGE_SIZE).coerceAtLeast(1)
+		}
 		val canGoBack = page > 0
 		val canGoNext = page < pageCount - 1
 
@@ -430,6 +500,24 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 			viewModel.setRecentUpdatesPage(page - 1)
 		})
 
+		// Compact "Page X / Y" instead of one button per page (200 pages would explode RAM).
+		binding.recentUpdatesPagination.addView(
+			TextView(context).apply {
+				layoutParams = LinearLayout.LayoutParams(
+					LinearLayout.LayoutParams.MATCH_PARENT,
+					LinearLayout.LayoutParams.WRAP_CONTENT,
+				).apply {
+					topMargin = 12.dp(binding.root)
+					bottomMargin = 4.dp(binding.root)
+				}
+				gravity = Gravity.CENTER
+				text = "Page ${page + 1} / $pageCount  ·  $totalItems titles"
+				setTextColor(ContextCompat.getColor(context, R.color.taru_text_secondary))
+				textSize = 13f
+			},
+		)
+
+		// Optional nearby page chips (window of 5) for quick jumps without 200 views.
 		val pagesRow = LinearLayout(context).apply {
 			orientation = LinearLayout.HORIZONTAL
 			gravity = Gravity.CENTER
@@ -437,14 +525,16 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 			).apply {
-				topMargin = 12.dp(binding.root)
+				topMargin = 8.dp(binding.root)
 			}
 		}
-		for (i in 0 until pageCount) {
+		val windowStart = (page - 2).coerceAtLeast(0)
+		val windowEnd = (windowStart + 4).coerceAtMost(pageCount - 1)
+		for (i in windowStart..windowEnd) {
 			val isSelected = page == i
 			val button = TextView(context).apply {
 				layoutParams = LinearLayout.LayoutParams(54.dp(binding.root), 54.dp(binding.root)).apply {
-					if (i > 0) marginStart = 8.dp(binding.root)
+					if (i > windowStart) marginStart = 8.dp(binding.root)
 				}
 				background = ContextCompat.getDrawable(
 					context,
@@ -545,11 +635,10 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
 	private companion object {
 		const val COLUMNS = 2
-		const val FEATURED_LIMIT = 15
-		const val CONTINUE_READING_LIMIT = 6
+		const val FEATURED_LIMIT = 8
+		const val CONTINUE_READING_LIMIT = 4
 		const val HOME_BOTTOM_CONTENT_SPACE_DP = 178
 		const val RECENT_PAGE_SIZE = 10
-		const val RECENT_PAGE_COUNT = 6
 		val HTML_TAG_REGEX = Regex("<[^>]+>")
 		val WHITESPACE_REGEX = Regex("\\s+")
 		const val FEATURED_DESCRIPTION_WORD_LIMIT = 26

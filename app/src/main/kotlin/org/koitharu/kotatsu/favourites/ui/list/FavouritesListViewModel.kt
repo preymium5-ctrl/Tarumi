@@ -47,6 +47,7 @@ import javax.inject.Inject
 import org.koitharu.kotatsu.local.data.LocalStorageChanges
 import org.koitharu.kotatsu.local.domain.model.LocalManga
 import kotlinx.coroutines.flow.SharedFlow
+import org.koitharu.kotatsu.tracker.domain.TrackingRepository
 
 private const val PAGE_SIZE = 16
 private const val CHAPTER_BACKFILL_BATCH_SIZE = 4
@@ -61,6 +62,7 @@ class FavouritesListViewModel @Inject constructor(
 	settings: AppSettings,
 	private val mangaDataRepository: MangaDataRepository,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	private val trackingRepository: TrackingRepository,
 	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>,
 ) : MangaListViewModel(settings, mangaDataRepository, localStorageChanges), QuickFilterListener {
 
@@ -182,14 +184,19 @@ class FavouritesListViewModel @Inject constructor(
 			var changed = false
 			for (manga in candidates) {
 				val cached = mangaDataRepository.findMangaById(manga.id, withChapters = true)
-				if (!cached?.chapters.isNullOrEmpty()) {
+				val cachedCount = cached?.chapters?.size ?: 0
+				val newCount = runCatchingCancellable {
+					trackingRepository.getNewChaptersCount(manga.id)
+				}.getOrDefault(0)
+				// Refresh when there is no chapter list yet, or when NEW is set (stale totals).
+				if (cachedCount > 0 && newCount <= 0) {
 					continue
 				}
 				val details = runCatchingCancellable {
 					mangaRepositoryFactory.create(manga.source).getDetails(manga)
 				}.getOrNull() ?: continue
 				if (!details.chapters.isNullOrEmpty()) {
-					mangaDataRepository.updateChapters(details)
+					mangaDataRepository.storeManga(details, replaceExisting = true)
 					changed = true
 				}
 			}

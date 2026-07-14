@@ -35,8 +35,9 @@ fun List<RecentUpdateGroup>.rankRecentUpdateGroups(
 				.distinctBy { chapter -> "${chapter.source.name}:${chapter.id}:${chapter.url}" }
 				.sortedWith(recentChapterComparator)
 				.take(chaptersPerTitle)
+			// Allow list-only feeds (no getDetails) with empty chapter rows.
 			if (chapters.isEmpty()) {
-				return@mapNotNull null
+				return@mapNotNull newestGroup.copy(chapters = emptyList())
 			}
 			newestGroup.copy(
 				manga = newestGroup.manga.copy(chapters = chapters),
