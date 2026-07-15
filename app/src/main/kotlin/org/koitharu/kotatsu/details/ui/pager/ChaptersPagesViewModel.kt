@@ -131,12 +131,29 @@ abstract class ChaptersPagesViewModel(
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, null)
 
 	private val currentChapterProgress = combine(
-		readingState.map { it?.chapterId ?: 0L }.distinctUntilChanged(),
+		readingState,
 		currentHistory,
-	) { currentChapterId, history ->
-		val chapterId = currentChapterId.takeIf { it != 0L } ?: history?.chapterId ?: 0L
-		// Chapter-local page progress (not series-wide).
-		chapterId to (history?.takeIf { it.chapterId == chapterId }?.percent ?: -1f)
+		mangaDetails,
+	) { state, history, details ->
+		val chapterId = state?.chapterId?.takeIf { it != 0L }
+			?: history?.chapterId
+			?: 0L
+		// Prefer live history percent (updated offline from local page files).
+		// Fall back to matching chapter id in merged remote+local list.
+		val resolvedId = when {
+			chapterId == 0L -> 0L
+			details?.allChapters?.any { it.id == chapterId } == true -> chapterId
+			else -> details?.allChapters?.find { ch ->
+				// Local re-download may keep url/number but change id in rare cases.
+				history != null && ch.id == history.chapterId
+			}?.id ?: chapterId
+		}
+		val percent = history
+			?.takeIf { it.chapterId == resolvedId || it.chapterId == chapterId }
+			?.percent
+			?.takeIf { it >= 0f }
+			?: -1f
+		resolvedId to percent
 	}
 
 	val chapters = combine(
@@ -231,13 +248,13 @@ abstract class ChaptersPagesViewModel(
 			val chapters = selectedBranch.value?.let { manga.chapters[it] } ?: manga.allChapters
 			val chapterIndex = chapters.indexOfFirst { it.id == chapterId }
 			check(chapterIndex in chapters.indices) { "Chapter not found" }
-			val percent = chapterIndex / chapters.size.toFloat()
+			// Chapter-local progress starts at 0 (not series-wide chapter index ratio).
 			historyRepository.addOrUpdate(
 				manga = manga.toManga(),
 				chapterId = chapterId,
 				page = 0,
 				scroll = 0,
-				percent = percent,
+				percent = 0f,
 				force = true,
 			)
 		}

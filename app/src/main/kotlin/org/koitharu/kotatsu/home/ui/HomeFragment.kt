@@ -91,18 +91,22 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		viewModel.mangaRecommendations.observe(viewLifecycleOwner) { comics ->
 			renderRecommendationRail(binding.mangaRecommendationList, binding.mangaRecommendationLoading, mangaAdapter, comics)
 		}
-		// Recent Updates: whole block (title + summary + list) hidden when toggle is off.
+		// Header + switch always stay (except Performance mode). Body hides when off
+		// so the toggle remains reachable and does not sit under the bottom nav alone.
 		binding.switchRecentUpdates.setOnCheckedChangeListener(null)
 		viewModel.isRecentUpdatesEnabled.observe(viewLifecycleOwner) { enabled ->
-			val showSection = enabled && !viewModel.isPerformanceMode
-			binding.recentUpdatesSection.isVisible = showSection
+			if (viewModel.isPerformanceMode) {
+				binding.recentUpdatesSection.isVisible = false
+				return@observe
+			}
+			binding.recentUpdatesSection.isVisible = true
 			binding.switchRecentUpdates.isChecked = enabled
-			if (showSection) {
-				// Content under the header follows normal loading.
-			} else {
+			binding.recentUpdatesBody.isVisible = enabled
+			binding.textRecentUpdatesTitle.alpha = if (enabled) 1f else 0.55f
+			if (!enabled) {
 				binding.recentUpdatesLoading.isVisible = false
-				binding.recentUpdatesList.isVisible = false
-				binding.recentUpdatesPagination.isVisible = false
+				binding.recentUpdatesList.removeAllViews()
+				binding.recentUpdatesPagination.removeAllViews()
 			}
 		}
 		binding.switchRecentUpdates.setOnCheckedChangeListener { _, isChecked ->
@@ -111,7 +115,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		if (!viewModel.isPerformanceMode) {
 			viewModel.recentUpdatesLoading.observe(viewLifecycleOwner) { isLoading ->
 				if (!viewModel.isRecentUpdatesEnabled.value) {
-					binding.recentUpdatesSection.isVisible = false
+					binding.recentUpdatesBody.isVisible = false
 					return@observe
 				}
 				val hasUpdates = viewModel.recentUpdates.value.isNotEmpty()

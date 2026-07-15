@@ -201,12 +201,14 @@ class DetailsViewModel @Inject constructor(
 
 	init {
 		loadingJob = doLoad(force = false)
+		// Recompute chapter-local read progress whenever chapters or history change
+		// so offline/downloaded chapters keep an accurate bar in the chapter list.
 		launchJob(Dispatchers.Default + SkipErrors) {
-			val manga = mangaDetails.firstOrNull { !it?.chapters.isNullOrEmpty() } ?: return@launchJob
-			val h = history.firstOrNull()
-			if (h != null) {
-				progressUpdateUseCase(manga.toManga())
-			}
+			combine(mangaDetails, history) { details, h -> details to h }
+				.collect { (details, h) ->
+					if (details == null || details.allChapters.isEmpty() || h == null) return@collect
+					progressUpdateUseCase(details.toManga())
+				}
 		}
 		launchJob(Dispatchers.Default) {
 			val manga = mangaDetails.firstOrNull { it != null && it.isLocal } ?: return@launchJob

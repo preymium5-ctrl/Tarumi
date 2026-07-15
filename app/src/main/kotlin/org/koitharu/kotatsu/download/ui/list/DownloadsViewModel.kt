@@ -271,11 +271,18 @@ class DownloadsViewModel @Inject constructor(
 		val mangaId = DownloadState.getMangaId(workData)
 		if (mangaId == 0L) return null
 		val manga = getManga(mangaId) ?: return null
-		val chapters = synchronized(chaptersCache) {
+		val baseChapters = synchronized(chaptersCache) {
 			chaptersCache.getOrPut(id) {
 				observeChapters(manga, id)
 			}
 		}
+		// Overlay live per-chapter progress from WorkManager progress data
+		// (works for online + offline once chapters are known).
+		val chapters = mapChaptersWithProgress(
+			base = baseChapters,
+			workState = state,
+			workData = workData,
+		)
 		return DownloadItemModel(
 			id = id,
 			workState = state,
@@ -292,6 +299,43 @@ class DownloadsViewModel @Inject constructor(
 			isExpanded = isExpanded,
 			chapters = chapters,
 		)
+	}
+
+	private fun mapChaptersWithProgress(
+		base: StateFlow<List<DownloadChapter>?>,
+		workState: WorkInfo.State,
+		workData: androidx.work.Data,
+	): StateFlow<List<DownloadChapter>?> {
+		val downloadedCount = DownloadState.getDownloadedChapters(workData)
+		val currentChapter = DownloadState.getCurrentChapter(workData)
+		val totalPages = DownloadState.getTotalPages(workData).coerceAtLeast(0)
+		val currentPage = DownloadState.getCurrentPage(workData).coerceAtLeast(0)
+		val isRunning = workState == WorkInfo.State.RUNNING && !DownloadState.isPaused(workData)
+		return base.map { list ->
+			if (list.isNullOrEmpty()) return@map list
+			list.mapIndexed { index, chapter ->
+				when {
+					chapter.isDownloaded || index < downloadedCount -> chapter.copy(
+						isDownloaded = true,
+						progress = 1f,
+						isActive = false,
+					)
+					isRunning && index == currentChapter -> {
+						val pageProgress = if (totalPages > 0) {
+							((currentPage + 1).toFloat() / totalPages.toFloat()).coerceIn(0f, 1f)
+						} else {
+							0f
+						}
+						chapter.copy(
+							progress = pageProgress,
+							isActive = true,
+							isDownloaded = false,
+						)
+					}
+					else -> chapter.copy(progress = 0f, isActive = false)
+				}
+			}
+		}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, base.value)
 	}
 
 	private fun emptyStateList() = listOf(
@@ -318,7 +362,8 @@ class DownloadsViewModel @Inject constructor(
 
 	private fun observeChapters(manga: Manga, workId: UUID): StateFlow<List<DownloadChapter>?> = flow {
 		val chapterIds = workScheduler.getTask(workId)?.chaptersIds
-		val chapters = (tryLoad(manga) ?: manga).chapters ?: return@flow
+		// Prefer local/DB chapters first so offline + NSFW downloads still show a list.
+		val chapters = resolveChapters(manga) ?: return@flow
 
 		suspend fun mapChapters(): List<DownloadChapter> {
 			val size = chapterIds?.size ?: chapters.size
@@ -330,6 +375,7 @@ class DownloadsViewModel @Inject constructor(
 						number = it.numberString(),
 						name = it.name,
 						isDownloaded = it.id in localChapters,
+						progress = if (it.id in localChapters) 1f else 0f,
 					)
 				} else {
 					null
@@ -343,6 +389,17 @@ class DownloadsViewModel @Inject constructor(
 			}
 		}
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, null)
+
+	private suspend fun resolveChapters(manga: Manga): List<org.koitharu.kotatsu.parsers.model.MangaChapter>? {
+		manga.chapters?.takeIf { it.isNotEmpty() }?.let { return it }
+		localMangaRepository.findSavedManga(manga, withDetails = true)?.manga?.chapters
+			?.takeIf { it.isNotEmpty() }
+			?.let { return it }
+		mangaDataRepository.findMangaById(manga.id, withChapters = true)?.chapters
+			?.takeIf { it.isNotEmpty() }
+			?.let { return it }
+		return tryLoad(manga)?.chapters?.takeIf { it.isNotEmpty() }
+	}
 
 	private suspend fun tryLoad(manga: Manga) = runCatchingCancellable {
 		mangaRepositoryFactory.create(manga.source).getDetails(manga)

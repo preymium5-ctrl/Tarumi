@@ -292,14 +292,21 @@ class ReaderViewModel @Inject constructor(
             readingState.value = state
             savedStateHandle[ReaderIntent.EXTRA_STATE] = state
         }
+        // null = NSFW ask still pending; true = incognito. Only save when explicitly off.
         if (isIncognitoMode.value != false) {
             return
         }
         val readerState = state ?: readingState.value ?: return
+        val pages = loadedPagesCount(readerState.chapterId)
+            ?: chaptersLoader.getPagesCount(readerState.chapterId).takeIf { it > 0 }
+        val percent = getPercent(readerState.chapterId, readerState.page, pages)
+        if (percent < 0f) {
+            return
+        }
         historyUpdateUseCase.invokeAsync(
             manga = getMangaOrNull() ?: return,
             readerState = readerState,
-            percent = getPercent(readerState.chapterId, readerState.page, loadedPagesCount(readerState.chapterId)),
+            percent = percent,
         )
     }
 
@@ -530,8 +537,13 @@ class ReaderViewModel @Inject constructor(
                         // save state
                         if (!isIncognitoMode.firstNotNull()) {
                             readingState.value?.let {
-                                val percent = getPercent(it.chapterId, it.page, loadedPagesCount(it.chapterId))
-                                historyUpdateUseCase(manga, it, percent)
+                                val pages = loadedPagesCount(it.chapterId)
+                                    ?: chaptersLoader.getPagesCount(it.chapterId).takeIf { c -> c > 0 }
+                                val percent = getPercent(it.chapterId, it.page, pages)
+                                // Skip invalid percent so offline chapter bars stay coherent.
+                                if (percent >= 0f) {
+                                    historyUpdateUseCase(manga, it, percent)
+                                }
                             }
                             if (!scrobblingPromptChecked) {
                                 scrobblingPromptChecked = true

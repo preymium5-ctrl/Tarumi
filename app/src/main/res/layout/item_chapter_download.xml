@@ -8,7 +8,7 @@
 	android:baselineAligned="false"
 	android:gravity="center_vertical"
 	android:orientation="horizontal"
-	android:paddingVertical="4dp">
+	android:paddingVertical="6dp">
 
 	<TextView
 		android:id="@+id/textView_number"
@@ -24,20 +24,37 @@
 		android:textSize="12sp"
 		tools:text="13" />
 
-	<TextView
-		android:id="@+id/textView_title"
-		android:layout_width="match_parent"
+	<LinearLayout
+		android:layout_width="0dp"
 		android:layout_height="wrap_content"
 		android:layout_marginStart="?android:listPreferredItemPaddingStart"
 		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
-		android:drawablePadding="4dp"
-		android:ellipsize="end"
-		android:gravity="center_vertical"
-		android:singleLine="true"
-		android:textColor="@color/taru_text_secondary"
-		android:textAppearance="?attr/textAppearanceBodySmall"
-		app:drawableTint="?colorControlNormal"
-		tools:drawableEnd="@drawable/ic_check"
-		tools:text="@tools:sample/lorem[15]" />
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<TextView
+			android:id="@+id/textView_title"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:drawablePadding="4dp"
+			android:ellipsize="end"
+			android:gravity="center_vertical"
+			android:singleLine="true"
+			android:textAppearance="?attr/textAppearanceBodySmall"
+			android:textColor="@color/taru_text_secondary"
+			app:drawableTint="?colorControlNormal"
+			tools:drawableEnd="@drawable/ic_check"
+			tools:text="@tools:sample/lorem[15]" />
+
+		<com.google.android.material.progressindicator.LinearProgressIndicator
+			android:id="@+id/progressBar_chapter"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:visibility="gone"
+			app:trackThickness="3dp"
+			tools:progress="40"
+			tools:visibility="visible" />
+	</LinearLayout>
 
 </LinearLayout>

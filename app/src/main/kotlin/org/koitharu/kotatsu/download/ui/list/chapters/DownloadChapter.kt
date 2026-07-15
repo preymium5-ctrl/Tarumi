@@ -7,6 +7,9 @@ data class DownloadChapter(
 	val number: String?,
 	val name: String,
 	val isDownloaded: Boolean,
+	/** 0f..1f for the chapter being downloaded; 1f when done; 0f when waiting. */
+	val progress: Float = if (isDownloaded) 1f else 0f,
+	val isActive: Boolean = false,
 ) : ListModel {
 
 	override fun areItemsTheSame(other: ListModel): Boolean {
@@ -14,7 +17,10 @@ data class DownloadChapter(
 	}
 
 	override fun getChangePayload(previousState: ListModel): Any? {
-		return if (previousState is DownloadChapter && previousState.name == name && previousState.number == number) {
+		return if (previousState is DownloadChapter &&
+			previousState.name == name &&
+			previousState.number == number
+		) {
 			ListModelDiffCallback.PAYLOAD_PROGRESS_CHANGED
 		} else {
 			super.getChangePayload(previousState)

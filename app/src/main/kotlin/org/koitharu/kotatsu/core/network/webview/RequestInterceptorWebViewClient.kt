@@ -53,10 +53,24 @@ class RequestInterceptorWebViewClient(
         return super.shouldOverrideUrlLoading(view, request)
     }
 
+    override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+        super.onPageStarted(view, url, favicon)
+        // Install hooks as early as possible so SPA XHR/fetch (e.g. Comix chapters)
+        // is captured before the first network responses finish.
+        if (view != null) {
+            maybeInjectPageScript(view, url.orEmpty(), force = false, early = true)
+        }
+    }
+
     override fun onPageFinished(view: WebView, url: String) {
         super.onPageFinished(view, url)
+        maybeInjectPageScript(view, url, force = false, early = false)
+    }
+
+    private fun maybeInjectPageScript(view: WebView, url: String, force: Boolean, early: Boolean) {
         val script = config.pageScript
-        if (script.isNullOrBlank() || scriptInjected.get() || !isCapturing.get()) return
+        if (script.isNullOrBlank() || !isCapturing.get()) return
+        if (!force && scriptInjected.get()) return
         if (!scriptCheckPending.compareAndSet(false, true)) return
 
         // A managed Cloudflare challenge finishes loading like a normal page,
@@ -65,13 +79,15 @@ class RequestInterceptorWebViewClient(
         // Keep the script unclaimed until a real content page is available.
         view.evaluateJavascript(CLOUDFLARE_CHALLENGE_CHECK) { result ->
             scriptCheckPending.set(false)
-            if (!isCapturing.get() || scriptInjected.get()) return@evaluateJavascript
+            if (!isCapturing.get()) return@evaluateJavascript
             if (result == "true") {
                 Log.d(TAG_VRF, "Cloudflare challenge detected; waiting for verified page: $url")
+                // Allow another attempt after CF clears.
+                scriptInjected.set(false)
                 return@evaluateJavascript
             }
-            if (scriptInjected.compareAndSet(false, true)) {
-                Log.d(TAG_VRF, "Injecting pageScript for URL: $url")
+            if (force || scriptInjected.compareAndSet(false, true)) {
+                Log.d(TAG_VRF, "Injecting pageScript early=$early for URL: $url")
                 view.evaluateJavascript(script, null)
             }
         }

@@ -367,7 +367,8 @@
 			</FrameLayout>
 		</LinearLayout>
 
-		<!-- Entire block (title + list) hidden when Recent Updates is turned off. -->
+		<!-- Header always stays so the switch is reachable; body hides when off.
+		     Extra bottom padding keeps the toggle above the floating bottom nav. -->
 		<LinearLayout
 			android:id="@+id/recentUpdatesSection"
 			android:layout_width="match_parent"
@@ -375,15 +376,20 @@
 			android:layout_marginTop="54dp"
 			android:orientation="vertical"
 			android:paddingHorizontal="4dp"
-			android:paddingBottom="4dp">
+			android:paddingBottom="32dp">
 
 			<LinearLayout
+				android:id="@+id/recentUpdatesHeader"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:gravity="center_vertical"
-				android:orientation="horizontal">
+				android:minHeight="52dp"
+				android:orientation="horizontal"
+				android:paddingEnd="4dp"
+				android:paddingBottom="8dp">
 
 				<TextView
+					android:id="@+id/textRecentUpdatesTitle"
 					android:layout_width="0dp"
 					android:layout_height="wrap_content"
 					android:layout_weight="1"
@@ -396,24 +402,27 @@
 					android:id="@+id/switchRecentUpdates"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
+					android:layout_marginStart="8dp"
+					android:minHeight="48dp"
 					android:contentDescription="@string/recent_updates_enabled" />
 			</LinearLayout>
 
-			<TextView
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_marginTop="8dp"
-				android:fontFamily="sans-serif"
-				android:lineSpacingExtra="2dp"
-				android:text="@string/recent_updates_summary"
-				android:textColor="@color/taru_text_muted"
-				android:textSize="15sp" />
-
+			<!-- Summary + list + pagination: hidden when Recent is off -->
 			<LinearLayout
-				android:id="@+id/recentUpdatesContent"
+				android:id="@+id/recentUpdatesBody"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:orientation="vertical">
+
+				<TextView
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="8dp"
+					android:fontFamily="sans-serif"
+					android:lineSpacingExtra="2dp"
+					android:text="@string/recent_updates_summary"
+					android:textColor="@color/taru_text_muted"
+					android:textSize="15sp" />
 
 				<FrameLayout
 					android:id="@+id/recentUpdatesLoading"
@@ -443,6 +452,7 @@
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
 					android:layout_marginTop="24dp"
+					android:layout_marginBottom="16dp"
 					android:gravity="center"
 					android:orientation="vertical" />
 			</LinearLayout>

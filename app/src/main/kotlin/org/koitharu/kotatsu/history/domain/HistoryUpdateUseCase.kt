@@ -18,13 +18,16 @@ class HistoryUpdateUseCase @Inject constructor(
 ) {
 
 	suspend operator fun invoke(manga: Manga, readerState: ReaderState, percent: Float) {
+		// force=true: reader already decided history should be saved (incognito is off).
+		// Without this, NSFW titles with "Incognito for NSFW" mismatches could drop
+		// offline progress (HiveComic downloads etc.) even while the reader tracked pages.
 		historyRepository.addOrUpdate(
 			manga = manga,
 			chapterId = readerState.chapterId,
 			page = readerState.page,
 			scroll = readerState.scroll,
-			percent = percent,
-			force = false,
+			percent = percent.coerceIn(0f, 1f),
+			force = true,
 		)
 	}
 

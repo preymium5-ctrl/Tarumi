@@ -5,10 +5,16 @@ import androidx.annotation.CheckResult
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.koitharu.kotatsu.core.model.LocalMangaSource
+import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.details.data.MangaDetails
+import org.koitharu.kotatsu.local.data.LocalMangaRepository
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaPage
+import org.koitharu.kotatsu.parsers.util.findById
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import javax.inject.Inject
 
@@ -17,16 +23,20 @@ private const val PAGES_TRIM_THRESHOLD = 120
 @ViewModelScoped
 class ChaptersLoader @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	private val localMangaRepository: LocalMangaRepository,
 ) {
 
 	private val chapters = LongSparseArray<MangaChapter>()
 	private val chapterPages = ChapterPages()
 	private val mutex = Mutex()
+	@Volatile
+	private var mangaDetails: MangaDetails? = null
 
 	val size: Int
 		get() = chapters.size()
 
 	suspend fun init(manga: MangaDetails) = mutex.withLock {
+		mangaDetails = manga
 		chapters.clear()
 		manga.allChapters.forEach {
 			chapters.put(it.id, it)
@@ -34,12 +44,14 @@ class ChaptersLoader @Inject constructor(
 	}
 
 	suspend fun loadPrevNextChapter(manga: MangaDetails, currentId: Long, isNext: Boolean): Boolean {
+		mangaDetails = manga
 		val chapters = manga.allChapters
 		val predicate: (MangaChapter) -> Boolean = { it.id == currentId }
 		val index = if (isNext) chapters.indexOfFirst(predicate) else chapters.indexOfLast(predicate)
 		if (index == -1) return false
 		val newChapter = chapters.getOrNull(if (isNext) index + 1 else index - 1) ?: return false
 		val newPages = loadChapter(newChapter.id)
+		if (newPages.isEmpty()) return false
 		mutex.withLock {
 			if (chapterPages.chaptersSize > 1) {
 				// trim pages
@@ -65,8 +77,12 @@ class ChaptersLoader @Inject constructor(
 		val pages = loadChapter(chapterId)
 		return mutex.withLock {
 			chapterPages.clear()
-			chapterPages.addLast(chapterId, pages)
-			pages.isNotEmpty()
+			if (pages.isEmpty()) {
+				false
+			} else {
+				chapterPages.addLast(chapterId, pages)
+				true
+			}
 		}
 	}
 
@@ -92,9 +108,79 @@ class ChaptersLoader @Inject constructor(
 
 	private suspend fun loadChapter(chapterId: Long): List<ReaderPage> {
 		val chapter = checkNotNull(chapters[chapterId]) { "Requested chapter not found" }
-		val repo = mangaRepositoryFactory.create(chapter.source)
-		return repo.getPages(chapter).mapIndexed { index, page ->
+		val pages = resolvePages(chapter)
+		return pages.mapIndexed { index, page ->
 			ReaderPage(page, index, chapterId)
 		}
+	}
+
+	/**
+	 * Prefer offline/downloaded pages first. This fixes NSFW offline reading (e.g. HiveComic)
+	 * where the chapter object still carries the remote source and network getPages fails,
+	 * which previously left the progress bar stuck and blocked next-chapter loading.
+	 */
+	private suspend fun resolvePages(chapter: MangaChapter): List<MangaPage> {
+		val localPages = runCatchingCancellable {
+			resolveLocalPages(chapter)
+		}.onFailure(Throwable::printStackTraceDebug).getOrNull()
+		if (!localPages.isNullOrEmpty()) {
+			return localPages
+		}
+
+		val repo = mangaRepositoryFactory.create(chapter.source)
+		return runCatchingCancellable {
+			repo.getPages(chapter)
+		}.onFailure(Throwable::printStackTraceDebug).getOrDefault(emptyList())
+	}
+
+	private suspend fun resolveLocalPages(chapter: MangaChapter): List<MangaPage>? {
+		val details = mangaDetails
+
+		// 1) Chapter already points at local storage.
+		if (chapter.source == LocalMangaSource || isLocalChapterUrl(chapter.url)) {
+			val pages = localMangaRepository.getPages(
+				chapter.copy(source = LocalMangaSource),
+			)
+			if (pages.isNotEmpty()) return pages
+		}
+
+		// 2) Merged local chapter for this id/url from MangaDetails.
+		val localFromDetails = details?.local?.manga?.chapters?.findById(chapter.id)
+			?: details?.local?.manga?.chapters?.find { it.url == chapter.url }
+		if (localFromDetails != null) {
+			val pages = localMangaRepository.getPages(
+				localFromDetails.copy(source = LocalMangaSource),
+			)
+			if (pages.isNotEmpty()) return pages
+		}
+
+		// 3) Lookup download by remote manga id (HiveComic / any remote source offline).
+		val seed = details?.toManga()
+		if (seed != null) {
+			val saved = if (seed.isLocal) {
+				seed
+			} else {
+				localMangaRepository.findSavedManga(seed, withDetails = true)?.manga
+			}
+			val savedChapter = saved?.chapters?.findById(chapter.id)
+				?: saved?.chapters?.find { it.number == chapter.number && chapter.number > 0f }
+			if (savedChapter != null) {
+				val pages = localMangaRepository.getPages(
+					savedChapter.copy(source = LocalMangaSource),
+				)
+				if (pages.isNotEmpty()) return pages
+			}
+		}
+		return null
+	}
+
+	private fun isLocalChapterUrl(url: String): Boolean {
+		return url.startsWith("file:", ignoreCase = true) ||
+			url.startsWith("content:", ignoreCase = true) ||
+			url.startsWith("zip:", ignoreCase = true) ||
+			url.contains("://") && (
+				url.contains("/storage/") ||
+					url.contains("/Android/data/")
+				)
 	}
 }

@@ -28,7 +28,6 @@ import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.util.PagerNestedScrollHelper
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
-import org.koitharu.kotatsu.core.util.RecyclerViewScrollCallback
 import org.koitharu.kotatsu.core.util.ext.findAppCompatDelegate
 import org.koitharu.kotatsu.core.util.ext.findParentCallback
 import org.koitharu.kotatsu.core.util.ext.observe
@@ -43,7 +42,6 @@ import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.reader.ui.ReaderNavigationCallback
-import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 class ChaptersFragment :
@@ -57,7 +55,8 @@ class ChaptersFragment :
 	private var chaptersAdapter: ChaptersAdapter? = null
 	private var selectionController: ListSelectionController? = null
 	private var isFirstReverseEmission = true
-	private var shouldScrollChaptersToTop = false
+	/** Always open the chapter list at the top (not mid-list / current chapter). */
+	private var shouldScrollChaptersToTop = true
 
 	override val recyclerView: RecyclerView?
 		get() = viewBinding?.recyclerViewChapters
@@ -198,27 +197,18 @@ class ChaptersFragment :
 
 	private fun onChaptersChanged(list: List<ListModel>) {
 		val adapter = chaptersAdapter ?: return
-		if (shouldScrollChaptersToTop) {
+		// Prefer top of the list whenever the chapter list first appears or reverse changes.
+		// Jumping to "current" mid-list was confusing when opening from bookmarks.
+		if (shouldScrollChaptersToTop || adapter.itemCount == 0) {
 			shouldScrollChaptersToTop = false
 			adapter.setItems(list) {
-				viewBinding?.recyclerViewChapters?.scrollToPosition(0)
+				viewBinding?.recyclerViewChapters?.post {
+					viewBinding?.recyclerViewChapters?.scrollToPosition(0)
+				}
 			}
 			return
 		}
-		if (adapter.itemCount == 0) {
-			val position = list.indexOfFirst { it is ChapterListItem && it.isCurrent } - 1
-			if (position > 0) {
-				val offset = (resources.getDimensionPixelSize(R.dimen.chapter_list_item_height) * 0.6).roundToInt()
-				adapter.setItems(
-					list,
-					RecyclerViewScrollCallback(requireViewBinding().recyclerViewChapters, position, offset),
-				)
-			} else {
-				adapter.items = list
-			}
-		} else {
-			adapter.items = list
-		}
+		adapter.items = list
 	}
 
 	private fun onFilterChanged(list: List<ChipsView.ChipModel>) {

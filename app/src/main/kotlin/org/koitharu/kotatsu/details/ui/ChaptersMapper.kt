@@ -39,48 +39,70 @@ fun MangaDetails.mapChapters(
 		localChapters.mapTo(this) { it.id }
 	}
 	val result = ArrayList<ChapterListItem>(ids.size)
-	val localMap = if (localChapters.isNotEmpty()) {
+	// Index local chapters by id and url so offline downloads still match after remaps.
+	val localById = if (localChapters.isNotEmpty()) {
 		localChapters.associateByTo(LinkedHashMap(localChapters.size)) { it.id }
 	} else {
 		null
 	}
-	var isUnread = currentChapterId !in ids
+	val localByUrl = if (localChapters.isNotEmpty()) {
+		localChapters.associateByTo(LinkedHashMap(localChapters.size)) { it.url }
+	} else {
+		null
+	}
+	fun takeLocal(chapter: org.koitharu.kotatsu.parsers.model.MangaChapter): org.koitharu.kotatsu.parsers.model.MangaChapter? {
+		localById?.remove(chapter.id)?.let { matched ->
+			localByUrl?.remove(matched.url)
+			return matched
+		}
+		localByUrl?.remove(chapter.url)?.let { matched ->
+			localById?.remove(matched.id)
+			return matched
+		}
+		return null
+	}
+	fun isCurrentChapter(chapterId: Long): Boolean = chapterId == currentChapterId
+	var isUnread = currentChapterId !in ids &&
+		localChapters.none { it.id == currentChapterId || it.url == remoteChapters.find { r -> r.id == currentChapterId }?.url }
 	if (!isDownloadedOnly || local?.manga?.chapters == null) {
 		for (chapter in remoteChapters) {
-			val local = localMap?.remove(chapter.id)
-			if (chapter.id == currentChapterId) {
+			val local = takeLocal(chapter)
+			val display = local ?: chapter
+			val current = isCurrentChapter(display.id) || isCurrentChapter(chapter.id)
+			if (current) {
 				isUnread = true
 			}
-			result += (local ?: chapter).toListItem(
-				isCurrent = chapter.id == currentChapterId,
+			result += display.toListItem(
+				isCurrent = current,
 				isUnread = isUnread,
 				isNew = isUnread && result.size >= newFrom,
 				isDownloaded = local != null,
-				isBookmarked = chapter.id in bookmarked,
+				isBookmarked = chapter.id in bookmarked || display.id in bookmarked,
 				isGrid = isGrid,
-				progressPercent = if (chapter.id == currentChapterId) currentChapterProgress else -1f,
+				progressPercent = if (current) currentChapterProgress else -1f,
 			)
 		}
 	}
-	if (!localMap.isNullOrEmpty()) {
+	if (!localById.isNullOrEmpty()) {
 		// Keep leftover local-only chapters in reading order (by number), not arbitrary map order.
 		// Appending unsorted leftovers + reverse made "current" jump to the bottom and scrambled lists.
-		val leftovers = localMap.values.sortedWith(
+		val leftovers = localById.values.sortedWith(
 			compareBy<org.koitharu.kotatsu.parsers.model.MangaChapter> { it.number }
 				.thenBy { it.title.orEmpty() },
 		)
 		for (chapter in leftovers) {
-			if (chapter.id == currentChapterId) {
+			val current = isCurrentChapter(chapter.id)
+			if (current) {
 				isUnread = true
 			}
 			result += chapter.toListItem(
-				isCurrent = chapter.id == currentChapterId,
+				isCurrent = current,
 				isUnread = isUnread,
 				isNew = false,
 				isDownloaded = !isLocal,
 				isBookmarked = chapter.id in bookmarked,
 				isGrid = isGrid,
-				progressPercent = if (chapter.id == currentChapterId) currentChapterProgress else -1f,
+				progressPercent = if (current) currentChapterProgress else -1f,
 			)
 		}
 	}

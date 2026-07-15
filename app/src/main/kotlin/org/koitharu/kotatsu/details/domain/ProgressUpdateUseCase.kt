@@ -21,26 +21,30 @@ class ProgressUpdateUseCase @Inject constructor(
 
 	/**
 	 * Refreshes history with **chapter-local** page progress (0..1 within the current chapter),
-	 * not series-wide progress across all chapters.
+	 * not series-wide progress across all chapters. Works online and for offline/downloaded manga.
 	 */
 	suspend operator fun invoke(manga: Manga): Float {
 		val history = database.getHistoryDao().find(manga.id) ?: return PROGRESS_NONE
-		val details = resolveDetails(manga) ?: return history.percent.coerceIn(0f, 1f)
+		val details = resolveDetails(manga)
+			?: return history.percent.takeIf { it >= 0f } ?: PROGRESS_NONE
 
 		val chapter = details.findChapterById(history.chapterId)
-			?: return history.percent.coerceIn(0f, 1f)
-		val chapters = details.getChapters(chapter.branch)
-		val chaptersCount = chapters.size.coerceAtLeast(history.chaptersCount)
+			?: return history.percent.takeIf { it >= 0f } ?: PROGRESS_NONE
+		val branchChapters = details.chapters.orEmpty().let { list ->
+			if (chapter.branch == null) list else list.filter { it.branch == chapter.branch }
+		}
+		val chaptersCount = branchChapters.size.coerceAtLeast(history.chaptersCount)
 
 		val pagesCount = resolvePagesCount(details, chapter)
-		val result = if (pagesCount > 0) {
-			((history.page + 1).toFloat() / pagesCount).coerceIn(0f, 1f)
-		} else {
-			// Offline without page list: keep existing chapter-local percent when valid.
-			history.percent.coerceIn(0f, 1f)
+		val result = when {
+			pagesCount > 0 -> chapterLocalPercent(history.page, pagesCount)
+			history.percent in 0f..1f -> history.percent
+			// Offline without page list: treat having a page index as partial progress.
+			history.page > 0 -> (history.page / (history.page + 1f)).coerceIn(0.05f, 0.95f)
+			else -> 0f
 		}
 
-		if (result != history.percent || history.chaptersCount != chaptersCount) {
+		if (result != history.percent || history.chaptersCount != chaptersCount || chapter.id != history.chapterId) {
 			database.getHistoryDao().update(
 				history.copy(
 					chapterId = chapter.id,
@@ -87,25 +91,44 @@ class ProgressUpdateUseCase @Inject constructor(
 	}
 
 	private suspend fun resolvePagesCount(details: Manga, chapter: MangaChapter): Int {
+		// 1) Local/offline pages first (downloaded chapter).
 		runCatchingCancellable {
-			val local = localMangaRepository.findSavedManga(details, withDetails = true)?.manga
-			val localChapter = local?.chapters?.findById(chapter.id) ?: chapter.takeIf {
-				details.isLocal || local != null
+			val localManga = when {
+				details.isLocal -> details
+				else -> localMangaRepository.findSavedManga(details, withDetails = true)?.manga
 			}
-			if (localChapter != null && (details.isLocal || local != null)) {
-				val localRepo = mangaRepositoryFactory.create(
-					local?.source ?: details.source,
-				)
-				val pages = localRepo.getPages(localChapter)
-				if (pages.isNotEmpty()) return pages.size
+			if (localManga != null) {
+				val localChapter = localManga.chapters?.findById(chapter.id)
+					?: localManga.chapters?.find { it.url == chapter.url }
+					?: chapter.takeIf { details.isLocal }
+				if (localChapter != null) {
+					val localRepo = mangaRepositoryFactory.create(localManga.source)
+					val pages = localRepo.getPages(localChapter)
+					if (pages.isNotEmpty()) return pages.size
+				}
 			}
 		}
-		if (!networkState.value && !details.isLocal) {
+		// 2) Try chapter source directly (local storage source when offline).
+		if (!networkState.value || details.isLocal) {
+			runCatchingCancellable {
+				val repo = mangaRepositoryFactory.create(chapter.source)
+				repo.getPages(chapter).size
+			}.getOrNull()?.takeIf { it > 0 }?.let { return it }
 			return 0
 		}
+		// 3) Online fallback.
 		return runCatchingCancellable {
 			val repo = mangaRepositoryFactory.create(chapter.source)
 			repo.getPages(chapter).size
 		}.getOrDefault(0)
+	}
+
+	private fun chapterLocalPercent(pageIndex: Int, pagesCount: Int): Float {
+		if (pagesCount <= 0) return 0f
+		if (pagesCount == 1) return 1f
+		if (pageIndex >= pagesCount - 1) return 1f
+		if (pagesCount >= 10 && pageIndex >= pagesCount - 3) return 1f
+		if (pagesCount >= 5 && pageIndex >= pagesCount - 2) return 1f
+		return (pageIndex / (pagesCount - 1).toFloat()).coerceIn(0f, 1f)
 	}
 }

@@ -82,7 +82,13 @@ fun downloadItemAD(
 	bind { payloads ->
 		binding.textViewTitle.text = item.manga?.title ?: getString(R.string.unknown)
 		binding.imageViewCover.setImageAsync(item.manga?.coverUrl, item.manga)
-		if (chaptersJob == null || payloads.isEmpty()) {
+		// Re-subscribe on full bind and on progress/status payloads so per-chapter
+		// progress bars update while a download is running (online + offline).
+		val shouldResubscribeChapters = chaptersJob == null ||
+			payloads.isEmpty() ||
+			ListModelDiffCallback.PAYLOAD_ANYTHING_CHANGED in payloads ||
+			ListModelDiffCallback.PAYLOAD_PROGRESS_CHANGED in payloads
+		if (shouldResubscribeChapters) {
 			chaptersJob?.cancel()
 			chaptersJob = lifecycleOwner.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
 				item.chapters.collect { chapters ->

@@ -45,6 +45,10 @@ data class DownloadState(
 		.putLong(DATA_TIMESTAMP, timestamp)
 		.putString(DATA_ERROR, errorMessage)
 		.putInt(DATA_CHAPTERS, downloadedChapters)
+		.putInt(DATA_CURRENT_CHAPTER, currentChapter)
+		.putInt(DATA_TOTAL_CHAPTERS, totalChapters)
+		.putInt(DATA_TOTAL_PAGES, totalPages)
+		.putInt(DATA_CURRENT_PAGE, currentPage)
 		.putBoolean(DATA_INDETERMINATE, isIndeterminate)
 		.putBoolean(DATA_PAUSED, isPaused)
 		.build()
@@ -55,6 +59,10 @@ data class DownloadState(
 		private const val DATA_MAX = "max"
 		private const val DATA_PROGRESS = "progress"
 		private const val DATA_CHAPTERS = "chapter_cnt"
+		private const val DATA_CURRENT_CHAPTER = "cur_chapter"
+		private const val DATA_TOTAL_CHAPTERS = "total_chapters"
+		private const val DATA_TOTAL_PAGES = "total_pages"
+		private const val DATA_CURRENT_PAGE = "cur_page"
 		private const val DATA_ETA = "eta"
 		private const val DATA_STUCK = "stuck"
 		const val DATA_TIMESTAMP = "timestamp"
@@ -81,5 +89,13 @@ data class DownloadState(
 		fun getTimestamp(data: Data): Instant = Instant.ofEpochMilli(data.getLong(DATA_TIMESTAMP, 0L))
 
 		fun getDownloadedChapters(data: Data): Int = data.getInt(DATA_CHAPTERS, 0)
+
+		fun getCurrentChapter(data: Data): Int = data.getInt(DATA_CURRENT_CHAPTER, 0)
+
+		fun getTotalChapters(data: Data): Int = data.getInt(DATA_TOTAL_CHAPTERS, 0)
+
+		fun getTotalPages(data: Data): Int = data.getInt(DATA_TOTAL_PAGES, 0)
+
+		fun getCurrentPage(data: Data): Int = data.getInt(DATA_CURRENT_PAGE, 0)
 	}
 }
