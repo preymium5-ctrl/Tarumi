@@ -14,9 +14,13 @@ Starting with **v1.6.2**, Tarumi ships as a proper **release** APK (`app-release
 
 1. **Join Discord for help and the latest download link:**  
    👉 **https://discord.gg/hVr5KNQRnk**
-2. **Uninstall** the old Tarumi / `app-debug` build on your device
-3. Download **`app-release.apk`** from this GitHub release (or from Discord if mirrors are posted there)
-4. Install the new release APK
+2. **Before uninstalling, back up your data** (so reading progress, bookmarks, and library survive the switch):  
+   **Settings → Backup and restore → Create data backup**  
+   Save the backup file somewhere safe (Files / Drive / PC) — you will need it after installing the new APK.
+3. **Uninstall** the old Tarumi / `app-debug` build on your device
+4. Download **`app-release.apk`** from this GitHub release (or from Discord if mirrors are posted there)
+5. Install the new release APK
+6. **Restore your progress:** open Tarumi → **Settings → Backup and restore → Restore** (pick the backup you saved in step 2)
 
 If something looks wrong after install, **open a ticket or ask in Discord first** — we can walk you through the switch. Do not stay on old `app-debug.apk` builds; they will no longer receive the same release channel updates.
 
