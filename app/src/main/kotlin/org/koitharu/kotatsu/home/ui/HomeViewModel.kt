@@ -406,7 +406,10 @@ class HomeViewModel @Inject constructor(
 
 	/**
 	 * Manga Plus EN list slice — no getDetails.
-	 * [bucket] offsets different home rails so they don't show the same page.
+	 *
+	 * Manga Plus is a [org.koitharu.kotatsu.parsers.core.SinglePageMangaParser]:
+	 * any `offset > 0` returns an **empty list**. We always fetch offset 0, then
+	 * rotate/slice in-memory so Smart / Manhua / Manga rails don't show the same cards.
 	 */
 	private suspend fun loadMangaPlusList(period: Long, bucket: Int, limit: Int): List<Manga> {
 		val repository = mangaRepositoryFactory.create(MANGA_PLUS_EN)
@@ -415,13 +418,21 @@ class HomeViewModel @Inject constructor(
 			SortOrder.UPDATED in repository.sortOrders -> SortOrder.UPDATED
 			else -> repository.defaultSortOrder
 		}
-		val offset = (((period + bucket) % RECOMMENDATION_OFFSET_BUCKETS).toInt() * limit).coerceAtLeast(0)
+		// Must stay 0 — SinglePageMangaParser short-circuits non-zero offsets.
 		val page = withTimeoutOrNull(RECENT_PAGE_TIMEOUT_MS) {
 			runCatchingCancellable {
-				repository.getList(offset, order, MangaListFilter.EMPTY)
-			}.getOrDefault(emptyList())
+				repository.getList(0, order, MangaListFilter.EMPTY)
+			}.onFailure { it.printStackTraceDebug() }.getOrDefault(emptyList())
 		}.orEmpty()
-		return page.distinctById().take(limit)
+		val all = page.distinctById()
+		if (all.isEmpty()) {
+			return emptyList()
+		}
+		// In-memory rail offset (parser ignores non-zero offsets).
+		val start = (
+			((period + bucket) % RECOMMENDATION_OFFSET_BUCKETS).toInt() * limit
+			) % all.size
+		return (all.drop(start) + all.take(start)).take(limit)
 	}
 
 	/**
