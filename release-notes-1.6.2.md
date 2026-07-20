@@ -75,6 +75,10 @@ Tarumi **v1.6.2** is a **release-channel** build with **R8 minify + resource shr
 
 ---
 
+### 🏠 Home recommendations (Manga Plus EN)
+* Fixed **empty Manhua / Manga / Smart recommendation rails**
+* Manga Plus is a single-page source (`offset > 0` always returned empty). Home now always loads the full EN ranking, then slices different cards per rail in memory.
+
 ### 🔧 Other
 * Minor Ask AI ViewModel / AppModule wiring touch-ups for the new image decoders
 * Refresh / chapter-edge messaging cleaned up so false “content removed” style labels are less likely after normal chapter transitions
