@@ -709,6 +709,7 @@ class AskAiViewModel @Inject constructor(
 				ComicType.MANHWA -> "manhwa recommendations"
 				ComicType.MANHUA -> "manhua recommendations"
 				ComicType.MANGA -> "manga recommendations"
+				ComicType.CGI -> "cgi animated comic recommendations"
 				else -> "manga manhwa manhua recommendations"
 			}
 		}

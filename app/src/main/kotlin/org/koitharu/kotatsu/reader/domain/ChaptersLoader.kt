@@ -18,7 +18,8 @@ import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import javax.inject.Inject
 
-private const val PAGES_TRIM_THRESHOLD = 120
+/** Keep this many chapters in continuous (webtoon) memory — page-count trim was too aggressive. */
+private const val MAX_CHAPTERS_IN_MEMORY = 5
 
 @ViewModelScoped
 class ChaptersLoader @Inject constructor(
@@ -43,24 +44,33 @@ class ChaptersLoader @Inject constructor(
 		}
 	}
 
+	/** Ensure [mangaDetails] chapter map includes every chapter id from details (branch switches). */
+	fun ensureChapter(chapter: MangaChapter) {
+		if (chapters[chapter.id] == null) {
+			chapters.put(chapter.id, chapter)
+		}
+	}
+
 	suspend fun loadPrevNextChapter(manga: MangaDetails, currentId: Long, isNext: Boolean): Boolean {
 		mangaDetails = manga
-		val chapters = manga.allChapters
+		// Refresh chapter map in case details were reloaded
+		manga.allChapters.forEach { ensureChapter(it) }
+		val list = manga.allChapters
 		val predicate: (MangaChapter) -> Boolean = { it.id == currentId }
-		val index = if (isNext) chapters.indexOfFirst(predicate) else chapters.indexOfLast(predicate)
+		val index = if (isNext) list.indexOfFirst(predicate) else list.indexOfLast(predicate)
 		if (index == -1) return false
-		val newChapter = chapters.getOrNull(if (isNext) index + 1 else index - 1) ?: return false
+		val newChapter = list.getOrNull(if (isNext) index + 1 else index - 1) ?: return false
+		ensureChapter(newChapter)
+		if (hasPages(newChapter.id)) return true
 		val newPages = loadChapter(newChapter.id)
 		if (newPages.isEmpty()) return false
 		mutex.withLock {
-			if (chapterPages.chaptersSize > 1) {
-				// trim pages
-				if (chapterPages.size > PAGES_TRIM_THRESHOLD) {
-					if (isNext) {
-						chapterPages.removeFirst()
-					} else {
-						chapterPages.removeLast()
-					}
+			// Trim oldest chapters so continuous webtoon can keep loading without OOM.
+			while (chapterPages.chaptersSize >= MAX_CHAPTERS_IN_MEMORY) {
+				if (isNext) {
+					chapterPages.removeFirst()
+				} else {
+					chapterPages.removeLast()
 				}
 			}
 			if (isNext) {
@@ -74,6 +84,10 @@ class ChaptersLoader @Inject constructor(
 
 	@CheckResult
 	suspend fun loadSingleChapter(chapterId: Long): Boolean {
+		// Recover chapter from details if missing from the map
+		if (chapters[chapterId] == null) {
+			mangaDetails?.allChapters?.find { it.id == chapterId }?.let { ensureChapter(it) }
+		}
 		val pages = loadChapter(chapterId)
 		return mutex.withLock {
 			chapterPages.clear()
@@ -87,6 +101,7 @@ class ChaptersLoader @Inject constructor(
 	}
 
 	fun peekChapter(chapterId: Long): MangaChapter? = chapters[chapterId]
+		?: mangaDetails?.allChapters?.find { it.id == chapterId }
 
 	fun hasPages(chapterId: Long): Boolean {
 		return chapterId in chapterPages
@@ -107,8 +122,12 @@ class ChaptersLoader @Inject constructor(
 	fun snapshot() = chapterPages.toList()
 
 	private suspend fun loadChapter(chapterId: Long): List<ReaderPage> {
-		val chapter = checkNotNull(chapters[chapterId]) { "Requested chapter not found" }
+		val chapter = chapters[chapterId]
+			?: mangaDetails?.allChapters?.find { it.id == chapterId }
+			?: return emptyList()
+		ensureChapter(chapter)
 		val pages = resolvePages(chapter)
+		if (pages.isEmpty()) return emptyList()
 		return pages.mapIndexed { index, page ->
 			ReaderPage(page, index, chapterId)
 		}

@@ -19,6 +19,13 @@ import kotlinx.coroutines.runInterruptible
 import org.aomedia.avif.android.AvifDecoder
 import org.koitharu.kotatsu.core.util.ext.readByteBuffer
 
+/**
+ * Static AVIF still decoder (libavif).
+ *
+ * Animated AVIF (`ftyp` brand `avis` / `avifs`) is intentionally NOT handled here —
+ * [coil3.gif.AnimatedImageDecoder] (Android ImageDecoder) plays those multi-frame
+ * sequences. Claiming them here would freeze motion CGI (e.g. Hitomi GameCG) on frame 1.
+ */
 class AvifImageDecoder(
 	private val source: ImageSource,
 	private val options: Options,
@@ -90,7 +97,12 @@ class AvifImageDecoder(
 		override fun hashCode() = javaClass.hashCode()
 
 		private fun isApplicable(result: SourceFetchResult): Boolean {
-			return result.mimeType == "image/avif"
+			val mime = result.mimeType
+			val looksAvif = mime == "image/avif" ||
+				result.source.fileOrNull()?.toString()?.endsWith(".avif", ignoreCase = true) == true
+			if (!looksAvif) return false
+			// Leave animated AVIF (`avis`) to AnimatedAvifDecoder so CGI motion plays.
+			return !AnimatedAvifDecoder.isAnimatedAvif(result.source.source())
 		}
 	}
 }

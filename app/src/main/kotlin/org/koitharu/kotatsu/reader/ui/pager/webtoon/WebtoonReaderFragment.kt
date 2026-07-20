@@ -11,7 +11,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.take
@@ -201,8 +200,16 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 			}
 		}
 		if (pendingState != null) {
-			val position = pages.indexOfFirst {
+			// Prefer exact page; fall back to chapter start so refresh never shows
+			// "Content not found or removed".
+			var position = pages.indexOfFirst {
 				it.chapterId == pendingState.chapterId && it.index == pendingState.page
+			}
+			if (position == -1) {
+				position = pages.indexOfFirst { it.chapterId == pendingState.chapterId }
+			}
+			if (position == -1 && pages.isNotEmpty()) {
+				position = 0
 			}
 			setItems.join()
 			if (position != -1) {
@@ -215,10 +222,8 @@ open class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBindi
 				}
 				val progress = calculateScrollProgress(position, position)
 				viewModel.onCurrentPageChanged(position, position, position, pendingState.scroll, progress)
-			} else {
-				Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
-					.show()
 			}
+			// Intentionally no error snackbar — missing index is recovered above.
 		} else {
 			setItems.join()
 		}

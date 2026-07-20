@@ -9,6 +9,7 @@ enum class ComicType(val label: String) {
 	MANHUA("Manhua"),
 	MANHWA("Manhwa"),
 	MANGA("Manga"),
+	CGI("CGI"),
 	COMIC("Comic"),
 }
 
@@ -43,6 +44,11 @@ fun Manga.detectComicType(): ComicType {
 	when (sourceType) {
 		ContentType.MANHWA -> return ComicType.MANHWA
 		ContentType.MANHUA -> return ComicType.MANHUA
+		// Gallery CG types (artist/game CGI + image sets) — surface as CGI in the type chip.
+		ContentType.ARTIST_CG,
+		ContentType.GAME_CG,
+		ContentType.IMAGE_SET,
+		-> return ComicType.CGI
 		ContentType.MANGA,
 		ContentType.ONE_SHOT,
 		ContentType.DOUJINSHI,
@@ -59,6 +65,14 @@ fun Manga.detectComicType(): ComicType {
 			t == "manhwa" || k == "manhwa" || t == "webtoon" || k == "webtoon" -> ComicType.MANHWA
 			t == "manhua" || k == "manhua" -> ComicType.MANHUA
 			t == "manga" || k == "manga" -> ComicType.MANGA
+			// CGI / motion / 3D-generated comic tags from parsers
+			t == "cgi" || k == "cgi" ||
+				t == "artist cg" || k == "artist cg" || k == "artist_cg" ||
+				t == "game cg" || k == "game cg" || k == "game_cg" ||
+				t.contains("3d") && (t.contains("cgi") || t.contains("render")) ||
+				t.contains("motion comic") || t.contains("animated") && t.contains("cgi") ||
+				k.contains("artistcg") || k.contains("gamecg")
+				-> ComicType.CGI
 			else -> null
 		}
 	}
@@ -76,6 +90,14 @@ fun Manga.detectComicType(): ComicType {
 		description?.cleanTypeNoise(source)?.let(::add)
 	}.map { it.lowercase(Locale.ROOT) }
 
+	val hasCgi = labels.any {
+		it.hasWholeWord("cgi") ||
+			it.contains("artist cg") ||
+			it.contains("game cg") ||
+			it.contains("motion comic") ||
+			it.contains("3d cgi") ||
+			it.contains("3d render")
+	}
 	val hasManhwa = labels.any {
 		it.hasWholeWord("manhwa") ||
 			it.hasWholeWord("webtoon") ||
@@ -96,11 +118,15 @@ fun Manga.detectComicType(): ComicType {
 
 	// Manhwa before manhua — previously manhua matched first and mislabeled manhwa titles.
 	return when {
+		hasCgi -> ComicType.CGI
 		hasManhwa -> ComicType.MANHWA
 		hasManhua -> ComicType.MANHUA
 		hasManga -> ComicType.MANGA
 		sourceType == ContentType.MANHWA -> ComicType.MANHWA
 		sourceType == ContentType.MANHUA -> ComicType.MANHUA
+		sourceType == ContentType.ARTIST_CG ||
+			sourceType == ContentType.GAME_CG ||
+			sourceType == ContentType.IMAGE_SET -> ComicType.CGI
 		sourceType == ContentType.MANGA ||
 			sourceType == ContentType.ONE_SHOT ||
 			sourceType == ContentType.DOUJINSHI -> ComicType.MANGA

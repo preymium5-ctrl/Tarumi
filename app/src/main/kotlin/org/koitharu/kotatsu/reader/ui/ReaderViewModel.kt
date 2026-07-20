@@ -238,19 +238,17 @@ class ReaderViewModel @Inject constructor(
             // Drop parser page-list cache + decoded page files so we re-fetch from network.
             contentCache.clear(manga.source)
             pageLoader.invalidate(clearCache = true)
-            // Clear UI content first so the reader is forced to rebind (same page IDs
-            // otherwise look like a no-op and the old bitmaps stay on screen).
-            content.value = ReaderContent(emptyList(), state)
+            // Keep existing pages on screen until the new list is ready (avoids empty flash
+            // and "Content not found or removed" snackbars during refresh).
             val ok = chaptersLoader.loadSingleChapter(state.chapterId)
             if (!ok) {
-                // Fall back to a full reload of the reader pipeline.
                 loadImpl()
                 return@launchLoadingJob
             }
-            // Keep page index if possible, but clamp if chapter length changed.
             val pages = chaptersLoader.snapshot()
+            val chapterPages = pages.filter { it.chapterId == state.chapterId }
             val clamped = state.copy(
-                page = state.page.coerceIn(0, (pages.size - 1).coerceAtLeast(0)),
+                page = state.page.coerceIn(0, (chapterPages.size - 1).coerceAtLeast(0)),
             )
             readingState.value = clamped
             content.value = ReaderContent(pages, clamped)
@@ -404,41 +402,49 @@ class ReaderViewModel @Inject constructor(
     ) {
         customScrollProgress = scrollProgress
         val prevJob = stateChangeJob
-        val pages = content.value.pages // capture immediately
+        val capturedPages = content.value.pages
         stateChangeJob = launchJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
-            // Wait for any in-progress loading, but with a timeout to avoid blocking forever
+            // Wait briefly for an in-flight chapter load so positions stay coherent.
             withTimeoutOrNull(5_000L) { loadingJob?.join() }
-            if (pages.size != content.value.pages.size) {
-                return@launchJob // TODO
-            }
-            val visibleStates = pages.visibleReaderStates(lowerPos, upperPos, selectedPos, scroll)
+            ensureActive()
+            // Always use the latest page list (previous code bailed when size changed,
+            // which stopped webtoon next-chapter auto-load after the first append).
+            val livePages = content.value.pages.ifEmpty { capturedPages }
+            if (livePages.isEmpty()) return@launchJob
+
+            val safeUpper = upperPos.coerceIn(0, livePages.lastIndex)
+            val safeLower = lowerPos.coerceIn(0, livePages.lastIndex)
+            val safeSelected = selectedPos.coerceIn(safeLower, safeUpper)
+
+            val visibleStates = livePages.visibleReaderStates(safeLower, safeUpper, safeSelected, scroll)
             if (visibleStates.isNotEmpty()) {
                 visibleReadingStates = visibleStates
             }
-            pages.getOrNull(selectedPos.coerceIn(lowerPos, upperPos))?.let { page ->
+            livePages.getOrNull(safeSelected)?.let { page ->
                 readingState.update { cs ->
                     cs?.copy(chapterId = page.chapterId, page = page.index, scroll = scroll)
                 }
             }
             notifyStateChanged()
-            if (pages.isEmpty() || loadingJob?.isActive == true) {
-                return@launchJob
-            }
-            ensureActive()
+
+            if (loadingJob?.isActive == true) return@launchJob
+
             val mode = readerMode.value
-            val autoLoadAllowed = mode != ReaderMode.VERTICAL &&
-                (mode != ReaderMode.WEBTOON || !isWebtoonPullGestureEnabled.value)
+            // Always auto-append adjacent chapters in webtoon (seamless scroll).
+            // Pull gesture still switches chapters, but must not block continuous load.
+            val autoLoadAllowed = mode != ReaderMode.VERTICAL
             if (autoLoadAllowed) {
-                if (upperPos >= pages.lastIndex - BOUNDS_PAGE_OFFSET) {
-                    loadPrevNextChapter(pages.last().chapterId, isNext = true)
+                val lastIdx = livePages.lastIndex
+                if (safeUpper >= lastIdx - BOUNDS_PAGE_OFFSET) {
+                    loadPrevNextChapter(livePages.last().chapterId, isNext = true)
                 }
-                if (lowerPos <= BOUNDS_PAGE_OFFSET) {
-                    loadPrevNextChapter(pages.first().chapterId, isNext = false)
+                if (safeLower <= BOUNDS_PAGE_OFFSET) {
+                    loadPrevNextChapter(livePages.first().chapterId, isNext = false)
                 }
             }
             if (pageLoader.isPrefetchApplicable()) {
-                pageLoader.prefetch(pages.trySublist(upperPos + 1, upperPos + PREFETCH_LIMIT))
+                pageLoader.prefetch(livePages.trySublist(safeUpper + 1, safeUpper + PREFETCH_LIMIT))
             }
         }
     }
@@ -600,12 +606,18 @@ class ReaderViewModel @Inject constructor(
         if (idx < 0) return
         val adjacentChapter = allChapters.getOrNull(if (isNext) idx + 1 else idx - 1) ?: return
         if (chaptersLoader.hasPages(adjacentChapter.id)) return
+        // Don't stack concurrent loads (would cancel each other mid-fetch)
+        if (loadingJob?.isActive == true) return
 
         val prevJob = loadingJob
         loadingJob = launchLoadingJob(Dispatchers.Default + EventExceptionHandler(onLoadingError)) {
             prevJob?.cancelAndJoin()
-            chaptersLoader.loadPrevNextChapter(details, currentId, isNext)
-            content.value = ReaderContent(chaptersLoader.snapshot(), readingState.value)
+            val ok = chaptersLoader.loadPrevNextChapter(details, currentId, isNext)
+            if (ok) {
+                // Keep current reading position; only grow the continuous page list.
+                content.value = ReaderContent(chaptersLoader.snapshot(), readingState.value)
+            }
+            // If load failed, leave current content as-is so the user isn't stuck on an empty list.
         }
     }
 

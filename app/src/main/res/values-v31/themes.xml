@@ -10,7 +10,7 @@
 	<style name="Theme.Kotatsu" parent="Base.V31.Kotatsu" />
 
 	<style name="Theme.Kotatsu.Splash" parent="Theme.Material3.DayNight.NoActionBar">
-		<!-- System splash: same as video frame 0, no centered app icon. -->
+		<!-- System splash: same as video frame 0, no centered app icon. Immersive open. -->
 		<item name="android:windowBackground">@drawable/bg_splash_root</item>
 		<item name="android:windowSplashScreenBackground">@color/splash_video_background</item>
 		<item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_transparent_icon</item>
@@ -20,6 +20,8 @@
 		<item name="android:navigationBarColor">@android:color/transparent</item>
 		<item name="android:windowLightStatusBar">false</item>
 		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
+		<item name="android:windowFullscreen">true</item>
+		<item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
 		<item name="windowActionBar">false</item>
 		<item name="windowNoTitle">true</item>
 	</style>

@@ -7,11 +7,14 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.VideoView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
@@ -21,6 +24,7 @@ import javax.inject.Inject
 /**
  * Cold-start intro: plays the branded splash video (muted, ~3s), then [MainActivity].
  * System splash uses a transparent icon + first-frame backdrop so the static logo never appears.
+ * Fully immersive: no Android status bar (or nav bar) over the open animation.
  */
 @SuppressLint("CustomSplashScreen")
 @AndroidEntryPoint
@@ -42,7 +46,7 @@ class SplashActivity : AppCompatActivity() {
 		}
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
-		WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
+		hideSystemBarsForSplash()
 
 		if (savedInstanceState != null) {
 			goToMain()
@@ -56,6 +60,8 @@ class SplashActivity : AppCompatActivity() {
 		}
 
 		setContentView(R.layout.activity_splash)
+		// Content view can recreate the controller target — re-apply immersive mode.
+		hideSystemBarsForSplash()
 		val video = findViewById<VideoView>(R.id.video_splash)
 		val placeholder = findViewById<ImageView>(R.id.image_splash_placeholder)
 		videoView = video
@@ -118,6 +124,13 @@ class SplashActivity : AppCompatActivity() {
 		}
 	}
 
+	override fun onWindowFocusChanged(hasFocus: Boolean) {
+		super.onWindowFocusChanged(hasFocus)
+		if (hasFocus && !launched) {
+			hideSystemBarsForSplash()
+		}
+	}
+
 	override fun onDestroy() {
 		safetyRunnable?.let { window.decorView.removeCallbacks(it) }
 		safetyRunnable = null
@@ -127,6 +140,26 @@ class SplashActivity : AppCompatActivity() {
 		}
 		videoView = null
 		super.onDestroy()
+	}
+
+	/** Hide status (and nav) bars so the open video fills the screen edge-to-edge. */
+	private fun hideSystemBarsForSplash() {
+		WindowCompat.setDecorFitsSystemWindows(window, false)
+		@Suppress("DEPRECATION")
+		window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			window.attributes = window.attributes.apply {
+				layoutInDisplayCutoutMode =
+					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+			}
+		}
+		val controller = WindowCompat.getInsetsController(window, window.decorView)
+		controller.isAppearanceLightStatusBars = false
+		controller.isAppearanceLightNavigationBars = false
+		controller.systemBarsBehavior =
+			WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+		// Status bar is the visible strip the user reported; hide all system bars for immersion.
+		controller.hide(WindowInsetsCompat.Type.systemBars())
 	}
 
 	private fun goToMain() {

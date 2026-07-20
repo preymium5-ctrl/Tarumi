@@ -812,6 +812,7 @@ class DetailsActivity :
 		ComicType.MANGA -> getColor(R.color.common_yellow)
 		ComicType.MANHWA -> getColor(R.color.blue_primary)
 		ComicType.MANHUA -> getColor(R.color.common_red)
+		ComicType.CGI -> getColor(R.color.common_purple)
 		ComicType.COMIC -> getColor(R.color.taru_accent)
 	}
 

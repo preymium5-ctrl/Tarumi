@@ -34,6 +34,7 @@ import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.backups.domain.BackupObserver
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
+import org.koitharu.kotatsu.core.image.AnimatedAvifDecoder
 import org.koitharu.kotatsu.core.image.AvifImageDecoder
 import org.koitharu.kotatsu.core.image.CbzFetcher
 import org.koitharu.kotatsu.core.image.MangaSourceHeaderInterceptor
@@ -134,13 +135,17 @@ interface AppModule {
 							connectivityChecker = { networkStateProvider.get() },
 						),
 					)
+					// GIF / animated WebP / stock animated HEIF
 					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-						add(AnimatedImageDecoder.Factory())
+						add(AnimatedImageDecoder.Factory(enforceMinimumFrameDelay = true))
+						// Hitomi GameCG etc. use animated AVIF brand "avis" (not covered above)
+						add(AnimatedAvifDecoder.Factory(enforceMinimumFrameDelay = true))
 					} else {
 						add(GifDecoder.Factory())
 					}
 					add(SvgDecoder.Factory())
 					add(CbzFetcher.Factory())
+					// Static AVIF only — skips avis so motion is not frozen on frame 1
 					add(AvifImageDecoder.Factory())
 					add(faviconFetcherFactory)
 					add(MangaPageKeyer())

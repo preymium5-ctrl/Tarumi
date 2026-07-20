@@ -341,7 +341,11 @@ class PageLoader @Inject constructor(
 		fun createPageRequest(pageUrl: String, mangaSource: MangaSource) = Request.Builder()
 			.url(pageUrl)
 			.get()
-			.header(CommonHeaders.ACCEPT, "image/webp,image/png;q=0.9,image/jpeg,*/*;q=0.8")
+			// Prefer animated-capable types so CGI/motion pages can deliver GIF / animated WebP.
+			.header(
+				CommonHeaders.ACCEPT,
+				"image/avif,image/webp,image/apng,image/gif,image/png;q=0.9,image/jpeg,*/*;q=0.8",
+			)
 			.cacheControl(CommonHeaders.CACHE_CONTROL_NO_STORE)
 			.tag(MangaSource::class.java, mangaSource)
 			.build()

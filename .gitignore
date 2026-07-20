@@ -54,3 +54,6 @@ tmp_apk_icon_extract/
 # Cloudflare Worker local secrets
 cloudflare-ai-worker/.dev.vars
 cloudflare-ai-worker/.wrangler/
+
+signing-backup.local.txt
+

@@ -34,6 +34,90 @@ fun File.takeIfWriteable() = takeIf { it.isWriteable() }
 
 fun File.isNotEmpty() = length() != 0L
 
+/**
+ * Detect GIF / animated WebP / APNG / animated AVIF from file magic bytes.
+ * Hitomi GameCG motion frames are often **animated AVIF** (`ftyp` brand `avis`).
+ */
+@Blocking
+fun File.isAnimatedImageFile(): Boolean {
+	if (!isFile || !canRead() || length() < 12L) return false
+	// Name-based fast path (gif/apng/webm)
+	if (name.isAnimatedImage()) return true
+	return runCatching {
+		inputStream().use { input ->
+			val header = ByteArray(64)
+			val n = input.read(header)
+			if (n < 12) return@use false
+			// GIF87a / GIF89a
+			if (header[0] == 'G'.code.toByte() &&
+				header[1] == 'I'.code.toByte() &&
+				header[2] == 'F'.code.toByte()
+			) {
+				return@use true
+			}
+			// RIFF....WEBP
+			val isWebp = header[0] == 'R'.code.toByte() &&
+				header[1] == 'I'.code.toByte() &&
+				header[2] == 'F'.code.toByte() &&
+				header[3] == 'F'.code.toByte() &&
+				header[8] == 'W'.code.toByte() &&
+				header[9] == 'E'.code.toByte() &&
+				header[10] == 'B'.code.toByte() &&
+				header[11] == 'P'.code.toByte()
+			if (isWebp) {
+				val probe = ByteArray(minOf(length(), 256_000L).toInt())
+				System.arraycopy(header, 0, probe, 0, n)
+				val more = input.read(probe, n, probe.size - n).coerceAtLeast(0)
+				return@use probe.containsAsciiChunk("ANIM", n + more) ||
+					probe.containsAsciiChunk("ANMF", n + more)
+			}
+			// PNG signature → look for acTL (APNG)
+			val isPng = header[0] == 0x89.toByte() &&
+				header[1] == 'P'.code.toByte() &&
+				header[2] == 'N'.code.toByte() &&
+				header[3] == 'G'.code.toByte()
+			if (isPng) {
+				val probe = ByteArray(minOf(length(), 64_000L).toInt())
+				System.arraycopy(header, 0, probe, 0, n)
+				val more = input.read(probe, n, probe.size - n).coerceAtLeast(0)
+				return@use probe.containsAsciiChunk("acTL", n + more)
+			}
+			// ISO BMFF (AVIF/HEIF): size(4) + "ftyp"(4) + major_brand(4) + …
+			// Animated AVIF uses major/compatible brand "avis" (or "avifs").
+			val isFtyp = n >= 12 &&
+				header[4] == 'f'.code.toByte() &&
+				header[5] == 't'.code.toByte() &&
+				header[6] == 'y'.code.toByte() &&
+				header[7] == 'p'.code.toByte()
+			if (isFtyp) {
+				val probe = ByteArray(minOf(length(), 8_192L).toInt())
+				System.arraycopy(header, 0, probe, 0, n)
+				val more = input.read(probe, n, probe.size - n).coerceAtLeast(0)
+				val len = n + more
+				// brands are 4-byte ASCII tokens after ftyp
+				return@use probe.containsAsciiChunk("avis", len) ||
+					probe.containsAsciiChunk("avifs", len)
+			}
+			false
+		}
+	}.getOrDefault(false)
+}
+
+private fun ByteArray.containsAsciiChunk(tag: String, length: Int): Boolean {
+	if (tag.length != 4 || length < 4) return false
+	val a = tag[0].code.toByte()
+	val b = tag[1].code.toByte()
+	val c = tag[2].code.toByte()
+	val d = tag[3].code.toByte()
+	val limit = length - 3
+	for (i in 0 until limit) {
+		if (this[i] == a && this[i + 1] == b && this[i + 2] == c && this[i + 3] == d) {
+			return true
+		}
+	}
+	return false
+}
+
 @Blocking
 fun ZipFile.readText(entry: ZipEntry) = getInputStream(entry).use { output ->
 	output.bufferedReader().use(BufferedReader::readText)

@@ -72,7 +72,25 @@ fun <T> Collection<T>.joinToStringWithLimit(context: Context, limit: Int, transf
 
 fun String.isHttpUrl() = startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
 
-fun String.isAnimatedImage() = false
+/**
+ * Whether this URL/path likely points at a moving/animated page image.
+ * Used by the reader to route frames through Coil's animated decoder (GIF/WebP animation)
+ * instead of static SubsamplingScaleImageView (which only shows the first frame).
+ *
+ * Note: static `.webp` is intentionally not always treated as animated — file magic
+ * detection in [java.io.File.isAnimatedImageFile] covers true animated WebP after download.
+ */
+fun String.isAnimatedImage(): Boolean {
+	val path = substringBefore('#').substringBefore('?').lowercase()
+	return path.endsWith(".gif") ||
+		path.endsWith(".apng") ||
+		path.endsWith(".awebp") ||
+		path.endsWith(".webm") ||
+		contains("animated=1", ignoreCase = true) ||
+		contains("format=gif", ignoreCase = true) ||
+		contains("mime=image/gif", ignoreCase = true) ||
+		contains("mime=image/apng", ignoreCase = true)
+}
 
 fun concatStrings(context: Context, a: String?, b: String?): String? = when {
 	a.isNullOrEmpty() && b.isNullOrEmpty() -> null

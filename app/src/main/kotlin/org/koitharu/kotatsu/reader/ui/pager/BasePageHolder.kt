@@ -24,9 +24,12 @@ import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.ui.list.lifecycle.LifecycleAwareViewHolder
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.isAnimatedImage
+import org.koitharu.kotatsu.core.util.ext.isAnimatedImageFile
+import org.koitharu.kotatsu.core.util.ext.isFileUri
 import org.koitharu.kotatsu.core.util.ext.isLowRamDevice
 import org.koitharu.kotatsu.core.util.ext.isSerializable
 import org.koitharu.kotatsu.core.util.ext.observe
+import org.koitharu.kotatsu.core.util.ext.toFileOrNull
 import org.koitharu.kotatsu.databinding.LayoutPageInfoBinding
 import org.koitharu.kotatsu.parsers.util.ifZero
 import org.koitharu.kotatsu.reader.domain.PageLoader
@@ -34,6 +37,7 @@ import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
 import org.koitharu.kotatsu.reader.ui.pager.vm.PageState
 import org.koitharu.kotatsu.reader.ui.pager.vm.PageViewModel
 import org.koitharu.kotatsu.reader.ui.pager.webtoon.WebtoonHolder
+import com.davemorrissey.labs.subscaleview.ImageSource as SsivImageSource
 
 abstract class BasePageHolder<B : ViewBinding>(
 	protected val binding: B,
@@ -164,20 +168,18 @@ abstract class BasePageHolder<B : ViewBinding>(
 	protected open fun onStateChanged(state: PageState) {
 		bindingInfo.layoutError.isVisible = state is PageState.Error
 		bindingInfo.layoutProgress.isGone = state.isFinalState()
+		// Spinner only — hide status text (Loading / Preparing / Processing / %).
+		bindingInfo.textViewStatus.isVisible = false
 		val progress = (state as? PageState.Loading)?.progress ?: -1
 		if (progress in 0..100) {
 			bindingInfo.progressBar.isIndeterminate = false
 			bindingInfo.progressBar.setProgressCompat(progress, true)
-			bindingInfo.textViewStatus.text = context.getString(R.string.percent_string_pattern, progress.toString())
 		} else {
 			bindingInfo.progressBar.isIndeterminate = true
-			bindingInfo.textViewStatus.setText(R.string.loading_)
 		}
-		val isAnimated = boundData?.url?.isAnimatedImage() == true
+		val isAnimated = isAnimatedPage(boundData, state)
 		when (state) {
-			is PageState.Converting -> {
-				bindingInfo.textViewStatus.setText(R.string.processing_)
-			}
+			is PageState.Converting -> Unit
 
 			is PageState.Empty -> Unit
 
@@ -197,7 +199,6 @@ abstract class BasePageHolder<B : ViewBinding>(
 					showAnimated(boundData!!, state)
 					bindingInfo.layoutProgress.isGone = true
 				} else {
-					bindingInfo.textViewStatus.setText(R.string.preparing_)
 					ssiv.setImage(state.source)
 				}
 			}
@@ -214,9 +215,16 @@ abstract class BasePageHolder<B : ViewBinding>(
 
 	private fun showAnimated(page: ReaderPage, loadedState: PageState.Loaded) {
 		ssiv.isVisible = false
-		animatedView?.let {
-			it.isVisible = true
-			it.setImageAsync(page)
+		ssiv.recycle()
+		animatedView?.let { view ->
+			view.isVisible = true
+			// Prefer the downloaded local URI so offline CGI / animated AVIF still plays.
+			val localUri = (loadedState.source as? SsivImageSource.Uri)?.uri
+			if (localUri != null) {
+				view.setImageAsync(localUri.toString())
+			} else {
+				view.setImageAsync(page)
+			}
 		}
 		viewModel.state.update { currentState ->
 			if (currentState is PageState.Loaded) {
@@ -225,6 +233,22 @@ abstract class BasePageHolder<B : ViewBinding>(
 				currentState
 			}
 		}
+	}
+
+	/**
+	 * URL extension first (fast), then magic-byte scan of the downloaded file.
+	 * Hitomi GameCG motion is typically **animated AVIF** (`avis` brand) — only magic finds it.
+	 */
+	private fun isAnimatedPage(page: ReaderPage?, state: PageState): Boolean {
+		if (page?.url?.isAnimatedImage() == true) return true
+		val uri = when (state) {
+			is PageState.Loaded -> (state.source as? SsivImageSource.Uri)?.uri
+			is PageState.Shown -> (state.source as? SsivImageSource.Uri)?.uri
+			else -> null
+		} ?: return false
+		if (uri.toString().isAnimatedImage()) return true
+		if (!uri.isFileUri()) return false
+		return uri.toFileOrNull()?.isAnimatedImageFile() == true
 	}
 
 	protected fun SubsamplingScaleImageView.applyDownSampling(isForeground: Boolean) {
