@@ -153,6 +153,12 @@
             android:summary="@string/recent_updates_enabled_summary"
             android:title="@string/recent_updates_enabled" />
 
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="home_continue_reading_enabled"
+            android:summary="@string/continue_reading_enabled_summary"
+            android:title="@string/continue_reading_enabled" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

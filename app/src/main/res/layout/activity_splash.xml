@@ -4,6 +4,8 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:background="@drawable/bg_splash_root"
+	android:clipChildren="true"
+	android:clipToPadding="true"
 	android:fitsSystemWindows="false">
 
 	<!-- Holds frame 0 until VideoView is ready (avoids logo / black flash). -->
@@ -15,7 +17,7 @@
 		android:scaleType="centerCrop"
 		android:src="@drawable/splash_open_first_frame" />
 
-	<!-- Full-screen muted intro clip (exactly ~3s, no audio track). -->
+	<!-- Full-screen muted intro clip; overflow clipped so baked nav/status chrome stays off-screen. -->
 	<VideoView
 		android:id="@+id/video_splash"
 		android:layout_width="match_parent"

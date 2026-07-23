@@ -40,6 +40,8 @@
     <string name="recent_updates_summary">Fresh chapter drops, grouped by title so it is quicker to scan and jump back in.</string>
     <string name="recent_updates_enabled">Recent Updates on Home</string>
     <string name="recent_updates_enabled_summary">Show the Recent Updates section and fetch new chapters. Turn off to hide it and save data/battery.</string>
+    <string name="continue_reading_enabled">Continue Reading on Home</string>
+    <string name="continue_reading_enabled_summary">Show the Continue Reading section on the Home screen. Turn off to hide it (your history is still saved).</string>
     <string name="recent_back">Back</string>
     <string name="recent_next">Next</string>
     <string name="continue_reading">Continue Reading</string>

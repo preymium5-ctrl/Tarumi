@@ -57,6 +57,7 @@ class ChaptersFragment :
 	private var isFirstReverseEmission = true
 	/** Always open the chapter list at the top (not mid-list / current chapter). */
 	private var shouldScrollChaptersToTop = true
+	private var pendingScrollToTop = true
 
 	override val recyclerView: RecyclerView?
 		get() = viewBinding?.recyclerViewChapters
@@ -68,6 +69,9 @@ class ChaptersFragment :
 
 	override fun onViewBindingCreated(binding: FragmentChaptersBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
+		// New view = always start at the first row (notifications / bookmarks / details).
+		shouldScrollChaptersToTop = true
+		pendingScrollToTop = true
 		chaptersAdapter = ChaptersAdapter(this) { item ->
 			onDownloadClick(item)
 		}
@@ -197,18 +201,39 @@ class ChaptersFragment :
 
 	private fun onChaptersChanged(list: List<ListModel>) {
 		val adapter = chaptersAdapter ?: return
-		// Prefer top of the list whenever the chapter list first appears or reverse changes.
-		// Jumping to "current" mid-list was confusing when opening from bookmarks.
-		if (shouldScrollChaptersToTop || adapter.itemCount == 0) {
+		// Always land on the first chapter row when the list opens or is rebuilt.
+		// Opening from notifications / bookmarks previously left the list mid-scroll.
+		val pinTop = shouldScrollChaptersToTop || pendingScrollToTop || adapter.itemCount == 0
+		if (pinTop) {
 			shouldScrollChaptersToTop = false
+			pendingScrollToTop = false
 			adapter.setItems(list) {
-				viewBinding?.recyclerViewChapters?.post {
-					viewBinding?.recyclerViewChapters?.scrollToPosition(0)
-				}
+				scrollChaptersToTop()
 			}
 			return
 		}
 		adapter.items = list
+	}
+
+	override fun onResume() {
+		super.onResume()
+		if (pendingScrollToTop) {
+			scrollChaptersToTop()
+		}
+	}
+
+	private fun scrollChaptersToTop() {
+		val rv = viewBinding?.recyclerViewChapters ?: return
+		rv.stopScroll()
+		rv.post {
+			rv.scrollToPosition(0)
+			(rv.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(0, 0)
+			// Second pass after layout (covers delayed header/item measure).
+			rv.post {
+				rv.scrollToPosition(0)
+				(rv.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(0, 0)
+			}
+		}
 	}
 
 	private fun onFilterChanged(list: List<ChipsView.ChipModel>) {

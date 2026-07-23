@@ -6,8 +6,11 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.VideoView
 import androidx.activity.enableEdgeToEdge
@@ -111,17 +114,28 @@ class SplashActivity : AppCompatActivity() {
 	private fun scaleVideo(video: VideoView, player: MediaPlayer) {
 		val vw = player.videoWidth.takeIf { it > 0 } ?: return
 		val vh = player.videoHeight.takeIf { it > 0 } ?: return
-		val parent = video.parent as? View ?: return
-		parent.post {
-			val pw = parent.width.toFloat()
-			val ph = parent.height.toFloat()
-			if (pw <= 0f || ph <= 0f) return@post
-			val scale = maxOf(pw / vw, ph / vh)
-			val lp = video.layoutParams
-			lp.width = (vw * scale).toInt()
-			lp.height = (vh * scale).toInt()
-			video.layoutParams = lp
+		val parent = video.parent as? FrameLayout ?: return
+		// Clip overflow; SurfaceView translations are unreliable — use FrameLayout gravity instead.
+		parent.clipChildren = true
+		parent.clipToPadding = true
+		fun applyCenterCrop() {
+			val pw = parent.width
+			val ph = parent.height
+			if (pw <= 0 || ph <= 0) return
+			// Center-crop: scale to cover full screen, pin dead-center with Gravity.CENTER.
+			val scale = maxOf(pw.toFloat() / vw, ph.toFloat() / vh)
+			val scaledW = (vw * scale).toInt().coerceAtLeast(pw)
+			val scaledH = (vh * scale).toInt().coerceAtLeast(ph)
+			video.translationX = 0f
+			video.translationY = 0f
+			video.scaleX = 1f
+			video.scaleY = 1f
+			video.layoutParams = FrameLayout.LayoutParams(scaledW, scaledH, Gravity.CENTER)
+			video.requestLayout()
 		}
+		parent.post { applyCenterCrop() }
+		// One more pass after first layout/insets settle.
+		parent.postDelayed({ applyCenterCrop() }, 32L)
 	}
 
 	override fun onWindowFocusChanged(hasFocus: Boolean) {

@@ -182,6 +182,12 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 		return insets.consumeAllSystemBarsInsets()
 	}
 
+	override fun onResume() {
+		super.onResume()
+		// Pick up Settings → Appearance → Hide Continue Reading without restart.
+		viewModel.refreshContinueReadingPreference()
+	}
+
 	private fun renderContinueReading(items: List<MangaWithHistory>) {
 		val binding = viewBinding ?: return
 		binding.continueReadingSection.isVisible = items.isNotEmpty()

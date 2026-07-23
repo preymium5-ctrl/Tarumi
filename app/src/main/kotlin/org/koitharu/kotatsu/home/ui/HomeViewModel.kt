@@ -11,6 +11,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -56,16 +57,26 @@ class HomeViewModel @Inject constructor(
 	private val _isRecentUpdatesEnabled = MutableStateFlow(appSettings.isRecentUpdatesEnabled)
 	val isRecentUpdatesEnabled: StateFlow<Boolean> = _isRecentUpdatesEnabled
 
+	private val _isContinueReadingEnabled = MutableStateFlow(appSettings.isContinueReadingEnabled)
+	val isContinueReadingEnabled: StateFlow<Boolean> = _isContinueReadingEnabled
+
 	private val _featuredComics = MutableStateFlow<List<Manga>>(emptyList())
 	val featuredComics: StateFlow<List<Manga>> = _featuredComics
 
-	val continueReadingComics: StateFlow<List<MangaWithHistory>> = historyRepository
+	private val continueReadingRaw: StateFlow<List<MangaWithHistory>> = historyRepository
 		.observeAllWithHistory(
 			order = org.koitharu.kotatsu.list.domain.ListSortOrder.LAST_READ,
 			filterOptions = emptySet(),
 			limit = CONTINUE_READING_LIMIT,
 		)
 		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
+
+	val continueReadingComics: StateFlow<List<MangaWithHistory>> = combine(
+		continueReadingRaw,
+		_isContinueReadingEnabled,
+	) { items, enabled ->
+		if (enabled) items else emptyList()
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
 
 	private val _trendingComics = MutableStateFlow<List<Manga>>(emptyList())
 	val trendingComics: StateFlow<List<Manga>> = _trendingComics
@@ -133,6 +144,11 @@ class HomeViewModel @Inject constructor(
 			_recentUpdatesLoading.value = false
 			_recentUpdates.value = emptyList()
 		}
+	}
+
+	/** Re-read Continue Reading visibility from settings (e.g. after Settings screen). */
+	fun refreshContinueReadingPreference() {
+		_isContinueReadingEnabled.value = appSettings.isContinueReadingEnabled
 	}
 
 	/**

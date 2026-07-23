@@ -66,6 +66,11 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_RECENT_UPDATES_ENABLED, true)
 		set(value) = prefs.edit { putBoolean(KEY_RECENT_UPDATES_ENABLED, value) }
 
+	/** Home “Continue Reading” section. Off = hidden (history still saved). */
+	var isContinueReadingEnabled: Boolean
+		get() = prefs.getBoolean(KEY_CONTINUE_READING_ENABLED, true)
+		set(value) = prefs.edit { putBoolean(KEY_CONTINUE_READING_ENABLED, value) }
+
 	val analyticsInstallationId: String
 		get() = prefs.getString(KEY_ANALYTICS_INSTALLATION_ID, null) ?: run {
 			val uuid = java.util.UUID.randomUUID().toString()
@@ -1017,6 +1022,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_ACTIVE_SOURCE_PRESET = "active_source_preset"
 		const val KEY_PERFORMANCE_MODE = "performance_mode"
 		const val KEY_RECENT_UPDATES_ENABLED = "home_recent_updates_enabled"
+		const val KEY_CONTINUE_READING_ENABLED = "home_continue_reading_enabled"
 		const val KEY_ANALYTICS_INSTALLATION_ID = "analytics_installation_id"
 
 		const val KEY_REMOTE_GRID_ASPECT_RATIO = "remote_grid_aspect_ratio"

@@ -16,9 +16,10 @@ fun feedItemAD(
 ) = adapterDelegateViewBinding<FeedItem, ListModel, ItemFeedBinding>(
 	{ inflater, parent -> ItemFeedBinding.inflate(inflater, parent, false) },
 ) {
-	itemView.setOnClickListener {
-		clickListener.onItemClick(item, it)
-	}
+	val openDetails = { clickListener.onItemClick(item, itemView) }
+	itemView.setOnClickListener { openDetails() }
+	binding.textViewType.setOnClickListener { openDetails() }
+	binding.textViewReadChapter.setOnClickListener { openDetails() }
 
 	bind {
 		binding.imageViewCover.setImageAsync(item.imageUrl, item.manga.source)
@@ -37,6 +38,8 @@ fun feedItemAD(
 		binding.textViewSummary.text = itemView.context.getString(R.string.notification_update_available, chapterTitle)
 		binding.textViewTime.text = calculateTimeAgo(item.createdAt)?.format(context) ?: context.getString(R.string.unknown)
 		binding.textViewNew.isVisible = item.isNew
+		// Left chip: comic type; right chip: open chapter list / details
 		binding.textViewType.text = item.manga.detectComicType().label
+		binding.textViewReadChapter.setText(R.string.notification_read_chapter)
 	}
 }

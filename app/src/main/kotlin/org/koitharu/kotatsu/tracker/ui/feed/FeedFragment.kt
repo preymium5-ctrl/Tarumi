@@ -101,13 +101,23 @@ class FeedFragment :
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
-		val paddingVertical = resources.getDimensionPixelSize(R.dimen.list_spacing_normal)
-		viewBinding?.recyclerView?.setPadding(
-			left = barsInsets.left,
-			top = paddingVertical,
-			right = barsInsets.right,
-			bottom = barsInsets.bottom + paddingVertical,
-		)
+		val density = resources.displayMetrics.density
+		fun dp(value: Int) = (value * density + 0.5f).toInt()
+		viewBinding?.run {
+			// Keep title / filter row clear of status bar and cutouts on all devices.
+			notificationsHeader.setPadding(
+				dp(16) + barsInsets.left,
+				dp(8) + barsInsets.top,
+				dp(16) + barsInsets.right,
+				dp(10),
+			)
+			recyclerView.setPadding(
+				barsInsets.left,
+				dp(4),
+				barsInsets.right,
+				barsInsets.bottom + dp(16),
+			)
+		}
 		return insets.consumeAll(typeMask)
 	}
 
