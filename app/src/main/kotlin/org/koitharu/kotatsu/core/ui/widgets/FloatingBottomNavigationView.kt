@@ -50,8 +50,6 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 	private val selectedIdState = MutableStateFlow(0)
 	private val labeledState = MutableStateFlow(true)
 	private val navColorsState = MutableStateFlow(readNavColors())
-	private val continueVisibleState = MutableStateFlow(false)
-	private var continueClickListener: (() -> Unit)? = null
 	private val sourceItems = mutableListOf<NavItem>()
 	private val hiddenIds = mutableSetOf<Int>()
 	private val badgeCounts = mutableMapOf<Int, Int>()
@@ -68,7 +66,6 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 				val selectedId by selectedIdState.collectAsState()
 				val labeled by labeledState.collectAsState()
 				val navColors by navColorsState.collectAsState()
-				val showContinue by continueVisibleState.collectAsState()
 				Box(
 					modifier = Modifier
 						.fillMaxWidth()
@@ -86,8 +83,6 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 							reselectedListener?.invoke(menuItem)
 						},
 						modifier = Modifier.wrapContentWidth(),
-						showContinue = showContinue,
-						onContinueClick = { continueClickListener?.invoke() },
 					)
 				}
 			}
@@ -131,15 +126,6 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 
 	fun setComposeLabeled(value: Boolean) {
 		labeledState.value = value
-	}
-
-	/** The round "continue reading" button beside the bar. Ignored while in legacy mode. */
-	fun setContinueVisible(value: Boolean) {
-		continueVisibleState.value = value
-	}
-
-	fun setOnContinueClickListener(listener: (() -> Unit)?) {
-		continueClickListener = listener
 	}
 
 	/** Falls back to Material's own bar, for when the floating setting is off. */

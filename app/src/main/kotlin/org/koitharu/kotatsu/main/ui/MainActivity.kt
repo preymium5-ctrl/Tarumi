@@ -137,9 +137,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		viewBinding.fab?.setOnClickListener(this)
 		viewBinding.navRail?.headerView?.findViewById<View>(R.id.railFab)?.setOnClickListener(this)
-		(viewBinding.bottomNav as? FloatingBottomNavigationView)?.setOnContinueClickListener {
-			viewModel.openLastReader()
-		}
 		fadingAppbarMediator =
 			FadingAppbarMediator(viewBinding.appbar, viewBinding.layoutSearch ?: viewBinding.searchBar)
 
@@ -418,11 +415,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			!actionModeDelegate.isActionModeStarted &&
 			!isSearchOpened &&
 			topFragment is HistoryListFragment
-		// The floating bar carries its own round continue button beside the pill, so the layout's
-		// extended FAB stays hidden while that face is in use.
-		val floatingNav = viewBinding.bottomNav as? FloatingBottomNavigationView
-		val isComposeNav = floatingNav != null && settings.isFloatingNavBar
-		floatingNav?.setContinueVisible(shouldShowResume && isComposeNav)
+		val isComposeNav = viewBinding.bottomNav is FloatingBottomNavigationView && settings.isFloatingNavBar
 		val fab = viewBinding.fab ?: return
 		if (shouldShowResume && !isComposeNav) {
 			if (!fab.isVisible) {

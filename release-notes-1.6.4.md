@@ -2,6 +2,9 @@
 
 Tarumi **v1.6.4** is a substantial experience and reliability update. It introduces a more expressive visual foundation, stronger Cloudflare challenge recovery, a cleaner navigation experience, and a broad refresh of the manga source engine.
 
+> [!IMPORTANT]
+> **OmegaScans reader fix:** Chapters that previously failed with HTTP 404 now recover stale media links through OmegaScans' active API image route, including affected chapters of *A Wonderful New World*.
+
 **Package:** `com.tarumi.reader` · **Version:** `1.6.4` (`versionCode` **2170**)
 **Artifact:** `app-release.apk` (minified, resource-shrunk, R8-obfuscated, and signed with the established Tarumi release certificate)
 
@@ -15,6 +18,7 @@ Users on **v1.6.3** can install this release directly as an in-place update. Use
 * Added a modern floating navigation style with improved adaptive behavior across phones, tablets, landscape layouts, and edge-to-edge screens.
 * Refined manga cards, reading progress indicators, grid sizing, app bars, and settings presentation for a cleaner and more consistent experience.
 * Expanded appearance controls so navigation styling can better follow the selected Tarumi theme.
+* Removed the detached Continue Reading control that could appear as a narrow extra pill on the right side of the floating navigation bar.
 
 ---
 
@@ -27,7 +31,7 @@ Users on **v1.6.3** can install this release directly as an in-place update. Use
 
 ---
 
-### 📖 Reader reliability
+### 📖 OmegaScans and reader reliability
 
 * Fixed **OmegaScans** chapters that returned HTTP 404 from stale media-host links. Tarumi now redirects those chapter images to Omega's active API origin while preserving the original upload path.
 * Reinforced HeanCMS chapter image discovery for sources that publish pages through preload metadata or embedded application data.

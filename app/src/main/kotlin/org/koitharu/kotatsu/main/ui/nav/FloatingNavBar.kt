@@ -29,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -82,8 +80,6 @@ fun FloatingNavBar(
 	onItemSelected: (Int) -> Unit,
 	onItemReselected: (Int) -> Unit,
 	modifier: Modifier = Modifier,
-	showContinue: Boolean = false,
-	onContinueClick: () -> Unit = {},
 ) {
 	if (items.isEmpty()) return
 	val colorScheme = MaterialTheme.colorScheme
@@ -127,54 +123,6 @@ fun FloatingNavBar(
 					)
 				}
 			}
-		}
-		// Standalone circular "continue reading" button living beside the bar. It slides along as the
-		// bar resizes so the two read as one floating toolbar.
-		AnimatedVisibility(
-			visible = showContinue,
-			enter = fadeIn(animationSpec = SpringFloat) +
-				expandHorizontally(animationSpec = SpringSize, expandFrom = Alignment.Start),
-			exit = fadeOut(animationSpec = SpringFloat) +
-				shrinkHorizontally(animationSpec = SpringSize, shrinkTowards = Alignment.Start),
-		) {
-			FloatingContinueButton(colors = colors, onClick = onContinueClick)
-		}
-	}
-}
-
-@Composable
-private fun FloatingContinueButton(
-	colors: FloatingNavBarColors,
-	onClick: () -> Unit,
-) {
-	val container by animateColorAsState(
-		targetValue = Color(colors.selectedContainer),
-		animationSpec = SpringColor,
-		label = "continueContainer",
-	)
-	val content by animateColorAsState(
-		targetValue = Color(colors.selectedContent),
-		animationSpec = SpringColor,
-		label = "continueContent",
-	)
-	val label = stringResource(R.string._continue)
-	Surface(
-		onClick = onClick,
-		shape = CircleShape,
-		color = container,
-		contentColor = content,
-		shadowElevation = 8.dp,
-		modifier = Modifier
-			.size(56.dp)
-			.semantics { contentDescription = label },
-	) {
-		Box(contentAlignment = Alignment.Center) {
-			Icon(
-				painter = painterResource(R.drawable.ic_read),
-				contentDescription = null,
-				tint = content,
-				modifier = Modifier.size(24.dp),
-			)
 		}
 	}
 }
