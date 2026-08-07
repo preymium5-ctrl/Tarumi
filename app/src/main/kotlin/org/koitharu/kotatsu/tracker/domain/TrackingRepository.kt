@@ -227,11 +227,13 @@ class TrackingRepository @Inject constructor(
 		dao.gc()
 		val ids = dao.findAllIds().toMutableSet()
 		val size = ids.size
+		// Prevent a manga present in both history and favourites from having its tracker baseline recreated.
+		val handled = HashSet<Long>(size)
 		// history
 		if (AppSettings.TRACK_HISTORY in settings.trackSources) {
 			val historyIds = db.getHistoryDao().findAllIds()
 			for (mangaId in historyIds) {
-				if (!ids.remove(mangaId)) {
+				if (handled.add(mangaId) && !ids.remove(mangaId)) {
 					dao.upsert(TrackEntity.create(mangaId))
 				}
 			}
@@ -240,7 +242,7 @@ class TrackingRepository @Inject constructor(
 		if (AppSettings.TRACK_FAVOURITES in settings.trackSources) {
 			val favoritesIds = db.getFavouritesDao().findIdsWithTrack()
 			for (mangaId in favoritesIds) {
-				if (!ids.remove(mangaId)) {
+				if (handled.add(mangaId) && !ids.remove(mangaId)) {
 					dao.upsert(TrackEntity.create(mangaId))
 				}
 			}

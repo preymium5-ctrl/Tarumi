@@ -119,6 +119,7 @@
 						android:layout_height="wrap_content"
 						android:textColor="@color/taru_text_primary"
 						android:textSize="26sp"
+					android:includeFontPadding="false"
 						android:textStyle="bold"
 						android:ellipsize="end"
 						android:maxLines="3"
