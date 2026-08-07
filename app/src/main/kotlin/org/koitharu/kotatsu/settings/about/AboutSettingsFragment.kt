@@ -3,8 +3,6 @@ package org.koitharu.kotatsu.settings.about
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.text.InputType
-import android.widget.EditText
 import androidx.annotation.StringRes
 import androidx.fragment.app.viewModels
 import androidx.preference.Preference
@@ -14,7 +12,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.ai.ui.AskAiLimitPrefs
 import org.koitharu.kotatsu.core.github.AppVersion
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -88,11 +85,6 @@ class AboutSettingsFragment : BasePreferenceFragment(R.string.about) {
 				true
 			}
 
-			KEY_AI_LIMIT_OVERRIDE -> {
-				showAiLimitOverrideDialog()
-				true
-			}
-
 			else -> super.onPreferenceTreeClick(preference)
 		}
 	}
@@ -130,28 +122,4 @@ class AboutSettingsFragment : BasePreferenceFragment(R.string.about) {
 		dialog.show()
 	}
 
-	private fun showAiLimitOverrideDialog() {
-		val input = EditText(requireContext()).apply {
-			inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-			setSingleLine()
-		}
-		MaterialAlertDialogBuilder(requireContext())
-			.setTitle(R.string.ask_ai_override_title)
-			.setMessage(R.string.ask_ai_override_prompt)
-			.setView(input)
-			.setNegativeButton(android.R.string.cancel, null)
-			.setPositiveButton(android.R.string.ok) { _, _ ->
-				if (AskAiLimitPrefs.matchesOverrideCode(input.text?.toString().orEmpty())) {
-					AskAiLimitPrefs.setLimitOverrideEnabled(requireContext(), true)
-					Snackbar.make(listView, R.string.ask_ai_override_enabled, Snackbar.LENGTH_SHORT).show()
-				} else {
-					Snackbar.make(listView, R.string.ask_ai_override_failed, Snackbar.LENGTH_SHORT).show()
-				}
-			}
-			.show()
-	}
-
-	private companion object {
-		private const val KEY_AI_LIMIT_OVERRIDE = "ask_ai_limit_override"
-	}
 }

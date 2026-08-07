@@ -24,9 +24,6 @@ online content sources. The main goal of the fork is to maintain existing featur
     *   **Offline Access**: Fast downloads with background queueing. Full support for local CBZ / ZIP archives.
     *   **Precision Navigation**: Intuitive page bookmarks, history logging, and immersive full-screen layouts.
 
-*   **AI Librarian Integration ("Ask AI")**
-    *   **Smart Chat Assistant**: Talk to **Tarumi**, your personal AI librarian, for direct manga recommendations, series overviews, or to find similar titles.
-    *   **Safe Browsing**: Optional 18+ content filters to keep recommendation streams safe and focused.
 
 *   **Privacy and Security First**
     *   **Secure Access**: Password or biometric fingerprint-protected lockscreen featuring a custom cat paw keypad design.

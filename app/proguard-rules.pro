@@ -101,9 +101,6 @@
 	public <init>(android.content.Context,androidx.work.WorkerParameters);
 }
 
-# ---- MediaPipe / GenAI ----
--keep class com.google.mediapipe.** { *; }
--dontwarn com.google.mediapipe.**
 -dontwarn com.google.protobuf.**
 -dontwarn com.google.auto.value.**
 

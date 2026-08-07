@@ -2,10 +2,7 @@ package org.koitharu.kotatsu.settings.about
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputType
 import android.view.View
-import android.view.inputmethod.EditorInfo
-import android.widget.EditText
 import androidx.annotation.StringRes
 import androidx.fragment.app.viewModels
 import androidx.preference.Preference
@@ -15,7 +12,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.ai.ui.AskAiLimitPrefs
 import org.koitharu.kotatsu.core.github.AppVersion
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -72,11 +68,6 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 				true
 			}
 
-			KEY_AI_LIMIT_OVERRIDE -> {
-				showAiLimitOverrideDialog()
-				true
-			}
-
 			KEY_SHARE_APP -> {
 				shareApp()
 				true
@@ -119,45 +110,6 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 		dialog.show()
 	}
 
-	private fun showAiLimitOverrideDialog() {
-		val input = EditText(requireContext()).apply {
-			inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-			imeOptions = EditorInfo.IME_ACTION_DONE
-			setSingleLine()
-		}
-		val dialog = MaterialAlertDialogBuilder(requireContext())
-			.setTitle(R.string.ask_ai_override_title)
-			.setMessage(R.string.ask_ai_override_prompt)
-			.setView(input)
-			.setNegativeButton(android.R.string.cancel, null)
-			.setPositiveButton(android.R.string.ok, null)
-			.create()
-		fun submitCode() {
-			if (AskAiLimitPrefs.matchesOverrideCode(input.text?.toString().orEmpty())) {
-				AskAiLimitPrefs.setLimitOverrideEnabled(requireContext(), true)
-				dialog.dismiss()
-				Snackbar.make(listView, R.string.ask_ai_override_enabled, Snackbar.LENGTH_SHORT).show()
-			} else {
-				Snackbar.make(listView, R.string.ask_ai_override_failed, Snackbar.LENGTH_SHORT).show()
-			}
-		}
-		dialog.setOnShowListener {
-			dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
-				submitCode()
-			}
-			input.requestFocus()
-		}
-		input.setOnEditorActionListener { _, actionId, _ ->
-			if (actionId == EditorInfo.IME_ACTION_DONE) {
-				submitCode()
-				true
-			} else {
-				false
-			}
-		}
-		dialog.show()
-	}
-
 	private fun shareApp() {
 		val text = getString(R.string.share_app_text, TARUMI_LATEST_APK_URL)
 		val intent = Intent(Intent.ACTION_SEND)
@@ -167,7 +119,6 @@ class AppUpdatesSettingsFragment : BasePreferenceFragment(R.string.check_app_upd
 	}
 
 	private companion object {
-		private const val KEY_AI_LIMIT_OVERRIDE = "ask_ai_limit_override"
 		private const val KEY_SHARE_APP = "share_tarumi_app"
 		private const val TARUMI_LATEST_APK_URL = "https://www.mediafire.com/file/2ple8svop158oen/Tarumi_Latest.apk/file"
 	}

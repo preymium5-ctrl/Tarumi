@@ -1,7 +1,0 @@
-name = "tarumi-ai-worker"
-main = "src/index.ts"
-compatibility_date = "2026-06-15"
-
-[vars]
-AI_API_BASE_URL = "https://newapi.makelove.cloud/v1/chat/completions"
-AI_MODEL = "grok-4.3"

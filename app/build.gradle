@@ -47,15 +47,6 @@ android {
 		if (localPropertiesFile.exists()) {
 			localProperties.load(new FileInputStream(localPropertiesFile))
 		}
-		def quoteBuildConfig = { value ->
-			"\"" + (value ?: '').replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-		}
-		buildConfigField 'String', 'AI_CLOUD_PROXY_URL', quoteBuildConfig(localProperties.getProperty('ai_cloud_proxy_url', ''))
-		buildConfigField 'String', 'AI_CLOUD_PROXY_CLIENT_TOKEN', quoteBuildConfig(localProperties.getProperty('ai_cloud_proxy_client_token', ''))
-		buildConfigField 'String', 'AI_CLOUD_PROXY_MODEL', quoteBuildConfig(localProperties.getProperty('ai_cloud_proxy_model', 'gpt-4.1-mini'))
-		buildConfigField 'String', 'AI_LOCAL_MODEL_URL', quoteBuildConfig(localProperties.getProperty('ai_local_model_url', 'https://huggingface.co/AfiOne/gemma3-1b-it-int4.task/resolve/main/gemma3-1b-it-int4.task'))
-		buildConfigField 'String', 'AI_LOCAL_MODEL_FILE', quoteBuildConfig(localProperties.getProperty('ai_local_model_file', 'tarumi-local-gemma3-1b.task'))
-		buildConfigField 'long', 'AI_LOCAL_MODEL_SIZE_BYTES', localProperties.getProperty('ai_local_model_size_bytes', '554661243L')
 		resValue 'string', 'tg_backup_bot_token', localProperties.getProperty('tg_backup_bot_token', '')
 	}
 	signingConfigs {
@@ -205,7 +196,6 @@ dependencies {
 	implementation libs.androidx.preference
 	implementation libs.androidx.biometric
 	implementation libs.material
-	implementation libs.mediapipe.tasks.genai
 	implementation libs.androidx.lifecycle.common.java8
 	implementation libs.androidx.webkit
 
