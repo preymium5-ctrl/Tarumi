@@ -98,19 +98,16 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	var mainNavItems: List<NavItem>
 		get() {
 			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
-			val defaultItems = listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS)
+			val defaultItems = listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.SETTINGS)
 			return if (raw.isNullOrEmpty()) {
 				defaultItems
 			} else {
 				val items = raw.mapNotNull { x -> NavItem.entries.find(x) }
 					.map { if (it == NavItem.STATS) NavItem.HISTORY else it }
+					.filterNot { it == NavItem.HISTORY }
 					.distinct()
-				when (items) {
-					listOf(NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS),
-					listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.HISTORY, NavItem.SETTINGS),
-					listOf(NavItem.HOME, NavItem.EXPLORE, NavItem.FAVORITES, NavItem.SETTINGS) -> defaultItems
-					else -> if (NavItem.HOME in items) items else listOf(NavItem.HOME) + items
-				}.ifEmpty { defaultItems }
+				(if (NavItem.HOME in items) items else listOf(NavItem.HOME) + items)
+					.ifEmpty { defaultItems }
 			}
 		}
 		set(value) {

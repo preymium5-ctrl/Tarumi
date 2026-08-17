@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.reader.domain
 import android.content.Context
 import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import androidx.annotation.AnyThread
 import androidx.annotation.CheckResult
 import androidx.collection.LongSparseArray
@@ -108,7 +109,8 @@ class PageLoader @Inject constructor(
 	private val edgeDetector = EdgeDetector(context)
 
 	fun isPrefetchApplicable(): Boolean {
-		return repository is CachingMangaRepository
+		return Build.VERSION.SDK_INT > Build.VERSION_CODES.O_MR1
+			&& repository is CachingMangaRepository
 			&& settings.isPagesPreloadEnabled
 			&& !context.isPowerSaveMode()
 			&& !isLowRam()

@@ -29,15 +29,27 @@ class AutoFixUseCase @Inject constructor(
 	private val mangaDataRepository: MangaDataRepository,
 ) {
 
-	suspend operator fun invoke(mangaId: Long): Pair<Manga, Manga?> {
+	suspend operator fun invoke(
+		mangaId: Long,
+		targetSourceNames: Set<String>? = null,
+	): Pair<Manga, Manga?> {
 		val seed = checkNotNull(
 			mangaDataRepository.findMangaById(mangaId, withChapters = true),
 		) { "Manga $mangaId not found" }.getDetailsSafe()
 		if (seed.isHealthy()) {
 			return seed to null // no fix required
 		}
-		val replacement = alternativesUseCase(seed, throughDisabledSources = false)
-			.concat(alternativesUseCase(seed, throughDisabledSources = true))
+		val alternatives = if (targetSourceNames == null) {
+			alternativesUseCase(seed, throughDisabledSources = false)
+				.concat(alternativesUseCase(seed, throughDisabledSources = true))
+		} else {
+			alternativesUseCase(
+				manga = seed,
+				throughDisabledSources = false,
+				targetSourceNames = targetSourceNames,
+			)
+		}
+		val replacement = alternatives
 			.filter { it.isHealthy() }
 			.runningFold<Manga, Manga?>(null) { best, candidate ->
 				if (best == null || best < candidate) {

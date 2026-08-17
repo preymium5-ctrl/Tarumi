@@ -179,7 +179,9 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 	protected open fun onCreateAdvancedTransformer(): PageTransformer = PageAnimTransformer()
 
 	protected open fun onInitPager(pager: ViewPager2) {
-		pager.offscreenPageLimit = 2
+		// Retaining five full-resolution pages can terminate the process on Android 8 devices with
+		// older graphics stacks. Keep only the adjacent pages there; modern devices retain two each way.
+		pager.offscreenPageLimit = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1) 1 else 2
 	}
 
 	protected open fun notifyPageChanged(page: Int) {

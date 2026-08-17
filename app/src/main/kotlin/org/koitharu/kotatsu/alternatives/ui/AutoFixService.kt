@@ -53,11 +53,12 @@ class AutoFixService : CoroutineIntentService() {
 
 	override suspend fun IntentJobContext.processIntent(intent: Intent) {
 		val ids = requireNotNull(intent.getLongArrayExtra(DATA_IDS))
+		val targetSourceNames = intent.getStringArrayExtra(DATA_SOURCE_NAMES)?.toSet()
 		startForeground(this)
 		for (mangaId in ids) {
 			powerManager.withPartialWakeLock(TAG) {
 				val result = runCatchingCancellable {
-					autoFixUseCase.invoke(mangaId)
+					autoFixUseCase.invoke(mangaId, targetSourceNames)
 				}
 				if (checkNotificationPermission(CHANNEL_ID)) {
 					val notification = buildNotification(startId, result)
@@ -186,13 +187,21 @@ class AutoFixService : CoroutineIntentService() {
 	companion object {
 
 		private const val DATA_IDS = "ids"
+		private const val DATA_SOURCE_NAMES = "source_names"
 		private const val TAG = "auto_fix"
 		private const val CHANNEL_ID = "auto_fix"
 		private const val FOREGROUND_NOTIFICATION_ID = 38
 
-		fun start(context: Context, mangaIds: Collection<Long>): Boolean = try {
+		fun start(
+			context: Context,
+			mangaIds: Collection<Long>,
+			targetSourceNames: Collection<String>? = null,
+		): Boolean = try {
 			val intent = Intent(context, AutoFixService::class.java)
 			intent.putExtra(DATA_IDS, mangaIds.toLongArray())
+			if (targetSourceNames != null) {
+				intent.putExtra(DATA_SOURCE_NAMES, targetSourceNames.toTypedArray())
+			}
 			ContextCompat.startForegroundService(context, intent)
 			true
 		} catch (e: Exception) {

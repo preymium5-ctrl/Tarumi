@@ -119,12 +119,6 @@
             android:title="@string/show_labels_in_navbar" />
 
         <SwitchPreferenceCompat
-            android:icon="@drawable/ic_nav_bar"
-            android:key="floating_nav"
-            android:summary="@string/floating_nav_bar_summary"
-            android:title="@string/floating_nav_bar" />
-
-        <SwitchPreferenceCompat
             android:defaultValue="false"
             android:icon="@drawable/ic_pin"
             android:key="nav_pinned"

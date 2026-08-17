@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.list.ui
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -21,7 +22,9 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.alternatives.ui.AutoFixService
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
+import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isLocal
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
@@ -44,6 +47,7 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.databinding.FragmentListBinding
+import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.domain.QuickFilterListener
 import org.koitharu.kotatsu.list.ui.adapter.ListItemType
@@ -56,6 +60,7 @@ import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.list.ui.size.DynamicItemSizeResolver
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.search.ui.MangaListActivity
 import javax.inject.Inject
@@ -75,6 +80,9 @@ abstract class MangaListFragment :
 
 	@Inject
 	lateinit var settings: AppSettings
+
+	@Inject
+	lateinit var mangaSourcesRepository: MangaSourcesRepository
 
 	private var listAdapter: BaseListAdapter<ListModel>? = null
 	private var paginationListener: PaginationScrollListener? = null
@@ -334,20 +342,65 @@ abstract class MangaListFragment :
 
 			R.id.action_fix -> {
 				val itemsSnapshot = selectedItemsIds
-				buildAlertDialog(context ?: return false, isCentered = true) {
-					setTitle(item.title)
-					setIcon(item.icon)
-					setMessage(R.string.manga_fix_prompt)
-					setNegativeButton(android.R.string.cancel, null)
-					setPositiveButton(R.string.fix) { _, _ ->
-						AutoFixService.start(context, itemsSnapshot)
-						mode?.finish()
-					}
-				}.show()
+				showFixSourcePicker(itemsSnapshot, mode)
 				true
 			}
 
 			else -> false
+		}
+	}
+
+	private fun showFixSourcePicker(mangaIds: Set<Long>, mode: ActionMode?) {
+		viewLifecycleScope.launch {
+			val context = context ?: return@launch
+			val sources = mangaSourcesRepository.getEnabledSources()
+				.asSequence()
+				.map { it.unwrap() }
+				.filterIsInstance<MangaParserSource>()
+				.distinctBy { it.name }
+				.sortedBy { it.getTitle(context) }
+				.toList()
+			if (sources.isEmpty() || !isAdded) {
+				return@launch
+			}
+
+			val checked = BooleanArray(sources.size)
+			val labels = sources.map { it.getTitle(context) }.toTypedArray()
+			val dialog = buildAlertDialog(context) {
+				setTitle(R.string.select_fix_sources)
+				setIcon(R.drawable.ic_auto_fix)
+				setMultiChoiceItems(labels, checked) { alert, which, isChecked ->
+					checked[which] = isChecked
+					(alert as? androidx.appcompat.app.AlertDialog)
+						?.getButton(DialogInterface.BUTTON_POSITIVE)
+						?.isEnabled = checked.any { it }
+				}
+				setNegativeButton(android.R.string.cancel, null)
+				setNeutralButton(android.R.string.selectAll, null)
+				setPositiveButton(R.string.fix, null)
+			}
+			dialog.setOnShowListener {
+				val positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+				positiveButton.isEnabled = false
+				positiveButton.setOnClickListener {
+					val selectedSources = sources.indices
+						.filter { checked[it] }
+						.map { sources[it].name }
+					if (selectedSources.isNotEmpty()) {
+						AutoFixService.start(context, mangaIds, selectedSources)
+						mode?.finish()
+						dialog.dismiss()
+					}
+				}
+				dialog.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener {
+					for (index in checked.indices) {
+						checked[index] = true
+						dialog.listView.setItemChecked(index, true)
+					}
+					positiveButton.isEnabled = true
+				}
+			}
+			dialog.show()
 		}
 	}
 

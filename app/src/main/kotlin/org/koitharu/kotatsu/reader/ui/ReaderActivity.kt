@@ -4,6 +4,7 @@ import android.app.assist.AssistContent
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
@@ -33,6 +34,7 @@ import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
@@ -77,6 +79,7 @@ import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.postDelayed
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.core.util.ext.zipWithPrevious
 import org.koitharu.kotatsu.databinding.ActivityReaderBinding
@@ -872,20 +875,31 @@ class ReaderActivity :
 
     // Observe foldable window layout to auto-enable double-page if configured
     private fun observeWindowLayout() {
-        WindowInfoTracker.getOrCreate(this)
-            .windowLayoutInfo(this)
-            .onEach { info ->
-                val fold = info.displayFeatures.filterIsInstance<FoldingFeature>().firstOrNull()
-                val unfolded = when (fold?.state) {
-                    FoldingFeature.State.HALF_OPENED, FoldingFeature.State.FLAT -> true
-                    else -> false
+        // Foldable tracking is not useful on Android 8-era devices. Some legacy OEM window
+        // implementations also throw while the tracker is being initialized, which used to close
+        // the reader immediately because this runs during ReaderActivity.onCreate().
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1) return
+        runCatching {
+            WindowInfoTracker.getOrCreate(this)
+                .windowLayoutInfo(this)
+                .onEach { info ->
+                    val fold = info.displayFeatures.filterIsInstance<FoldingFeature>().firstOrNull()
+                    val unfolded = when (fold?.state) {
+                        FoldingFeature.State.HALF_OPENED, FoldingFeature.State.FLAT -> true
+                        else -> false
+                    }
+                    if (unfolded != isFoldUnfolded) {
+                        isFoldUnfolded = unfolded
+                        applyDoubleModeAuto()
+                    }
                 }
-                if (unfolded != isFoldUnfolded) {
-                    isFoldUnfolded = unfolded
-                    applyDoubleModeAuto()
+                .catch { error ->
+                    error.printStackTraceDebug()
                 }
-            }
-            .launchIn(lifecycleScope)
+                .launchIn(lifecycleScope)
+        }.onFailure { error ->
+            error.printStackTraceDebug()
+        }
     }
 
     private fun askForIncognitoMode() {

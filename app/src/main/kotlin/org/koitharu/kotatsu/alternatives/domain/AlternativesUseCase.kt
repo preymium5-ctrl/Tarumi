@@ -31,8 +31,16 @@ class AlternativesUseCase @Inject constructor(
 	private val presetsRepository: SourcePresetsRepository,
 ) {
 
-	suspend operator fun invoke(manga: Manga, throughDisabledSources: Boolean): Flow<Manga> {
-		val sources = getSources(manga.source, throughDisabledSources)
+	suspend operator fun invoke(
+		manga: Manga,
+		throughDisabledSources: Boolean,
+		targetSourceNames: Set<String>? = null,
+	): Flow<Manga> {
+		val sources = if (targetSourceNames == null) {
+			getSources(manga.source, throughDisabledSources)
+		} else {
+			getSelectedSources(manga.source, targetSourceNames)
+		}
 		if (sources.isEmpty()) {
 			return emptyFlow()
 		}
@@ -59,6 +67,14 @@ class AlternativesUseCase @Inject constructor(
 				}
 			}
 		}
+	}
+
+	private fun getSelectedSources(ref: MangaSource, names: Set<String>): List<MangaSource> {
+		if (names.isEmpty()) return emptyList()
+		val skipNsfw = settings.isNsfwContentDisabled
+		return sourcesRepository.allMangaSources
+			.filter { source -> source.name in names && (!skipNsfw || !source.isNsfw()) }
+			.sortedByDescending { it.priority(ref) }
 	}
 
 	private suspend fun getSources(ref: MangaSource, disabled: Boolean): List<MangaSource> {

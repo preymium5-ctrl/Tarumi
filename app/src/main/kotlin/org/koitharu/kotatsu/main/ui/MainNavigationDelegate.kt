@@ -33,7 +33,6 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
-import org.koitharu.kotatsu.core.ui.widgets.FloatingBottomNavigationView
 import org.koitharu.kotatsu.core.ui.widgets.SlidingBottomNavigationView
 import org.koitharu.kotatsu.core.util.ext.buildBundle
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -166,7 +165,6 @@ class MainNavigationDelegate(
 	}
 
 	private fun setCounter(@IdRes id: Int, counter: Int) {
-		(navBar as? FloatingBottomNavigationView)?.setComposeBadge(id, counter)
 		if (counter == 0) {
 			navBar.getBadge(id)?.isVisible = false
 		} else {
@@ -280,22 +278,11 @@ class MainNavigationDelegate(
 			AppSettings.KEY_TRACKER_ENABLED,
 			AppSettings.KEY_SUGGESTIONS,
 			AppSettings.KEY_NAV_LABELS,
-			AppSettings.KEY_FLOATING_NAV,
 		).onEach {
 				setItemVisibility(R.id.nav_suggestions, settings.isSuggestionsEnabled)
 				setItemVisibility(R.id.nav_feed, settings.isTrackerEnabled)
-				val isFloating = settings.isFloatingNavBar
 				val isLabeled = settings.isNavLabelsVisible
-				if (navBar is FloatingBottomNavigationView) {
-					navBar.setUseLegacyNavigation(!isFloating)
-					navBar.setComposeItems(settings.mainNavItems)
-					navBar.setComposeLabeled(isLabeled)
-					navBar.setComposeItemVisibility(R.id.nav_suggestions, settings.isSuggestionsEnabled)
-					navBar.setComposeItemVisibility(R.id.nav_feed, settings.isTrackerEnabled)
-				}
-				setNavbarIsLabeled(
-					value = if (isFloating && navBar !is FloatingBottomNavigationView) false else isLabeled,
-				)
+				setNavbarIsLabeled(isLabeled)
 			}.launchIn(lifecycleOwner.lifecycleScope)
 	}
 

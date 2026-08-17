@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -182,7 +182,6 @@ private fun FloatingNavItem(
 					resId = item.icon,
 					selected = selected,
 					tint = content,
-					modifier = Modifier.size(24.dp),
 				)
 			}
 			AnimatedVisibility(
@@ -221,10 +220,15 @@ private fun NavIcon(
 	modifier: Modifier = Modifier,
 ) {
 	AndroidView(
-		modifier = modifier,
+		// requiredSize keeps Android's drawable/intrinsic-size remeasurement from changing an icon
+		// while a neighbouring selected label expands or collapses.
+		modifier = modifier.requiredSize(24.dp),
 		factory = { ctx ->
 			ImageView(ctx).apply {
 				scaleType = ImageView.ScaleType.FIT_CENTER
+				adjustViewBounds = false
+				minimumWidth = 0
+				minimumHeight = 0
 				setImageResource(resId)
 				// Prime the state without a transition, so the morph does not fire on first paint.
 				setImageState(IntArray(0), false)

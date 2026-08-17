@@ -62,7 +62,6 @@ import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.util.FadingAppbarMediator
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
-import org.koitharu.kotatsu.core.ui.widgets.FloatingBottomNavigationView
 import org.koitharu.kotatsu.core.ui.widgets.SlidingBottomNavigationView
 import org.koitharu.kotatsu.core.util.ext.consume
 import org.koitharu.kotatsu.core.util.ext.end
@@ -182,10 +181,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		}
 		viewModel.onFirstStart.observeEvent(this) { router.showWelcomeSheet() }
 		viewModel.isBottomNavPinned.observe(this, ::setNavbarPinned)
-		settings.observe(AppSettings.KEY_FLOATING_NAV).onEach {
-			viewBinding.root.requestApplyInsets()
-			setNavbarPinned(settings.isNavBarPinned)
-		}.launchIn(lifecycleScope)
 		searchSuggestionViewModel.isIncognitoModeEnabled.observe(this, this::onIncognitoModeChanged)
 		viewBinding.bottomNav?.addOnLayoutChangeListener(this)
 		viewBinding.searchView.addTransitionListener(this)
@@ -255,26 +250,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			}
 		}
 		viewBinding.bottomNav?.let { nav ->
-			val isFloating = settings.isFloatingNavBar
-			if (isFloating) {
-				// The Compose face draws and centres its own pill, including its horizontal padding
-				// and shadow, so this view only has to span the width and clear the system bars.
-				nav.updatePadding(left = barsInsets.left, right = barsInsets.right, bottom = 0)
-				nav.updateLayoutParams<MarginLayoutParams> {
-					marginStart = 0
-					marginEnd = 0
-					bottomMargin = barsInsets.bottom + resources.getDimensionPixelOffset(R.dimen.margin_small)
-				}
-				nav.elevation = 0f
-			} else {
-				nav.updatePadding(left = barsInsets.left, right = barsInsets.right, bottom = barsInsets.bottom)
-				nav.updateLayoutParams<MarginLayoutParams> {
-					marginStart = 0
-					marginEnd = 0
-					bottomMargin = 0
-				}
-				nav.elevation = 0f
+			nav.updatePadding(left = barsInsets.left, right = barsInsets.right, bottom = barsInsets.bottom)
+			nav.updateLayoutParams<MarginLayoutParams> {
+				marginStart = 0
+				marginEnd = 0
+				bottomMargin = 0
 			}
+			nav.elevation = 0f
 		}
 		viewBinding.navRail?.updateLayoutParams<MarginLayoutParams> {
 			marginStart = barsInsets.start(v)
@@ -415,9 +397,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			!actionModeDelegate.isActionModeStarted &&
 			!isSearchOpened &&
 			topFragment is HistoryListFragment
-		val isComposeNav = viewBinding.bottomNav is FloatingBottomNavigationView && settings.isFloatingNavBar
 		val fab = viewBinding.fab ?: return
-		if (shouldShowResume && !isComposeNav) {
+		if (shouldShowResume) {
 			if (!fab.isVisible) {
 				fab.show()
 			}
@@ -557,7 +538,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 	private fun setNavbarPinned(isPinned: Boolean) {
 		val bottomNavBar = viewBinding.bottomNav
-		bottomNavBar?.isPinned = isPinned || settings.isFloatingNavBar
+		bottomNavBar?.isPinned = isPinned
 		for (view in viewBinding.appbar.children) {
 			val lp = view.layoutParams as? AppBarLayout.LayoutParams ?: continue
 			val scrollFlags = if (isPinned) {
