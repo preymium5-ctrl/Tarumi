@@ -1,6 +1,6 @@
 <div align="center">
 
-**[Kotatsu-Redo](https://github.com/Kotatsu-Redo/Kotatsu-Redo) is a free and open-source manga reader for Android with built-in
+**[Tarumi](https://github.com/preymium5-ctrl/Tarumi) is a free and open-source manga reader for Android with built-in
 online content sources. The main goal of the fork is to maintain existing features and sources.**
 
 ![Android 6.0](https://img.shields.io/badge/android-6.0+-brightgreen) [![Discord](https://img.shields.io/discord/898363402467045416?color=5865f2&label=discord)](https://discord.gg/sfPJSQNxfW) [![License](https://img.shields.io/github/license/KotatsuApp/Kotatsu)](https://github.com/KotatsuApp/Kotatsu/blob/devel/LICENSE)
@@ -45,11 +45,6 @@ online content sources. The main goal of the fork is to maintain existing featur
     <img src="./metadata/en-US/images/phoneScreenshots/5.jpg" alt="Mobile view" width="250"/>
     <img src="./metadata/en-US/images/phoneScreenshots/6.jpg" alt="Mobile view" width="250"/>
 </div>
-
-### Contributing
-
-**📌 Pull requests are welcome, if you want:
-See [CONTRIBUTING.md](https://github.com/Kotatsu-Redo/Kotatsu-Redo/blob/devel/CONTRIBUTING.md) for the guidelines**
 
 ### Certificate fingerprints
 
