@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="128dp"
+	android:layout_height="match_parent"
+	android:background="@android:color/transparent"
+	android:orientation="vertical"
+	tools:layout_height="@dimen/search_suggestions_manga_height">
+
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_cover"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:scaleType="centerCrop"
+		app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Medium"
+		tools:src="@tools:sample/backgrounds/scenic" />
+
+	<TextView
+		android:id="@+id/textView_title"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="7dp"
+		android:elegantTextHeight="false"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="2"
+		android:textColor="@color/taru_text_primary"
+		android:textSize="14sp"
+		tools:text="@tools:sample/lorem" />
+</LinearLayout>

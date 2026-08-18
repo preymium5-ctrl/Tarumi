@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:orientation="vertical">
+
+		<LinearLayout
+			android:id="@+id/notificationsHeader"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:paddingStart="16dp"
+			android:paddingTop="8dp"
+			android:paddingEnd="16dp"
+			android:paddingBottom="10dp">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:gravity="center_vertical"
+				android:orientation="horizontal">
+
+				<TextView
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:ellipsize="end"
+					android:fontFamily="sans-serif-light"
+					android:letterSpacing="0"
+					android:maxLines="1"
+					android:text="@string/notifications"
+					android:textColor="@color/taru_text_primary"
+					android:textSize="28sp" />
+
+				<TextView
+					android:id="@+id/textViewUnreadCount"
+					android:layout_width="wrap_content"
+					android:layout_height="30dp"
+					android:layout_marginStart="10dp"
+					android:background="@drawable/bg_taru_new_label"
+					android:fontFamily="sans-serif-medium"
+					android:gravity="center"
+					android:minWidth="56dp"
+					android:paddingHorizontal="12dp"
+					android:textColor="#FFFFFF"
+					android:textSize="13sp"
+					tools:text="5 new" />
+			</LinearLayout>
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="12dp"
+				android:gravity="center_vertical"
+				android:orientation="horizontal">
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/buttonFilter"
+					style="@style/Widget.Material3.Button.TextButton"
+					android:layout_width="0dp"
+					android:layout_height="44dp"
+					android:layout_weight="1"
+					android:ellipsize="end"
+					android:fontFamily="sans-serif"
+					android:maxLines="1"
+					android:text="@string/all_types"
+					android:textAllCaps="false"
+					android:textColor="@color/taru_text_secondary"
+					android:textSize="13sp"
+					app:backgroundTint="@color/taru_surface_button"
+					app:cornerRadius="12dp"
+					app:icon="@drawable/ic_filter_menu"
+					app:iconGravity="textStart"
+					app:iconPadding="8dp"
+					app:iconSize="18dp"
+					app:iconTint="@color/taru_text_secondary"
+					app:strokeColor="@color/taru_outline"
+					app:strokeWidth="1dp" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/buttonMarkAllRead"
+					style="@style/Widget.Material3.Button.TextButton"
+					android:layout_width="0dp"
+					android:layout_height="44dp"
+					android:layout_marginStart="10dp"
+					android:layout_weight="1"
+					android:ellipsize="end"
+					android:fontFamily="sans-serif"
+					android:maxLines="1"
+					android:text="@string/mark_all_as_read"
+					android:textAllCaps="false"
+					android:textColor="@color/taru_text_secondary"
+					android:textSize="13sp"
+					app:backgroundTint="@color/taru_surface_button"
+					app:cornerRadius="12dp"
+					app:icon="@drawable/ic_check"
+					app:iconGravity="textStart"
+					app:iconPadding="8dp"
+					app:iconSize="18dp"
+					app:iconTint="@color/taru_text_secondary"
+					app:strokeColor="@color/taru_outline"
+					app:strokeWidth="1dp" />
+			</LinearLayout>
+		</LinearLayout>
+
+		<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+			android:id="@+id/swipeRefreshLayout"
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1">
+
+			<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
+				android:id="@+id/recyclerView"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:clipChildren="false"
+				android:clipToPadding="false"
+				android:orientation="vertical"
+				android:paddingHorizontal="4dp"
+				android:paddingTop="4dp"
+				android:paddingBottom="12dp"
+				tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_feed" />
+
+		</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+	</LinearLayout>
+</FrameLayout>

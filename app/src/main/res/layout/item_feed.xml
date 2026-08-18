@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="12dp"
+	android:layout_marginVertical="6dp"
+	android:background="@drawable/bg_taru_notification_card"
+	android:clipChildren="false"
+	android:clipToPadding="false"
+	android:padding="14dp">
+
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_cover"
+		android:layout_width="48dp"
+		android:layout_height="48dp"
+		android:scaleType="centerCrop"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Medium"
+		tools:src="@tools:sample/backgrounds/scenic" />
+
+	<TextView
+		android:id="@+id/textViewNew"
+		android:layout_width="wrap_content"
+		android:layout_height="22dp"
+		android:background="@drawable/bg_taru_new_label"
+		android:fontFamily="sans-serif-medium"
+		android:gravity="center"
+		android:letterSpacing="0.06"
+		android:minWidth="42dp"
+		android:paddingHorizontal="8dp"
+		android:text="@string/notification_new_label"
+		android:textColor="#FFFFFF"
+		android:textSize="10sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<TextView
+		android:id="@+id/textView_title"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="12dp"
+		android:layout_marginEnd="10dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif-medium"
+		android:maxLines="2"
+		android:textColor="@color/taru_text_primary"
+		android:textSize="15sp"
+		app:layout_constraintEnd_toStartOf="@+id/textViewNew"
+		app:layout_constraintStart_toEndOf="@+id/imageView_cover"
+		app:layout_constraintTop_toTopOf="@+id/imageView_cover"
+		tools:text="Ch. 263 - Chapter 263 of Infinite Level Up in Murim" />
+
+	<TextView
+		android:id="@+id/textView_summary"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="2"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="13sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/imageView_cover"
+		tools:text="Chapter 263 is now available!" />
+
+	<TextView
+		android:id="@+id/textViewTime"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="6dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="1"
+		android:textColor="@color/taru_text_muted"
+		android:textSize="12sp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/textView_summary"
+		tools:text="Just now" />
+
+	<LinearLayout
+		android:id="@+id/actionsRow"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="12dp"
+		android:gravity="center_vertical"
+		android:orientation="horizontal"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/textViewTime">
+
+		<TextView
+			android:id="@+id/textViewType"
+			android:layout_width="0dp"
+			android:layout_height="40dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_notification_button"
+			android:drawableEnd="@drawable/ic_taru_chevron_right"
+			android:drawablePadding="6dp"
+			android:ellipsize="end"
+			android:fontFamily="sans-serif"
+			android:gravity="center"
+			android:maxLines="1"
+			android:paddingHorizontal="10dp"
+			android:text="@string/notification_open_manga"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="13sp" />
+
+		<TextView
+			android:id="@+id/textViewReadChapter"
+			android:layout_width="0dp"
+			android:layout_height="40dp"
+			android:layout_marginStart="8dp"
+			android:layout_weight="1"
+			android:background="@drawable/bg_taru_notification_button"
+			android:drawableEnd="@drawable/ic_taru_chevron_right"
+			android:drawablePadding="6dp"
+			android:ellipsize="end"
+			android:fontFamily="sans-serif"
+			android:gravity="center"
+			android:maxLines="1"
+			android:paddingHorizontal="10dp"
+			android:text="@string/notification_read_chapter"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="13sp" />
+	</LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

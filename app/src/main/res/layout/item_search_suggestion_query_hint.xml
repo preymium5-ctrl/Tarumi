@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginVertical="0dp"
+	android:background="@android:color/transparent"
+	android:drawablePadding="14dp"
+	android:ellipsize="end"
+	android:gravity="center_vertical"
+	android:minHeight="58dp"
+	android:paddingStart="4dp"
+	android:paddingEnd="4dp"
+	android:singleLine="true"
+	android:fontFamily="sans-serif"
+	android:textColor="@color/taru_text_primary"
+	android:textSize="14sp"
+	app:drawableStartCompat="@drawable/ic_suggestion"
+	android:drawableTint="@color/taru_text_muted"
+	tools:text="@tools:sample/lorem[6]" />

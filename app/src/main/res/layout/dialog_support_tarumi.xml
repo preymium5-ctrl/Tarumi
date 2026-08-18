@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:background="@drawable/bg_taru_home_feature"
+	android:gravity="center_horizontal"
+	android:orientation="vertical"
+	android:paddingStart="24dp"
+	android:paddingTop="28dp"
+	android:paddingEnd="24dp"
+	android:paddingBottom="22dp">
+
+	<ImageView
+		android:layout_width="58dp"
+		android:layout_height="58dp"
+		android:background="@drawable/bg_taru_home_button"
+		android:padding="15dp"
+		android:src="@drawable/ic_kofi"
+		android:tint="@color/taru_text_primary" />
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="18dp"
+		android:fontFamily="sans-serif-medium"
+		android:gravity="center"
+		android:text="@string/support_tarumi_title"
+		android:textColor="@color/taru_on_accent"
+		android:textSize="22sp" />
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="10dp"
+		android:fontFamily="sans-serif"
+		android:gravity="center"
+		android:lineSpacingExtra="4dp"
+		android:text="@string/support_tarumi_message"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="14sp" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/buttonSupport"
+		android:layout_width="match_parent"
+		android:layout_height="52dp"
+		android:layout_marginTop="22dp"
+		android:fontFamily="sans-serif-medium"
+		android:text="@string/open_kofi"
+		android:textAllCaps="false"
+		android:textColor="@color/taru_text_primary"
+		android:textSize="15sp"
+		app:backgroundTint="@color/taru_accent"
+		app:cornerRadius="26dp"
+		app:icon="@drawable/ic_kofi"
+		app:iconGravity="textStart"
+		app:iconPadding="8dp"
+		app:iconTint="@color/taru_on_accent" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/buttonClose"
+		style="@style/Widget.Material3.Button.TextButton"
+		android:layout_width="match_parent"
+		android:layout_height="48dp"
+		android:layout_marginTop="8dp"
+		android:fontFamily="sans-serif-medium"
+		android:text="@android:string/cancel"
+		android:textAllCaps="false"
+		android:textColor="@color/taru_text_muted"
+		android:textSize="14sp" />
+</LinearLayout>

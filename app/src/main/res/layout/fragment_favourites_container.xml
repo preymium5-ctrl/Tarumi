@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@android:color/transparent"
+	android:orientation="vertical">
+
+	<LinearLayout
+		android:id="@+id/layout_library_header"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="14dp"
+		android:layout_marginTop="6dp"
+		android:background="@drawable/bg_taru_home_feature"
+		android:clipToOutline="true"
+		android:elevation="2dp"
+		android:orientation="vertical"
+		android:paddingHorizontal="20dp"
+		android:paddingTop="22dp"
+		android:paddingBottom="18dp">
+
+		<TextView
+			android:id="@+id/textView_library_title"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:fontFamily="sans-serif"
+			android:text="@string/library_title"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="26sp" />
+
+		<TextView
+			android:id="@+id/textView_library_subtitle"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="10dp"
+			android:fontFamily="sans-serif"
+			android:lineSpacingExtra="2dp"
+			android:text="@string/library_subtitle"
+			android:textColor="@color/taru_text_muted"
+			android:textSize="14sp" />
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="18dp"
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_saved_count"
+				style="?materialButtonOutlinedStyle"
+				android:layout_width="0dp"
+				android:layout_height="38dp"
+				android:layout_weight="1"
+				android:clickable="false"
+				android:focusable="false"
+				android:fontFamily="sans-serif"
+				android:gravity="center"
+				android:letterSpacing="0.04"
+				android:minWidth="0dp"
+				android:text="@string/saved_count_initial"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="12sp"
+				app:backgroundTint="@color/taru_surface_soft"
+				app:cornerRadius="20dp"
+				app:icon="@drawable/ic_bookmark"
+				app:iconGravity="textStart"
+				app:iconPadding="8dp"
+				app:iconTint="@color/taru_text_secondary"
+				app:strokeColor="@color/taru_outline_soft"
+				tools:text="13 saved" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_downloaded"
+				style="?materialButtonOutlinedStyle"
+				android:layout_width="0dp"
+				android:layout_height="38dp"
+				android:layout_weight="1"
+				android:layout_marginStart="10dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center"
+				android:letterSpacing="0.04"
+				android:minWidth="0dp"
+				android:text="@string/downloaded"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="12sp"
+				app:backgroundTint="@color/taru_surface_soft"
+				app:cornerRadius="20dp"
+				app:icon="@drawable/ic_download"
+				app:iconGravity="textStart"
+				app:iconPadding="8dp"
+				app:iconTint="@color/taru_text_secondary"
+				app:strokeColor="@color/taru_outline_soft" />
+		</LinearLayout>
+
+	</LinearLayout>
+
+	<com.google.android.material.tabs.TabLayout
+		android:id="@+id/tabs"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="14dp"
+		android:layout_marginTop="4dp"
+		android:layout_marginBottom="6dp"
+		android:background="@drawable/bg_taru_home_surface"
+		android:elevation="1dp"
+		android:paddingHorizontal="6dp"
+		android:paddingVertical="2dp"
+		app:tabGravity="start"
+		app:tabIndicatorColor="@color/taru_text_primary"
+		app:tabIndicatorHeight="2dp"
+		app:tabMode="scrollable"
+		app:tabSelectedTextColor="@color/taru_text_primary"
+		app:tabTextColor="@color/taru_text_soft" />
+
+	<androidx.viewpager2.widget.ViewPager2
+		android:id="@+id/pager"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		tools:visibility="gone" />
+
+	<ViewStub
+		android:id="@+id/stub_empty"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:layout="@layout/item_empty_state"
+		tools:visibility="visible" />
+
+</LinearLayout>

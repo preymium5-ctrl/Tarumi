@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:title="@string/about">
+
+	<Preference
+		android:icon="@drawable/ic_app_update"
+		android:key="app_version"
+		android:persistent="false"
+		android:summary="@string/check_for_updates" />
+
+	<Preference
+		android:icon="@drawable/ic_discord"
+		android:key="about_discord"
+		android:persistent="false"
+		android:summary="@string/url_discord_invite"
+		android:title="@string/discord" />
+
+	<Preference
+		android:icon="@drawable/ic_kofi"
+		android:key="about_kofi"
+		android:persistent="false"
+		android:summary="@string/url_kofi"
+		android:title="@string/support_me" />
+
+</PreferenceScreen>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+
+	<!-- Hidden legacy views to satisfy View Binding -->
+	<org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetHeaderBar
+		android:id="@+id/headerBar"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:visibility="gone" />
+
+	<com.google.android.material.appbar.MaterialToolbar
+		android:id="@+id/toolbar"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:visibility="gone" />
+
+	<com.google.android.material.button.MaterialSplitButton
+		android:id="@+id/split_button_read"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:visibility="gone">
+
+		<Button
+			android:id="@+id/button_read"
+			android:layout_width="0dp"
+			android:layout_height="0dp" />
+
+		<Button
+			android:id="@+id/button_read_menu"
+			android:layout_width="0dp"
+			android:layout_height="0dp" />
+
+	</com.google.android.material.button.MaterialSplitButton>
+
+	<!-- Custom landscape layout -->
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="horizontal"
+		android:paddingHorizontal="16dp"
+		android:paddingTop="16dp"
+		android:paddingBottom="12dp">
+
+		<TextView
+			android:id="@+id/textViewChaptersTitle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="18sp"
+			android:textStyle="bold"
+			tools:text="125 Chapters" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/buttonSortChapters"
+			style="?attr/materialButtonOutlinedStyle"
+			android:layout_width="wrap_content"
+			android:layout_height="38dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:paddingHorizontal="12dp"
+			android:text="Newest"
+			android:textColor="@color/taru_text_primary"
+			android:textSize="12sp"
+			app:backgroundTint="@android:color/transparent"
+			app:cornerRadius="19dp"
+			app:icon="@drawable/ic_sort_desc"
+			app:iconSize="14dp"
+			app:iconTint="@color/taru_text_primary"
+			app:strokeColor="@color/taru_outline"
+			app:strokeWidth="1dp"
+			tools:ignore="HardcodedText" />
+
+	</LinearLayout>
+
+	<EditText
+		android:id="@+id/searchChapters"
+		android:layout_width="match_parent"
+		android:layout_height="48dp"
+		android:layout_gravity="center_horizontal"
+		android:layout_marginHorizontal="16dp"
+		android:layout_marginBottom="12dp"
+		android:background="@drawable/bg_taru_home_chip"
+		android:drawableEnd="@drawable/ic_taru_search"
+		android:drawableTint="@color/taru_text_muted"
+		android:hint="Search chapters..."
+		android:textColorHint="@color/taru_text_muted"
+		android:textColor="@color/taru_text_primary"
+		android:textSize="14sp"
+		android:paddingHorizontal="16dp"
+		android:singleLine="true"
+		android:inputType="text"
+		android:imeOptions="actionSearch"
+		tools:ignore="Autofill,HardcodedText,TextFields" />
+
+	<com.google.android.material.tabs.TabLayout
+		android:id="@+id/tabs"
+		style="?tabSecondaryStyle"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="start|center_vertical"
+		android:background="@null"
+		android:visibility="gone"
+		app:tabGravity="start"
+		app:tabIndicator="@drawable/bg_tab_pill"
+		app:tabIndicatorAnimationMode="fade"
+		app:tabIndicatorColor="?colorSurfaceDim"
+		app:tabIndicatorFullWidth="true"
+		app:tabIndicatorGravity="stretch"
+		app:tabInlineLabel="true"
+		app:tabMinWidth="0dp"
+		app:tabMode="scrollable"
+		app:tabUnboundedRipple="true" />
+
+	<org.koitharu.kotatsu.core.ui.widgets.TouchBlockLayout
+		android:id="@+id/layout_touchBlock"
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1">
+
+		<androidx.viewpager2.widget.ViewPager2
+			android:id="@+id/pager"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent" />
+
+	</org.koitharu.kotatsu.core.ui.widgets.TouchBlockLayout>
+
+</LinearLayout>

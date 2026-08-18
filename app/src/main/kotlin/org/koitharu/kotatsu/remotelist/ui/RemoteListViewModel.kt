@@ -1,0 +1,460 @@
+package org.koitharu.kotatsu.remotelist.ui
+
+import android.content.Context
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.plus
+import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.exceptions.CloudFlareException
+import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
+import org.koitharu.kotatsu.core.model.MangaSource
+import org.koitharu.kotatsu.core.model.distinctById
+import org.koitharu.kotatsu.core.parser.MangaDataRepository
+import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.prefs.ListMode
+import org.koitharu.kotatsu.core.prefs.SourceSettings
+import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
+import org.koitharu.kotatsu.core.util.ext.call
+import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
+import org.koitharu.kotatsu.core.util.ext.getCauseUrl
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
+import org.koitharu.kotatsu.explore.domain.ExploreRepository
+import org.koitharu.kotatsu.filter.ui.FilterCoordinator
+import org.koitharu.kotatsu.list.domain.MangaListMapper
+import org.koitharu.kotatsu.list.ui.MangaListViewModel
+import org.koitharu.kotatsu.list.ui.model.ButtonFooter
+import org.koitharu.kotatsu.list.ui.model.EmptyState
+import org.koitharu.kotatsu.list.ui.model.ListModel
+import org.koitharu.kotatsu.list.ui.model.LoadingFooter
+import org.koitharu.kotatsu.list.ui.model.LoadingState
+import org.koitharu.kotatsu.list.ui.model.toErrorFooter
+import org.koitharu.kotatsu.list.ui.model.toErrorState
+import org.koitharu.kotatsu.local.data.LocalStorageChanges
+import org.koitharu.kotatsu.local.domain.model.LocalManga
+import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaListFilter
+import org.koitharu.kotatsu.parsers.model.MangaTag
+import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.parsers.model.SortOrder
+import javax.inject.Inject
+import kotlin.random.Random
+
+private const val FILTER_MIN_INTERVAL = 250L
+private const val EXPANDED_SOURCE_PAGE_SIZE = 50
+private const val EXPANDED_ROUTE_MAX_OFFSET = 220
+private const val RANDOMIZED_SOURCE_ROTATION_MS = 8L * 60L * 60L * 1000L
+private val EXPANDED_CATALOG_SOURCE_NAMES = setOf(
+	"WEBTOONS_EN",
+	"ASURASCANS",
+	"ASURASCANS_US",
+	"ASURASCANSGG",
+	"ASURACOMIC",
+	"MANGAPLUSPARSER_EN",
+	"MANGAFIRE_EN",
+	"MANGAFREAK",
+	"LUNARANIME",
+	"LUNARSCAN",
+	"LUNARSCANS",
+	"LUNAR_SCAN",
+	"AQUAMANGA",
+	"STONESCAPE",
+	"NINEMANGA_EN",
+	"MANHWAZ",
+	"MANHUAFAST",
+	"MANHUAHOT",
+	"MANGABALL_EN",
+	"DEMONICSCANS",
+	"BEEHENTAI",
+	"ALLPORN_COMIC",
+	"PORNCOMIC18",
+	"HENTAI3Z",
+	"HENTAI3ZCC",
+)
+private val RANDOMIZED_DEFAULT_SOURCE_NAMES = setOf(
+	"ALLPORN_COMIC",
+	"PORNCOMIC18",
+)
+private val EXPANDED_QUERY_SEEDS = listOf(
+	"a", "e", "i", "o", "u", "s", "t", "r", "n", "m",
+	"l", "c", "d", "b", "h", "k", "y", "p", "w", "g",
+	"1", "2", "3", "4", "5",
+)
+private val FORCE_AUTO_CAPTCHA_SOURCES = setOf(
+	"HENTAI3Z",
+	"HENTAI3ZCC",
+	// ManhuaFast is behind aggressive Cloudflare; always try auto-solve first.
+	"MANHUAFAST",
+	"MANGAFASTNET",
+)
+
+@HiltViewModel
+open class RemoteListViewModel @Inject constructor(
+	savedStateHandle: SavedStateHandle,
+	mangaRepositoryFactory: MangaRepository.Factory,
+	final override val filterCoordinator: FilterCoordinator,
+	settings: AppSettings,
+	protected val mangaListMapper: MangaListMapper,
+	private val exploreRepository: ExploreRepository,
+	sourcesRepository: MangaSourcesRepository,
+	mangaDataRepository: MangaDataRepository,
+	@ApplicationContext private val appContext: Context,
+	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>
+) : MangaListViewModel(settings, mangaDataRepository, localStorageChanges), FilterCoordinator.Owner {
+
+	val source = MangaSource(savedStateHandle[RemoteListFragment.ARG_SOURCE])
+	val isRandomLoading = MutableStateFlow(false)
+	val onOpenManga = MutableEventFlow<Manga>()
+    val onSourceBroken = MutableEventFlow<Unit>()
+	val onCaptchaRequired = MutableEventFlow<CloudFlareProtectedException>()
+
+	protected val repository = mangaRepositoryFactory.create(source)
+	private val mangaList = MutableStateFlow<List<Manga>?>(null)
+	private val hasNextPage = MutableStateFlow(false)
+	private val listError = MutableStateFlow<Throwable?>(null)
+	private val isResolvingCaptcha = MutableStateFlow(false)
+	private var loadingJob: Job? = null
+	private var randomJob: Job? = null
+	private var rawOffset = 0
+	private var expandedSessionKey: ExpandedSessionKey? = null
+	private var expandedRoutes: List<ExpandedRoute> = emptyList()
+	private var expandedRouteIndex = 0
+	private var expandedRouteOffset = 0
+	private val expandedSeenIds = HashSet<Long>()
+
+	override val listMode: StateFlow<ListMode> = MutableStateFlow(ListMode.GRID)
+
+	override val content = combine(
+		mangaList.map { it?.skipNsfwIfNeeded() },
+		observeListModeWithTriggers(),
+		listError,
+		hasNextPage,
+		isResolvingCaptcha,
+	) { list, mode, error, hasNext, resolvingCaptcha ->
+		buildList(list?.size?.plus(2) ?: 2) {
+			when {
+				// While the silent CAPTCHA solve is in progress, suppress the error state and keep showing
+				// the loading spinner with the "Solving captcha automatically…" text instead.
+				resolvingCaptcha && list.isNullOrEmpty() ->
+					add(LoadingState(R.string.captcha_solving))
+
+				list.isNullOrEmpty() && error != null -> add(
+					error.toErrorState(
+						canRetry = true,
+						secondaryAction = if (error.getCauseUrl().isNullOrEmpty()) 0 else R.string.open_in_browser,
+					),
+				)
+
+				list == null -> add(LoadingState())
+				list.isEmpty() -> add(createEmptyState(canResetFilter = filterCoordinator.isFilterApplied))
+				else -> {
+					mapMangaList(this, list, mode)
+					when {
+						error != null -> add(error.toErrorFooter())
+						hasNext -> add(LoadingFooter())
+						else -> getFooter()?.let(::add)
+					}
+				}
+			}
+			onBuildList(this)
+		}
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Lazily, listOf(LoadingState()))
+
+	init {
+		filterCoordinator.observe()
+			.debounce(FILTER_MIN_INTERVAL)
+			.onEach { filterState ->
+				loadingJob?.cancelAndJoin()
+				mangaList.value = null
+				loadList(filterState, false)
+			}.catch { error ->
+				listError.value = error
+			}.launchIn(viewModelScope)
+
+		launchJob(Dispatchers.Default) {
+			sourcesRepository.trackUsage(source)
+		}
+
+        if (source is MangaParserSource && source.isBroken) {
+            // Just notify one. Will show reason in future
+            onSourceBroken.call(Unit)
+        }
+	}
+
+	override fun onRefresh() {
+		resetExpandedSession()
+		loadList(filterCoordinator.snapshot(), append = false)
+	}
+
+	override fun onRetry() {
+		loadList(filterCoordinator.snapshot(), append = !mangaList.value.isNullOrEmpty())
+	}
+
+	fun loadNextPage() {
+		if (hasNextPage.value && listError.value == null) {
+			loadList(filterCoordinator.snapshot(), append = true)
+		}
+	}
+
+	/** Flipped by the Fragment around an `exceptionResolver.resolve(...)` call so the list can show
+	 *  the "Solving captcha automatically…" text instead of the error state while it runs. */
+	fun setCaptchaResolving(resolving: Boolean) {
+		isResolvingCaptcha.value = resolving
+	}
+
+	protected fun loadList(filterState: FilterCoordinator.Snapshot, append: Boolean): Job {
+		loadingJob?.let {
+			if (it.isActive) return it
+		}
+		return launchLoadingJob(Dispatchers.Default) {
+			try {
+				listError.value = null
+				val list = getListResolvingCaptcha(filterState, append)
+				val prevList = mangaList.value.orEmpty()
+				if (!append) {
+					mangaList.value = list.distinctById()
+					rawOffset = list.size
+				} else if (list.isNotEmpty()) {
+					mangaList.value = (prevList + list).distinctById()
+					rawOffset += list.size
+				}
+				hasNextPage.value = list.isNotEmpty()
+			} catch (e: CancellationException) {
+				throw e
+			} catch (e: Throwable) {
+				e.printStackTraceDebug()
+				listError.value = e
+				if (!mangaList.value.isNullOrEmpty()) {
+					errorEvent.call(e)
+				}
+				hasNextPage.value = false
+			}
+		}.also { loadingJob = it }
+	}
+
+	/**
+	 * Loads a page and, on a CloudFlare captcha, hands off the resolve to the Fragment which launches
+	 * `CloudFlareActivity` (hidden first, falling back to visible). The exception is rethrown so the
+	 * standard error state is shown while the resolve runs; a successful resolve triggers `onRetry`.
+	 */
+	private suspend fun getListResolvingCaptcha(
+		filterState: FilterCoordinator.Snapshot,
+		append: Boolean,
+	): List<Manga> {
+		val offset = if (append) rawOffset else 0
+		getExpandedSourceList(filterState, append)?.let {
+			return it
+		}
+		return try {
+			repository.getList(offset = offset, order = filterState.sortOrder, filter = filterState.listFilter)
+		} catch (e: Exception) {
+			val cfException = e.findCloudFlareException() ?: throw e
+			// Only fire the auto-resolve handoff if the per-source "Disable automatic CAPTCHA solving"
+			// setting is OFF. When it's on we just throw, the standard error state shows, and the user
+			// goes through the normal "Solve" → visible CloudFlareActivity flow.
+			//
+			// Also skip the event if a resolve is already in progress for this source — otherwise rapid
+			// successive loadList calls (filter coordinator emissions, retries, …) would each spawn
+			// their own Fragment-observer coroutine, all of which would award the same in-flight resolve
+			// but pile up toasts/UI churn on the way there.
+			if (
+				cfException is CloudFlareProtectedException &&
+				!isResolvingCaptcha.value &&
+				(!SourceSettings(appContext, source).isCaptchaAutoResolveDisabled ||
+					source.name in FORCE_AUTO_CAPTCHA_SOURCES)
+			) {
+				onCaptchaRequired.call(cfException)
+			}
+			throw cfException
+		}
+	}
+
+	private suspend fun getExpandedSourceList(
+		filterState: FilterCoordinator.Snapshot,
+		append: Boolean,
+	): List<Manga>? {
+		if (!shouldExpandSource(filterState.listFilter)) {
+			return null
+		}
+		val key = ExpandedSessionKey(source.name, filterState.sortOrder, filterState.listFilter)
+		if (!append || expandedSessionKey != key) {
+			resetExpandedSession()
+			expandedSessionKey = key
+			expandedRoutes = createExpandedRoutes(filterState.listFilter, filterState.sortOrder)
+			expandedRouteOffset = expandedRoutes.firstOrNull()?.startOffset ?: 0
+		}
+		return fetchExpandedBatch()
+	}
+
+	private fun shouldExpandSource(filter: MangaListFilter): Boolean {
+		return source.name in EXPANDED_CATALOG_SOURCE_NAMES &&
+			filter.query.isNullOrEmpty() &&
+			filter.author.isNullOrEmpty() &&
+			filter.tagsExclude.isEmpty()
+	}
+
+	private suspend fun createExpandedRoutes(baseFilter: MangaListFilter, order: SortOrder): List<ExpandedRoute> {
+		val filterOptions = repository.getFilterOptions()
+		val tags = filterOptions.availableTags.distinctBy { it.key }
+		val routes = buildList {
+			for (sortOrder in expandedSortOrders(order)) {
+				add(ExpandedRoute(filter = baseFilter, order = sortOrder))
+			}
+			if (baseFilter.tags.isEmpty()) {
+				for (tag in tags.take(48)) {
+					add(ExpandedRoute(filter = MangaListFilter(tags = setOf(tag)), order = order))
+				}
+			}
+			for (query in EXPANDED_QUERY_SEEDS) {
+				add(ExpandedRoute(filter = baseFilter.copy(query = query), order = SortOrder.RELEVANCE, maxOffset = 80))
+			}
+		}
+		return routes.randomizeForSource(baseFilter)
+	}
+
+	private suspend fun fetchExpandedBatch(): List<Manga> {
+		val result = ArrayList<Manga>(EXPANDED_SOURCE_PAGE_SIZE)
+		while (result.size < EXPANDED_SOURCE_PAGE_SIZE && expandedRouteIndex < expandedRoutes.size) {
+			val route = expandedRoutes[expandedRouteIndex]
+			if (expandedRouteOffset >= route.maxOffset) {
+				nextExpandedRoute()
+				continue
+			}
+			val page = runCatching {
+				repository.getList(expandedRouteOffset, route.order, route.filter)
+			}.getOrDefault(emptyList())
+			expandedRouteOffset += page.size.takeIf { it > 0 } ?: EXPANDED_SOURCE_PAGE_SIZE
+			if (page.isEmpty()) {
+				nextExpandedRoute()
+				continue
+			}
+			var addedFromPage = 0
+			for (manga in page) {
+				if (expandedSeenIds.add(manga.id)) {
+					result += manga
+					addedFromPage++
+					if (result.size == EXPANDED_SOURCE_PAGE_SIZE) {
+						break
+					}
+				}
+			}
+			if (addedFromPage == 0) {
+				nextExpandedRoute()
+			}
+		}
+		return result
+	}
+
+	private fun nextExpandedRoute() {
+		expandedRouteIndex++
+		expandedRouteOffset = expandedRoutes.getOrNull(expandedRouteIndex)?.startOffset ?: 0
+	}
+
+	private fun resetExpandedSession() {
+		expandedSessionKey = null
+		expandedRoutes = emptyList()
+		expandedRouteIndex = 0
+		expandedRouteOffset = 0
+		expandedSeenIds.clear()
+	}
+
+	private fun expandedSortOrders(primary: SortOrder): List<SortOrder> = listOf(
+		primary,
+		SortOrder.UPDATED,
+		SortOrder.POPULARITY,
+		SortOrder.NEWEST,
+		SortOrder.ALPHABETICAL,
+	).distinct()
+
+	private fun List<ExpandedRoute>.randomizeForSource(baseFilter: MangaListFilter): List<ExpandedRoute> {
+		if (source.name !in RANDOMIZED_DEFAULT_SOURCE_NAMES || !baseFilter.isEmptyDefaultBrowse()) {
+			return this
+		}
+		val random = Random(source.name.hashCode() * 31L + currentRandomizedSourcePeriod())
+		return shuffled(random).map { route ->
+			route.copy(startOffset = random.nextInt(0, 6) * EXPANDED_SOURCE_PAGE_SIZE)
+		}
+	}
+
+	private fun MangaListFilter.isEmptyDefaultBrowse(): Boolean {
+		return query.isNullOrEmpty() &&
+			author.isNullOrEmpty() &&
+			tags.isEmpty() &&
+			tagsExclude.isEmpty()
+	}
+
+	private fun currentRandomizedSourcePeriod(): Long {
+		return System.currentTimeMillis() / RANDOMIZED_SOURCE_ROTATION_MS
+	}
+
+	private data class ExpandedRoute(
+		val filter: MangaListFilter,
+		val order: SortOrder,
+		val maxOffset: Int = EXPANDED_ROUTE_MAX_OFFSET,
+		val startOffset: Int = 0,
+	)
+
+	private data class ExpandedSessionKey(
+		val sourceName: String,
+		val order: SortOrder,
+		val filter: MangaListFilter,
+	)
+
+
+	protected open fun createEmptyState(canResetFilter: Boolean) = EmptyState(
+		icon = R.drawable.cat_yarn,
+		textPrimary = R.string.nothing_found,
+		textSecondary = 0,
+		actionStringRes = if (canResetFilter) R.string.reset_filter else 0,
+	)
+
+	protected open suspend fun onBuildList(list: MutableList<ListModel>) = Unit
+
+	protected open suspend fun mapMangaList(
+		destination: MutableCollection<in ListModel>,
+		manga: Collection<Manga>,
+		mode: ListMode
+	) = mangaListMapper.toListModelList(destination, manga, mode)
+
+	protected open fun getFooter(): ButtonFooter? {
+		val filter = filterCoordinator.snapshot().listFilter
+		val hasQuery = !filter.query.isNullOrEmpty()
+		val hasAuthor = !filter.author.isNullOrEmpty()
+		val isOneTag = filter.tags.size == 1
+		return if ((hasQuery xor isOneTag xor hasAuthor) && !(hasQuery && isOneTag && hasAuthor)) {
+			ButtonFooter(R.string.global_search)
+		} else {
+			null
+		}
+	}
+
+	fun openRandom() {
+		if (randomJob?.isActive == true) {
+			return
+		}
+		randomJob = launchLoadingJob(Dispatchers.Default) {
+			isRandomLoading.value = true
+			val manga = exploreRepository.findRandomManga(source, 16)
+			onOpenManga.call(manga)
+			isRandomLoading.value = false
+		}
+	}
+}

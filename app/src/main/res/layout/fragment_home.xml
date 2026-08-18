@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/homeRoot"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@android:color/transparent"
+	android:clipToPadding="false"
+	android:fillViewport="true"
+	android:paddingHorizontal="14dp"
+	android:paddingTop="0dp"
+	android:paddingBottom="20dp"
+	android:scrollbars="none">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical">
+
+		<LinearLayout
+			android:id="@+id/continueReadingSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="0dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp"
+			android:visibility="gone"
+			tools:visibility="visible">
+
+			<TextView
+				android:id="@+id/buttonContinueReadingAll"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:background="?attr/selectableItemBackground"
+				android:drawablePadding="4dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center_vertical"
+				android:paddingVertical="4dp"
+				android:text="@string/continue_reading"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="20sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+
+			<LinearLayout
+				android:id="@+id/continueReadingList"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:orientation="vertical" />
+
+			<TextView
+				android:id="@+id/buttonContinueReadingSeeAll"
+				android:layout_width="wrap_content"
+				android:layout_height="38dp"
+				android:layout_gravity="end"
+				android:layout_marginTop="12dp"
+				android:background="@drawable/bg_taru_page_button"
+				android:drawablePadding="6dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center"
+				android:minWidth="98dp"
+				android:paddingHorizontal="14dp"
+				android:text="@string/see_all"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="14sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+		</LinearLayout>
+
+		<!-- Featured comics card -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="6dp"
+			android:background="@drawable/bg_taru_home_feature"
+			android:clipToOutline="true"
+			android:elevation="2dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="20dp"
+			android:paddingTop="22dp"
+			android:paddingBottom="18dp">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif"
+				android:text="@string/featured_manhwa"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="30sp"
+				android:textStyle="normal" />
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="20dp"
+				android:orientation="horizontal">
+
+				<TextView
+					android:id="@+id/textFeaturedType"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:background="@drawable/bg_taru_home_chip_active"
+					android:fontFamily="sans-serif"
+					android:gravity="center"
+					android:minHeight="32dp"
+					android:paddingHorizontal="14dp"
+					android:paddingVertical="6dp"
+					android:text="Comic"
+					android:textColor="@color/taru_text_primary"
+					android:textSize="13sp"
+					tools:ignore="HardcodedText" />
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginStart="8dp"
+					android:background="@drawable/bg_taru_home_chip"
+					android:fontFamily="sans-serif"
+					android:gravity="center"
+					android:minHeight="32dp"
+					android:paddingHorizontal="14dp"
+					android:paddingVertical="6dp"
+					android:text="Ongoing"
+					android:textColor="@color/taru_text_primary"
+					android:textSize="13sp"
+					tools:ignore="HardcodedText" />
+			</LinearLayout>
+
+			<TextView
+				android:id="@+id/textFeaturedTitle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="14dp"
+				android:fontFamily="sans-serif"
+				android:lineSpacingMultiplier="1.05"
+				android:text=""
+				android:textColor="@color/taru_text_primary"
+				android:textSize="20sp"
+				android:textStyle="normal"
+				tools:ignore="HardcodedText" />
+
+			<TextView
+				android:id="@+id/textFeaturedDescription"
+				android:layout_width="match_parent"
+				android:layout_height="58dp"
+				android:layout_marginTop="10dp"
+				android:ellipsize="end"
+				android:fontFamily="sans-serif"
+				android:lineSpacingExtra="2dp"
+				android:maxLines="3"
+				android:text=""
+				android:textColor="@color/taru_text_secondary"
+				android:textSize="13sp"
+				tools:ignore="HardcodedText" />
+
+			<HorizontalScrollView
+				android:id="@+id/featuredCarouselScroll"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="20dp"
+				android:clipToPadding="false"
+				android:overScrollMode="never"
+				android:scrollbars="none">
+
+				<LinearLayout
+					android:id="@+id/comicsCarousel"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:orientation="horizontal"
+					android:paddingEnd="14dp" />
+			</HorizontalScrollView>
+		</LinearLayout>
+
+		<!-- Trending section -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="54dp"
+			android:background="@drawable/bg_taru_home_feature"
+			android:clipToOutline="true"
+			android:elevation="2dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="20dp"
+			android:paddingTop="24dp"
+			android:paddingBottom="22dp">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif"
+				android:text="@string/trending_title"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="30sp"
+				android:textStyle="normal" />
+
+			<LinearLayout
+				android:id="@+id/trendingGrid"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="20dp"
+				android:orientation="vertical" />
+
+			<FrameLayout
+				android:id="@+id/trendingLoading"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginVertical="20dp"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.CircularProgressIndicator
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:indeterminate="true"
+					app:indicatorSize="28dp" />
+			</FrameLayout>
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/smartRecommendationSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="42dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:drawablePadding="4dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center_vertical"
+				android:text="@string/smart_recommendation"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="22sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/smartRecommendationList"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="18dp"
+				android:clipToPadding="false"
+				android:nestedScrollingEnabled="false"
+				android:orientation="horizontal"
+				android:overScrollMode="never"
+				android:paddingEnd="16dp"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_home_recommendation_cover" />
+
+			<FrameLayout
+				android:id="@+id/smartRecommendationLoading"
+				android:layout_width="match_parent"
+				android:layout_height="96dp"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.CircularProgressIndicator
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:indeterminate="true"
+					app:indicatorSize="28dp" />
+			</FrameLayout>
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/manhuaRecommendationSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="42dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:drawablePadding="4dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center_vertical"
+				android:text="@string/manhua_recommendation"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="22sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/manhuaRecommendationList"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="18dp"
+				android:clipToPadding="false"
+				android:nestedScrollingEnabled="false"
+				android:orientation="horizontal"
+				android:overScrollMode="never"
+				android:paddingEnd="16dp"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_home_recommendation_cover" />
+
+			<FrameLayout
+				android:id="@+id/manhuaRecommendationLoading"
+				android:layout_width="match_parent"
+				android:layout_height="96dp"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.CircularProgressIndicator
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:indeterminate="true"
+					app:indicatorSize="28dp" />
+			</FrameLayout>
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/mangaRecommendationSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="42dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:drawablePadding="4dp"
+				android:fontFamily="sans-serif"
+				android:gravity="center_vertical"
+				android:text="@string/manga_recommendation"
+				android:textColor="@color/taru_text_primary"
+				android:textSize="22sp"
+				app:drawableEndCompat="@drawable/ic_taru_chevron_right"
+				app:drawableTint="@color/taru_text_secondary" />
+
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/mangaRecommendationList"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="18dp"
+				android:clipToPadding="false"
+				android:nestedScrollingEnabled="false"
+				android:orientation="horizontal"
+				android:overScrollMode="never"
+				android:paddingEnd="16dp"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:listitem="@layout/item_home_recommendation_cover" />
+
+			<FrameLayout
+				android:id="@+id/mangaRecommendationLoading"
+				android:layout_width="match_parent"
+				android:layout_height="96dp"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.CircularProgressIndicator
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:indeterminate="true"
+					app:indicatorSize="28dp" />
+			</FrameLayout>
+		</LinearLayout>
+
+		<!-- Header always stays so the switch is reachable; body hides when off.
+		     Extra bottom padding keeps the toggle above the floating bottom nav. -->
+		<LinearLayout
+			android:id="@+id/recentUpdatesSection"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="54dp"
+			android:orientation="vertical"
+			android:paddingHorizontal="4dp"
+			android:paddingBottom="32dp">
+
+			<LinearLayout
+				android:id="@+id/recentUpdatesHeader"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:gravity="center_vertical"
+				android:minHeight="52dp"
+				android:orientation="horizontal"
+				android:paddingEnd="4dp"
+				android:paddingBottom="8dp">
+
+				<TextView
+					android:id="@+id/textRecentUpdatesTitle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:fontFamily="sans-serif"
+					android:text="@string/recent_updates"
+					android:textColor="@color/taru_text_primary"
+					android:textSize="30sp" />
+
+				<com.google.android.material.materialswitch.MaterialSwitch
+					android:id="@+id/switchRecentUpdates"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginStart="8dp"
+					android:minHeight="48dp"
+					android:contentDescription="@string/recent_updates_enabled" />
+			</LinearLayout>
+
+			<!-- Summary + list + pagination: hidden when Recent is off -->
+			<LinearLayout
+				android:id="@+id/recentUpdatesBody"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="vertical">
+
+				<TextView
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="8dp"
+					android:fontFamily="sans-serif"
+					android:lineSpacingExtra="2dp"
+					android:text="@string/recent_updates_summary"
+					android:textColor="@color/taru_text_muted"
+					android:textSize="15sp" />
+
+				<FrameLayout
+					android:id="@+id/recentUpdatesLoading"
+					android:layout_width="match_parent"
+					android:layout_height="96dp"
+					android:layout_marginTop="20dp"
+					android:visibility="gone"
+					tools:visibility="visible">
+
+					<com.google.android.material.progressindicator.CircularProgressIndicator
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:layout_gravity="center"
+						android:indeterminate="true"
+						app:indicatorSize="28dp" />
+				</FrameLayout>
+
+				<LinearLayout
+					android:id="@+id/recentUpdatesList"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="20dp"
+					android:orientation="vertical" />
+
+				<LinearLayout
+					android:id="@+id/recentUpdatesPagination"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="24dp"
+					android:layout_marginBottom="16dp"
+					android:gravity="center"
+					android:orientation="vertical" />
+			</LinearLayout>
+		</LinearLayout>
+	</LinearLayout>
+</ScrollView>

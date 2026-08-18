@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginTop="4dp"
+	android:layout_marginBottom="18dp"
+	android:background="@android:color/white"
+	android:gravity="center"
+	android:orientation="vertical"
+	android:paddingVertical="16dp">
+
+	<TextView
+		android:id="@+id/text_bottom_page"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:fontFamily="sans-serif"
+		android:gravity="center"
+		android:letterSpacing="0.08"
+		android:textColor="#20242D"
+		android:textSize="21sp"
+		tools:text="1   2   3 ... 6355" />
+
+	<LinearLayout
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="14dp"
+		android:gravity="center"
+		android:orientation="horizontal">
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_bottom_prev"
+			style="?materialButtonOutlinedStyle"
+			android:layout_width="96dp"
+			android:layout_height="40dp"
+			android:backgroundTint="@android:color/white"
+			android:contentDescription="@string/prev_page"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:text="@string/browser_prev_page"
+			android:textColor="#20242D"
+			android:textSize="13sp"
+			app:icon="@drawable/ic_prev"
+			app:iconSize="16dp"
+			app:iconTint="#20242D"
+			app:strokeColor="#6B7280" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_bottom_next"
+			style="?materialButtonOutlinedStyle"
+			android:layout_width="96dp"
+			android:layout_height="40dp"
+			android:layout_marginStart="14dp"
+			android:backgroundTint="@android:color/white"
+			android:contentDescription="@string/next_page"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:text="@string/browser_next_page"
+			android:textColor="#20242D"
+			android:textSize="13sp"
+			app:icon="@drawable/ic_next"
+			app:iconGravity="textEnd"
+			app:iconSize="16dp"
+			app:iconTint="#20242D"
+			app:strokeColor="#6B7280" />
+
+	</LinearLayout>
+
+</LinearLayout>

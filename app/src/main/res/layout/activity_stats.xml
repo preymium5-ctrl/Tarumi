@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root">
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:background="@android:color/transparent"
+		android:fitsSystemWindows="false"
+		app:elevation="0dp"
+		app:liftOnScroll="false"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent">
+
+		<com.google.android.material.appbar.MaterialToolbar
+			android:id="@id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="?attr/actionBarSize"
+			android:background="@android:color/transparent"
+			android:paddingHorizontal="18dp"
+			app:layout_scrollFlags="noScroll"
+			app:navigationIconTint="@color/taru_text_primary"
+			app:titleTextAppearance="@style/TextAppearance.Tarumi.Settings.Title"
+			app:titleTextColor="@color/taru_text_primary" />
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<com.google.android.material.progressindicator.LinearProgressIndicator
+		android:id="@+id/progressBar"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:indeterminate="true"
+		android:visibility="gone"
+		app:hideAnimationBehavior="outward"
+		app:layout_constraintBottom_toBottomOf="@id/appbar"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/appbar"
+		app:showAnimationBehavior="inward"
+		app:trackCornerRadius="0dp"
+		tools:visibility="visible" />
+
+	<com.google.android.material.card.MaterialCardView
+		android:id="@+id/card_period"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginHorizontal="16dp"
+		android:layout_marginTop="8dp"
+		app:cardCornerRadius="16dp"
+		app:cardElevation="0dp"
+		app:strokeWidth="1dp"
+		app:strokeColor="@color/taru_outline"
+		app:cardBackgroundColor="@color/taru_surface"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/appbar">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:padding="4dp">
+
+			<TextView
+				android:id="@+id/btn_period_day"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/day"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+
+			<TextView
+				android:id="@+id/btn_period_week"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/week"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+
+			<TextView
+				android:id="@+id/btn_period_month"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/month"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+
+
+			<TextView
+				android:id="@+id/btn_period_all"
+				android:layout_width="0dp"
+				android:layout_height="36dp"
+				android:layout_weight="1"
+				android:gravity="center"
+				android:text="@string/all_time"
+				android:textSize="12sp"
+				android:textColor="@color/taru_text_secondary"
+				android:background="@drawable/bg_period_tab_unselected"
+				android:clickable="true"
+				android:focusable="true"/>
+		</LinearLayout>
+	</com.google.android.material.card.MaterialCardView>
+
+	<HorizontalScrollView
+		android:id="@+id/scrollView_chips"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:clipToPadding="false"
+		android:paddingHorizontal="12dp"
+		android:scrollbars="none"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/card_period">
+
+		<com.google.android.material.chip.ChipGroup
+			android:id="@+id/layout_chips"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content">
+		</com.google.android.material.chip.ChipGroup>
+	</HorizontalScrollView>
+
+	<androidx.core.widget.NestedScrollView
+		android:id="@+id/stats_scroll"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:clipToPadding="false"
+		android:fillViewport="true"
+		android:overScrollMode="ifContentScrolls"
+		android:paddingBottom="18dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/scrollView_chips">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical">
+
+			<LinearLayout
+				android:id="@+id/layout_summary"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="16dp"
+				android:layout_marginTop="10dp"
+				android:orientation="vertical">
+
+				<LinearLayout
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:orientation="horizontal">
+
+					<LinearLayout
+						android:layout_width="0dp"
+						android:layout_height="82dp"
+						android:layout_weight="1"
+						android:background="@drawable/bg_taru_stat_card"
+						android:gravity="center_vertical"
+						android:orientation="vertical"
+						android:paddingHorizontal="14dp"
+						android:paddingVertical="11dp">
+
+						<TextView
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:letterSpacing="0.08"
+							android:maxLines="1"
+							android:text="@string/reading_streak"
+							android:textColor="@color/taru_text_muted"
+							android:textSize="10sp" />
+
+						<TextView
+							android:id="@+id/text_streak"
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:layout_marginTop="7dp"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:maxLines="1"
+							android:textColor="@color/taru_text_primary"
+							android:textSize="20sp"
+							tools:text="3 days" />
+					</LinearLayout>
+
+					<LinearLayout
+						android:id="@+id/layout_hours_played"
+						android:layout_width="0dp"
+						android:layout_height="82dp"
+						android:layout_marginStart="10dp"
+						android:layout_weight="1"
+						android:background="@drawable/bg_taru_stat_card"
+						android:gravity="center_vertical"
+						android:orientation="vertical"
+						android:paddingHorizontal="14dp"
+						android:paddingVertical="11dp"
+						android:visibility="gone">
+
+						<TextView
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:letterSpacing="0.08"
+							android:maxLines="1"
+							android:text="@string/total_pages_read"
+							android:textColor="@color/taru_text_muted"
+							android:textSize="10sp" />
+
+						<TextView
+							android:id="@+id/text_pages_read"
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:layout_marginTop="7dp"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:maxLines="1"
+							android:textColor="@color/taru_text_primary"
+							android:textSize="20sp"
+							tools:text="4.2h" />
+					</LinearLayout>
+				</LinearLayout>
+
+				<LinearLayout
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="10dp"
+					android:orientation="horizontal">
+
+					<LinearLayout
+						android:layout_width="0dp"
+						android:layout_height="82dp"
+						android:layout_weight="1"
+						android:background="@drawable/bg_taru_stat_card"
+						android:gravity="center_vertical"
+						android:orientation="vertical"
+						android:paddingHorizontal="14dp"
+						android:paddingVertical="11dp">
+
+						<TextView
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:letterSpacing="0.08"
+							android:maxLines="1"
+							android:text="@string/total_chapters_read"
+							android:textColor="@color/taru_text_muted"
+							android:textSize="10sp" />
+
+						<TextView
+							android:id="@+id/text_chapters_read"
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:layout_marginTop="7dp"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:maxLines="1"
+							android:textColor="@color/taru_text_primary"
+							android:textSize="20sp"
+							tools:text="28" />
+					</LinearLayout>
+
+					<LinearLayout
+						android:layout_width="0dp"
+						android:layout_height="82dp"
+						android:layout_marginStart="10dp"
+						android:layout_weight="1"
+						android:background="@drawable/bg_taru_stat_card"
+						android:gravity="center_vertical"
+						android:orientation="vertical"
+						android:paddingHorizontal="14dp"
+						android:paddingVertical="11dp">
+
+						<TextView
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:letterSpacing="0.08"
+							android:maxLines="1"
+							android:text="@string/total_reading_time"
+							android:textColor="@color/taru_text_muted"
+							android:textSize="10sp" />
+
+						<TextView
+							android:id="@+id/text_reading_time"
+							android:layout_width="match_parent"
+							android:layout_height="wrap_content"
+							android:layout_marginTop="7dp"
+							android:ellipsize="end"
+							android:fontFamily="sans-serif-medium"
+							android:maxLines="1"
+							android:textColor="@color/taru_text_primary"
+							android:textSize="20sp"
+							tools:text="2h 5m" />
+					</LinearLayout>
+				</LinearLayout>
+			</LinearLayout>
+
+			<LinearLayout
+				android:id="@+id/layout_genres"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="16dp"
+				android:layout_marginTop="12dp"
+				android:background="@drawable/bg_taru_stat_card"
+				android:orientation="vertical"
+				android:padding="14dp"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:fontFamily="sans-serif-medium"
+					android:letterSpacing="0.08"
+					android:text="@string/genre_breakdown"
+					android:textColor="@color/taru_text_muted"
+					android:textSize="10sp" />
+
+				<LinearLayout
+					android:id="@+id/layout_genre_bar"
+					android:layout_width="match_parent"
+					android:layout_height="18dp"
+					android:layout_marginTop="10dp"
+					android:clipToOutline="true"
+					android:orientation="horizontal" />
+
+				<LinearLayout
+					android:id="@+id/layout_genre_legend"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="8dp"
+					android:orientation="vertical" />
+			</LinearLayout>
+
+			<org.koitharu.kotatsu.stats.ui.views.PieChartView
+				android:id="@+id/chart"
+				android:layout_width="match_parent"
+				android:layout_height="238dp"
+				android:layout_marginHorizontal="42dp"
+				android:layout_marginTop="18dp"
+				android:layout_marginBottom="8dp" />
+
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/recyclerView"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="8dp"
+				android:nestedScrollingEnabled="false"
+				android:overScrollMode="never"
+				android:scrollbars="none"
+				app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+				tools:itemCount="4"
+				tools:listitem="@layout/item_stats" />
+		</LinearLayout>
+	</androidx.core.widget.NestedScrollView>
+
+	<ViewStub
+		android:id="@+id/stub_empty"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:layout="@layout/item_empty_state"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/scrollView_chips"
+		tools:visibility="visible" />
+</androidx.constraintlayout.widget.ConstraintLayout>

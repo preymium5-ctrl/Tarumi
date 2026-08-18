@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="16dp"
+	android:layout_marginTop="10dp"
+	android:layout_marginBottom="32dp"
+	android:background="@drawable/bg_taru_home_feature"
+	android:gravity="center"
+	android:minHeight="148dp"
+	android:orientation="vertical"
+	android:padding="22dp">
+
+	<TextView
+		android:id="@android:id/title"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:fontFamily="sans-serif-medium"
+		android:gravity="center"
+		android:text="@string/app_name"
+		android:textColor="@color/taru_text_primary"
+		android:textSize="23sp" />
+
+	<TextView
+		android:id="@android:id/summary"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:fontFamily="sans-serif"
+		android:gravity="center"
+		android:lineSpacingExtra="7dp"
+		android:textColor="@color/taru_text_muted"
+		android:textSize="15sp" />
+</LinearLayout>

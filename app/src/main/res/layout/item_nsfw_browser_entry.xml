@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_margin="4dp"
+	android:background="@drawable/bg_nsfw_browser_card"
+	android:orientation="vertical"
+	android:paddingBottom="8dp">
+
+	<FrameLayout
+		android:id="@+id/layout_cover_stack"
+		android:layout_width="match_parent"
+		android:layout_height="156dp"
+		android:padding="6dp">
+
+		<View
+			android:layout_width="1dp"
+			android:layout_height="1dp"
+			android:visibility="gone"
+			android:background="@drawable/bg_nsfw_browser_stack_dark" />
+
+		<org.koitharu.kotatsu.image.ui.CoverImageView
+			android:id="@+id/imageView_back"
+			android:layout_width="1dp"
+			android:layout_height="1dp"
+			android:visibility="gone"
+			app:allowRgb565="true"
+			tools:ignore="ContentDescription" />
+
+		<org.koitharu.kotatsu.image.ui.CoverImageView
+			android:id="@+id/imageView_cover"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:background="@android:color/white"
+			android:elevation="2dp"
+			android:scaleType="centerCrop"
+			app:allowRgb565="true"
+			tools:ignore="ContentDescription"
+			tools:src="@tools:sample/backgrounds/scenic[5]" />
+
+	</FrameLayout>
+
+	<TextView
+		android:id="@+id/textView_title"
+		android:layout_width="match_parent"
+		android:layout_height="40dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif-medium"
+		android:gravity="center_vertical"
+		android:maxLines="2"
+		android:paddingHorizontal="8dp"
+		android:textColor="#5E1F27"
+		android:textSize="12sp"
+		tools:text="Recently Added Title" />
+
+	<TextView
+		android:id="@+id/textView_subtitle"
+		android:layout_width="match_parent"
+		android:layout_height="22dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:gravity="center_vertical"
+		android:maxLines="1"
+		android:paddingHorizontal="8dp"
+		android:textColor="@color/taru_text_muted"
+		android:textSize="10sp"
+		tools:text="Source name" />
+
+	<LinearLayout
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone">
+
+		<TextView
+			android:id="@+id/textView_series"
+			android:layout_width="1dp"
+			android:layout_height="1dp" />
+
+		<TextView
+			android:id="@+id/textView_type"
+			android:layout_width="1dp"
+			android:layout_height="1dp" />
+
+		<TextView
+			android:id="@+id/textView_language"
+			android:layout_width="1dp"
+			android:layout_height="1dp" />
+
+		<com.google.android.material.chip.ChipGroup
+			android:id="@+id/chipGroup_tags"
+			android:layout_width="1dp"
+			android:layout_height="1dp" />
+
+	</LinearLayout>
+
+	<TextView
+		android:id="@+id/textView_footer"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:ellipsize="end"
+		android:maxLines="1"
+		android:paddingHorizontal="8dp"
+		android:textColor="#C28186"
+		android:textSize="10sp"
+		tools:text="Page 1 - Source" />
+
+</LinearLayout>

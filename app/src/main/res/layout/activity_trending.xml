@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/trendingRoot"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root">
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@null"
+		android:fitsSystemWindows="true"
+		app:elevation="0dp"
+		app:liftOnScroll="false">
+
+		<androidx.appcompat.widget.Toolbar
+			android:id="@+id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="?attr/actionBarSize"
+			android:background="@null"
+			android:titleTextAppearance="?attr/textAppearanceTitleLarge"
+			app:titleTextColor="@color/taru_text_primary"
+			app:navigationIconTint="@color/taru_text_primary"
+			tools:title="Trending" />
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+		android:id="@+id/swipeRefresh"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
+
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/recyclerView"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:clipToPadding="false"
+			android:paddingHorizontal="10dp"
+			android:paddingTop="6dp"
+			android:paddingBottom="20dp"
+			android:scrollbars="none"
+			tools:itemCount="6"
+			tools:listitem="@layout/item_trending" />
+
+	</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+	<FrameLayout
+		android:id="@+id/initialLoading"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone"
+		tools:visibility="visible">
+
+		<com.google.android.material.progressindicator.CircularProgressIndicator
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:indeterminate="true"
+			app:indicatorSize="40dp" />
+	</FrameLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

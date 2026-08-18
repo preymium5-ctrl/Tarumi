@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@drawable/bg_taru_home_root">
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@android:color/transparent"
+		android:elevation="0dp"
+		android:fitsSystemWindows="false"
+		app:elevation="0dp"
+		app:liftOnScroll="false">
+
+		<com.google.android.material.appbar.MaterialToolbar
+			android:id="@id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:background="@android:color/transparent"
+			android:paddingHorizontal="18dp"
+			app:navigationIconTint="@color/taru_surface_button"
+			app:titleTextAppearance="@style/TextAppearance.Tarumi.Settings.Title"
+			app:titleTextColor="@color/taru_surface_button"
+			app:layout_collapseMode="pin" />
+
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<androidx.fragment.app.FragmentContainerView
+		android:id="@id/container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior" />
+
+	<androidx.fragment.app.FragmentContainerView
+		android:id="@+id/container_search"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone"
+		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

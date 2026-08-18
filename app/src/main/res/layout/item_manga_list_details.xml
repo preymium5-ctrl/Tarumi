@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="10dp"
+	android:layout_marginVertical="0dp"
+	android:background="@drawable/bg_taru_library_card"
+	android:clipChildren="false"
+	android:minHeight="158dp"
+	android:paddingHorizontal="12dp"
+	android:paddingTop="13dp"
+	android:paddingBottom="15dp">
+
+	<TextView
+		android:id="@+id/textView_title"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:maxLines="2"
+		android:textColor="@color/taru_text_primary"
+		android:textSize="19sp"
+		app:layout_constraintEnd_toStartOf="@id/button_remove_bookmark"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		tools:text="Chronicles of the Lazy Sovereign" />
+
+	<ImageButton
+		android:id="@+id/button_remove_bookmark"
+		android:layout_width="34dp"
+		android:layout_height="34dp"
+		android:background="@drawable/bg_taru_library_action"
+		android:contentDescription="@string/remove"
+		android:padding="8dp"
+		android:scaleType="center"
+		android:src="@drawable/ic_remove_x"
+		android:visibility="gone"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		tools:visibility="visible" />
+
+	<org.koitharu.kotatsu.image.ui.CoverImageView
+		android:id="@+id/imageView_cover"
+		android:layout_width="82dp"
+		android:layout_height="94dp"
+		android:layout_marginTop="10dp"
+		android:background="?colorSurfaceContainerHigh"
+		android:scaleType="centerCrop"
+		app:aspectRationHeight="0"
+		app:aspectRationWidth="0"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/textView_title"
+		app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Small"
+		app:trimImage="true"
+		tools:src="@tools:sample/backgrounds/scenic" />
+
+	<TextView
+		android:id="@+id/textView_author"
+		android:layout_width="0dp"
+		android:layout_height="24dp"
+		android:layout_marginStart="12dp"
+		android:layout_marginEnd="8dp"
+		android:drawablePadding="9dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:gravity="center_vertical"
+		android:maxLines="1"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="14sp"
+		app:drawableStartCompat="@drawable/ic_open_book"
+		app:drawableTint="@color/taru_text_secondary"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@id/imageView_cover"
+		app:layout_constraintTop_toTopOf="@id/imageView_cover"
+		tools:text="5mo ago" />
+
+	<TextView
+		android:id="@+id/textView_current_chapter"
+		android:layout_width="0dp"
+		android:layout_height="24dp"
+		android:layout_marginTop="4dp"
+		android:layout_marginEnd="8dp"
+		android:drawablePadding="9dp"
+		android:ellipsize="end"
+		android:fontFamily="sans-serif"
+		android:gravity="center_vertical"
+		android:maxLines="1"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="14sp"
+		app:drawableStartCompat="@drawable/ic_history"
+		app:drawableTint="@color/taru_text_secondary"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="@id/textView_author"
+		app:layout_constraintTop_toBottomOf="@id/textView_author"
+		tools:text="10h ago" />
+
+	<TextView
+		android:id="@+id/textView_status"
+		android:layout_width="wrap_content"
+		android:layout_height="36dp"
+		android:layout_marginTop="10dp"
+		android:layout_marginEnd="10dp"
+		android:background="@drawable/bg_taru_library_status"
+		android:clickable="true"
+		android:drawablePadding="8dp"
+		android:ellipsize="end"
+		android:focusable="true"
+		android:fontFamily="sans-serif"
+		android:gravity="center"
+		android:maxWidth="118dp"
+		android:minWidth="92dp"
+		android:paddingStart="11dp"
+		android:paddingEnd="9dp"
+		android:singleLine="true"
+		android:textColor="#FFFFFF"
+		android:textSize="14sp"
+		app:drawableEndCompat="@drawable/ic_arrow_down"
+		app:drawableTint="#FFFFFF"
+		app:layout_constraintEnd_toStartOf="@id/button_continue_reading"
+		app:layout_constraintStart_toStartOf="@id/textView_author"
+		app:layout_constraintTop_toBottomOf="@id/textView_current_chapter"
+		tools:text="Planned" />
+
+	<com.google.android.material.button.MaterialButton
+		android:id="@+id/button_continue_reading"
+		android:layout_width="wrap_content"
+		android:layout_height="36dp"
+		android:layout_marginTop="10dp"
+		android:fontFamily="sans-serif"
+		android:gravity="center"
+		android:insetTop="0dp"
+		android:insetBottom="0dp"
+		android:minHeight="0dp"
+		android:minWidth="92dp"
+		android:paddingHorizontal="8dp"
+		android:textColor="@color/taru_text_secondary"
+		android:textSize="14sp"
+		app:backgroundTint="@color/taru_surface_button"
+		app:cornerRadius="14dp"
+		app:icon="@drawable/ic_arrow_forward"
+		app:iconGravity="end"
+		app:iconPadding="4dp"
+		app:iconTint="@color/taru_text_muted"
+		app:strokeColor="@color/taru_outline"
+		app:strokeWidth="1dp"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintTop_toBottomOf="@id/textView_current_chapter"
+		tools:text="17 / 50" />
+
+
+	<TextView
+		android:id="@+id/textView_tags"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone" />
+
+	<org.koitharu.kotatsu.history.ui.util.ReadingProgressView
+		android:id="@+id/progressView"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone" />
+
+	<org.koitharu.kotatsu.core.ui.widgets.IconsView
+		android:id="@+id/iconsView"
+		android:layout_width="1dp"
+		android:layout_height="1dp"
+		android:visibility="gone" />
+
+	<org.koitharu.kotatsu.core.ui.widgets.BadgeView
+		android:id="@+id/badge"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_margin="4dp"
+		android:visibility="gone"
+		app:layout_constraintStart_toStartOf="@id/imageView_cover"
+		app:layout_constraintTop_toTopOf="@id/imageView_cover"
+		app:maxCharacterCount="@integer/manga_badge_max_character_count" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
