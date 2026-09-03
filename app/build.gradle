@@ -29,8 +29,8 @@ android {
 		applicationId 'com.tarumi.reader'
 		minSdk = 23
 		targetSdk = 36
-		versionCode = 2171
-        versionName = '1.6.5'
+		versionCode = 2172
+        versionName = '1.6.6'
 		generatedDensities = []
 		testInstrumentationRunner 'org.koitharu.kotatsu.HiltTestRunner'
 		ksp {
