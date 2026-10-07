@@ -3,7 +3,6 @@ package org.koitharu.kotatsu.reader.domain
 import android.content.Context
 import android.graphics.Rect
 import android.net.Uri
-import android.os.Build
 import androidx.annotation.AnyThread
 import androidx.annotation.CheckResult
 import androidx.collection.LongSparseArray
@@ -21,6 +20,7 @@ import com.davemorrissey.labs.subscaleview.ImageSource
 import dagger.hilt.android.ActivityRetainedLifecycle
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -37,6 +37,7 @@ import okhttp3.Request
 import okio.use
 import org.jetbrains.annotations.Blocking
 import org.koitharu.kotatsu.core.LocalizedAppContext
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
 import org.koitharu.kotatsu.core.network.CommonHeaders
 import org.koitharu.kotatsu.core.network.MangaHttpClient
@@ -92,12 +93,16 @@ class PageLoader @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val imageProxyInterceptor: ImageProxyInterceptor,
 	private val downloadSlowdownDispatcher: DownloadSlowdownDispatcher,
+	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
 ) {
 
 	val loaderScope = lifecycle.lifecycleScope + InternalErrorHandler() + Dispatchers.Default
 
 	private val tasks = LongSparseArray<ProgressDeferred<Uri, Float>>()
 	private val semaphore = Semaphore(3)
+	private val prefetchSemaphore = Semaphore(2)
+	private val oniSagaSemaphore = Semaphore(ONISAGA_PREFETCH_LIMIT + 1)
+	private val oniSagaPrefetchSemaphore = Semaphore(ONISAGA_PREFETCH_LIMIT)
 	private val convertLock = Mutex()
 	private val prefetchLock = Mutex()
 
@@ -109,8 +114,7 @@ class PageLoader @Inject constructor(
 	private val edgeDetector = EdgeDetector(context)
 
 	fun isPrefetchApplicable(): Boolean {
-		return Build.VERSION.SDK_INT > Build.VERSION_CODES.O_MR1
-			&& repository is CachingMangaRepository
+		return repository is CachingMangaRepository
 			&& settings.isPagesPreloadEnabled
 			&& !context.isPowerSaveMode()
 			&& !isLowRam()
@@ -120,11 +124,19 @@ class PageLoader @Inject constructor(
 	fun prefetch(pages: List<ReaderPage>) = loaderScope.launch {
 		prefetchLock.withLock {
 			for (page in pages.asReversed()) {
-				if (tasks.containsKey(page.id)) {
+				val isLoading = synchronized(tasks) {
+					tasks[page.id]?.takeIf { it.isValid() }?.isCancelled == false
+				}
+				if (isLoading || prefetchQueue.any { it.id == page.id }) {
 					continue
 				}
 				prefetchQueue.offerFirst(page.toMangaPage())
-				if (prefetchQueue.size > prefetchQueueLimit) {
+				val queueLimit = if (page.source.isOniSaga()) {
+					ONISAGA_PREFETCH_LIMIT
+				} else {
+					prefetchQueueLimit
+				}
+				while (prefetchQueue.size > queueLimit) {
 					prefetchQueue.pollLast()
 				}
 			}
@@ -169,18 +181,16 @@ class PageLoader @Inject constructor(
 		return null
 	}
 
-	fun loadPageAsync(page: MangaPage, force: Boolean): ProgressDeferred<Uri, Float> {
-		var task = tasks[page.id]?.takeIf { it.isValid() }
+	fun loadPageAsync(page: MangaPage, force: Boolean): ProgressDeferred<Uri, Float> = synchronized(tasks) {
+		val task = tasks[page.id]?.takeIf { it.isValid() }
 		if (force) {
 			task?.cancel()
 		} else if (task?.isCancelled == false) {
-			return task
+			return@synchronized task
 		}
-		task = loadPageAsyncImpl(page, skipCache = force, isPrefetch = false)
-		synchronized(tasks) {
-			tasks[page.id] = task
+		loadPageAsyncImpl(page, skipCache = force, isPrefetch = false).also {
+			tasks[page.id] = it
 		}
-		return task
 	}
 
 	suspend fun loadPage(page: MangaPage, force: Boolean): Uri {
@@ -224,8 +234,13 @@ class PageLoader @Inject constructor(
 	}
 
 	suspend fun invalidate(clearCache: Boolean) {
-		tasks.clear()
+		prefetchLock.withLock {
+			prefetchQueue.clear()
+		}
 		loaderScope.cancelChildrenAndJoin()
+		synchronized(tasks) {
+			tasks.clear()
+		}
 		if (clearCache) {
 			cache.clear()
 		}
@@ -236,7 +251,10 @@ class PageLoader @Inject constructor(
 			while (prefetchQueue.isNotEmpty()) {
 				val page = prefetchQueue.pollFirst() ?: return@launch
 				synchronized(tasks) {
-					tasks[page.id] = loadPageAsyncImpl(page, skipCache = false, isPrefetch = true)
+					val task = tasks[page.id]?.takeIf { it.isValid() }
+					if (task?.isCancelled != false) {
+						tasks[page.id] = loadPageAsyncImpl(page, skipCache = false, isPrefetch = true)
+					}
 				}
 			}
 		}
@@ -248,7 +266,9 @@ class PageLoader @Inject constructor(
 		isPrefetch: Boolean,
 	): ProgressDeferred<Uri, Float> {
 		val progress = MutableStateFlow(PROGRESS_UNDEFINED)
-		val deferred = loaderScope.async {
+		val deferred = loaderScope.async(
+			start = if (isPrefetch) CoroutineStart.UNDISPATCHED else CoroutineStart.DEFAULT,
+		) {
 			counter.incrementAndGet()
 			try {
 				loadPageImpl(
@@ -281,7 +301,39 @@ class PageLoader @Inject constructor(
 		progress: MutableStateFlow<Float>,
 		isPrefetch: Boolean,
 		skipCache: Boolean,
-	): Uri = semaphore.withPermit {
+	): Uri {
+		if (isPrefetch) {
+			val gate = if (page.source.isOniSaga()) oniSagaPrefetchSemaphore else prefetchSemaphore
+			return gate.withPermit {
+				loadPageWithPermit(page, progress, isPrefetch = true, skipCache)
+			}
+		}
+		return loadPageWithPermit(page, progress, isPrefetch = false, skipCache)
+	}
+
+	private suspend fun loadPageWithPermit(
+		page: MangaPage,
+		progress: MutableStateFlow<Float>,
+		isPrefetch: Boolean,
+		skipCache: Boolean,
+	): Uri {
+		val gate = if (page.source.isOniSaga()) oniSagaSemaphore else semaphore
+		return gate.withPermit {
+			captchaAutoResolveCoordinator.runWithVerification(
+				source = page.source,
+				mayStartVerification = !isPrefetch,
+			) {
+				loadPageAttempt(page, progress, isPrefetch, skipCache)
+			}
+		}
+	}
+
+	private suspend fun loadPageAttempt(
+		page: MangaPage,
+		progress: MutableStateFlow<Float>,
+		isPrefetch: Boolean,
+		skipCache: Boolean,
+	): Uri {
 		val pageUrl = getPageUrl(page)
 		check(pageUrl.isNotBlank()) { "Cannot obtain full image url for $page" }
 		if (!skipCache) {
@@ -314,6 +366,8 @@ class PageLoader @Inject constructor(
 		return context.ramAvailable <= FileSize.MEGABYTES.convert(PREFETCH_MIN_RAM_MB, FileSize.BYTES)
 	}
 
+	private fun MangaSource.isOniSaga(): Boolean = name == "ONISAGA" || name.startsWith("ONISAGA_")
+
 	private fun Image.toImageSource(): ImageSource = if (this is BitmapImage) {
 		ImageSource.cachedBitmap(toBitmap())
 	} else {
@@ -338,16 +392,13 @@ class PageLoader @Inject constructor(
 
 		private const val PROGRESS_UNDEFINED = -1f
 		private const val PREFETCH_LIMIT_DEFAULT = 6
+		private const val ONISAGA_PREFETCH_LIMIT = 5
 		private const val PREFETCH_MIN_RAM_MB = 80L
 
 		fun createPageRequest(pageUrl: String, mangaSource: MangaSource) = Request.Builder()
 			.url(pageUrl)
 			.get()
-			// Prefer animated-capable types so CGI/motion pages can deliver GIF / animated WebP.
-			.header(
-				CommonHeaders.ACCEPT,
-				"image/avif,image/webp,image/apng,image/gif,image/png;q=0.9,image/jpeg,*/*;q=0.8",
-			)
+			.header(CommonHeaders.ACCEPT, "image/avif,image/webp,image/apng,image/gif,image/png;q=0.9,image/jpeg,*/*;q=0.8")
 			.cacheControl(CommonHeaders.CACHE_CONTROL_NO_STORE)
 			.tag(MangaSource::class.java, mangaSource)
 			.build()

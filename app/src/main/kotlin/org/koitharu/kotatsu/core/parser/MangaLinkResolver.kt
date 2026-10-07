@@ -34,7 +34,7 @@ class MangaLinkResolver @Inject constructor(
 	}
 
 	private suspend fun resolveAppLink(uri: Uri): Manga? {
-		require(uri.pathSegments.singleOrNull() == "manga") { "Invalid url" }
+		require(uri.host == "manga" || uri.pathSegments.singleOrNull() == "manga") { "Invalid url" }
 		uri.getQueryParameter("id")?.let { mangaId ->
 			// short url
 			return dataRepository.findMangaById(mangaId.toLong(), withChapters = false)
@@ -58,13 +58,15 @@ class MangaLinkResolver @Inject constructor(
 
 	private suspend fun MangaRepository.findExact(url: String?, title: String?): Manga? {
 		if (!title.isNullOrEmpty()) {
-			val list = getList(0, null, MangaListFilter(query = title))
+			val list = runCatchingCancellable {
+				getList(0, null, MangaListFilter(query = title))
+			}.getOrElse { if (url == null) throw it else emptyList() }
 			if (url != null) {
 				list.find { it.url == url }?.let {
 					return it
 				}
 			}
-			list.minByOrNull { it.title.levenshteinDistance(title) }
+			list.takeIf { url == null }?.minByOrNull { it.title.levenshteinDistance(title) }
 				?.takeIf { it.title.almostEquals(title, 0.2f) }
 				?.let { return it }
 		}
@@ -78,8 +80,10 @@ class MangaLinkResolver @Inject constructor(
 				seed.author
 			} ?: return@runCatchingCancellable null
 			val seedList = getList(0, null, MangaListFilter(query = seedTitle))
-			seedList.first { x -> x.url == url }
-		}.getOrThrow()
+			seedList.firstOrNull { x -> x.url == url }
+		}.getOrNull()
+			?: seed.publicUrl.takeIf { it.isNotEmpty() }?.let { dataRepository.findMangaByPublicUrl(it) }
+			?: seed
 	}
 
 	private suspend fun MangaRepository.getDetailsNoCache(manga: Manga): Manga = if (this is CachingMangaRepository) {

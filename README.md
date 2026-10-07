@@ -48,13 +48,19 @@ online content sources. The main goal of the fork is to maintain existing featur
 
 ### Certificate fingerprints
 
+Tarumi release certificate (unchanged from v1.6.6).
+
 ```plaintext
-70:BD:84:07:13:01:84:5E:A3:D0:A4:E5:F3:3A:D2:41:0D:C9:FC:EB
+SHA-1: 7F:15:F8:2F:FE:85:A7:CE:03:5F:23:01:AF:EF:50:E1:A2:0F:6F:6C
 ```
 
 ```plaintext
-FF:D9:C9:91:06:64:07:69:3C:F4:6E:46:9F:EA:DB:88:8D:33:FB:B2:FB:A7:7E:A3:79:B0:CA:12:A3:5C:66:1A
+SHA-256: CB:56:22:8A:6A:8C:43:4C:5B:A8:50:4F:6A:F9:ED:45:34:FF:7D:A4:B4:8A:6D:45:FA:05:9C:A9:A7:25:E4:1E
 ```
+
+### Building
+
+See [the Tarumi 1.6.7 build instructions](docs/building-1.6.7.md) for the matching parser checkout, verification commands and signing setup.
 
 ### License
 

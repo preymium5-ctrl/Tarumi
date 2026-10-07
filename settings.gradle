@@ -33,8 +33,13 @@ dependencyResolutionManagement {
 include ':app'
 rootProject.name = "Tarumi"
 
-includeBuild('../kotatsu-parsers-redo') {
-	dependencySubstitution {
-		substitute module('com.github.preymium5-ctrl:kotatsu-parsers-redo') using project(':')
+// Use Tarumi's patched source engine when the sibling checkout is available.
+// A different checkout can be supplied with -PparsersLocalPath=/path/to/parsers.
+def parsersDirectory = file(providers.gradleProperty('parsersLocalPath').getOrElse('../kotatsu-parsers-redo'))
+if (parsersDirectory.isDirectory()) {
+	includeBuild(parsersDirectory) {
+		dependencySubstitution {
+			substitute module('com.github.preymium5-ctrl:kotatsu-parsers-redo') using project(':')
+		}
 	}
 }

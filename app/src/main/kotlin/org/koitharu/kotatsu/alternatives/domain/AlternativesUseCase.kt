@@ -35,11 +35,17 @@ class AlternativesUseCase @Inject constructor(
 		manga: Manga,
 		throughDisabledSources: Boolean,
 		targetSourceNames: Set<String>? = null,
+		sameLanguageOnly: Boolean = false,
 	): Flow<Manga> {
+		val referenceSource = manga.source
 		val sources = if (targetSourceNames == null) {
 			getSources(manga.source, throughDisabledSources)
 		} else {
 			getSelectedSources(manga.source, targetSourceNames)
+		}.distinctBy { it.name }.filter { candidate ->
+			candidate.name != referenceSource.name &&
+				(!sameLanguageOnly || candidate !is MangaParserSource || referenceSource !is MangaParserSource ||
+					candidate.locale == referenceSource.locale)
 		}
 		if (sources.isEmpty()) {
 			return emptyFlow()
@@ -58,7 +64,9 @@ class AlternativesUseCase @Inject constructor(
 						if (m.id != manga.id) {
 							launch {
 								val details = runCatchingCancellable {
-									mangaRepositoryFactory.create(m.source).getDetails(m)
+									semaphore.withPermit {
+										mangaRepositoryFactory.create(m.source).getDetails(m)
+									}
 								}.getOrDefault(m)
 								send(details)
 							}

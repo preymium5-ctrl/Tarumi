@@ -133,6 +133,8 @@ class TrackWorker @AssistedInject constructor(
 				try {
 					favouritesRepository.syncLibraryFromTracker(scrobbler)
 					syncCount++
+				} catch (e: CancellationException) {
+					throw e
 				} catch (e: Exception) {
 					Log.w(LOG_TAG, "Failed to sync scrobbler ${scrobbler.scrobblerService.name}", e)
 				}

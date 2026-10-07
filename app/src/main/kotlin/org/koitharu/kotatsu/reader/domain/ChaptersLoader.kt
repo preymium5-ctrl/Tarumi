@@ -5,6 +5,7 @@ import androidx.annotation.CheckResult
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -25,6 +26,7 @@ private const val MAX_CHAPTERS_IN_MEMORY = 5
 class ChaptersLoader @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val localMangaRepository: LocalMangaRepository,
+	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
 ) {
 
 	private val chapters = LongSparseArray<MangaChapter>()
@@ -62,7 +64,7 @@ class ChaptersLoader @Inject constructor(
 		val newChapter = list.getOrNull(if (isNext) index + 1 else index - 1) ?: return false
 		ensureChapter(newChapter)
 		if (hasPages(newChapter.id)) return true
-		val newPages = loadChapter(newChapter.id)
+		val newPages = loadChapter(newChapter.id, mayStartVerification = false)
 		if (newPages.isEmpty()) return false
 		mutex.withLock {
 			// Trim oldest chapters so continuous webtoon can keep loading without OOM.
@@ -88,7 +90,7 @@ class ChaptersLoader @Inject constructor(
 		if (chapters[chapterId] == null) {
 			mangaDetails?.allChapters?.find { it.id == chapterId }?.let { ensureChapter(it) }
 		}
-		val pages = loadChapter(chapterId)
+		val pages = loadChapter(chapterId, mayStartVerification = true)
 		return mutex.withLock {
 			chapterPages.clear()
 			if (pages.isEmpty()) {
@@ -121,12 +123,12 @@ class ChaptersLoader @Inject constructor(
 
 	fun snapshot() = chapterPages.toList()
 
-	private suspend fun loadChapter(chapterId: Long): List<ReaderPage> {
+	private suspend fun loadChapter(chapterId: Long, mayStartVerification: Boolean): List<ReaderPage> {
 		val chapter = chapters[chapterId]
 			?: mangaDetails?.allChapters?.find { it.id == chapterId }
 			?: return emptyList()
 		ensureChapter(chapter)
-		val pages = resolvePages(chapter)
+		val pages = resolvePages(chapter, mayStartVerification)
 		if (pages.isEmpty()) return emptyList()
 		return pages.mapIndexed { index, page ->
 			ReaderPage(page, index, chapterId)
@@ -138,7 +140,7 @@ class ChaptersLoader @Inject constructor(
 	 * where the chapter object still carries the remote source and network getPages fails,
 	 * which previously left the progress bar stuck and blocked next-chapter loading.
 	 */
-	private suspend fun resolvePages(chapter: MangaChapter): List<MangaPage> {
+	private suspend fun resolvePages(chapter: MangaChapter, mayStartVerification: Boolean): List<MangaPage> {
 		val localPages = runCatchingCancellable {
 			resolveLocalPages(chapter)
 		}.onFailure(Throwable::printStackTraceDebug).getOrNull()
@@ -147,9 +149,12 @@ class ChaptersLoader @Inject constructor(
 		}
 
 		val repo = mangaRepositoryFactory.create(chapter.source)
-		return runCatchingCancellable {
+		return captchaAutoResolveCoordinator.runWithVerification(
+			source = chapter.source,
+			mayStartVerification = mayStartVerification,
+		) {
 			repo.getPages(chapter)
-		}.onFailure(Throwable::printStackTraceDebug).getOrDefault(emptyList())
+		}
 	}
 
 	private suspend fun resolveLocalPages(chapter: MangaChapter): List<MangaPage>? {

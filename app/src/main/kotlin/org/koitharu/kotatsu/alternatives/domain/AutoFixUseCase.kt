@@ -40,8 +40,8 @@ class AutoFixUseCase @Inject constructor(
 			return seed to null // no fix required
 		}
 		val alternatives = if (targetSourceNames == null) {
-			alternativesUseCase(seed, throughDisabledSources = false)
-				.concat(alternativesUseCase(seed, throughDisabledSources = true))
+			alternativesUseCase(seed, throughDisabledSources = false, sameLanguageOnly = true)
+				.concat(alternativesUseCase(seed, throughDisabledSources = true, sameLanguageOnly = true))
 		} else {
 			alternativesUseCase(
 				manga = seed,
